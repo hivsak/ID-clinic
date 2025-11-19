@@ -19,6 +19,8 @@ const ARV_SHORTCUTS = [
     { label: 'TLD', drugs: ['TDF', '3TC', 'DTG'] },
     { label: 'Kocitaf', drugs: ['TAF', 'FTC', 'DTG'] },
     { label: 'Goivir-T', drugs: ['TDF', 'FTC', 'EFV'] },
+    { label: 'Zilavir', drugs: ['AZT', '3TC'] },
+    { label: 'Teno-EM', drugs: ['TDF', 'FTC'] },
 ];
 
 interface ArvRegimenSelectorProps {
@@ -443,7 +445,18 @@ const AddEventForm: React.FC<AddEventFormProps> = ({ onSave, patientHistory, onE
         
         setDate(new Date().toISOString().split('T')[0]);
         setEventType(type);
-        setDetails({});
+
+        let newDetails: Record<string, any> = {};
+        
+        // Auto-populate based on event type
+        if (type === MedicalEventType.ART_CHANGE) {
+             const currentRegimen = getCurrentArv(patientHistory);
+             if (currentRegimen && currentRegimen !== '-' && currentRegimen !== 'N/A') {
+                 newDetails['จาก'] = currentRegimen;
+             }
+        }
+
+        setDetails(newDetails);
     };
 
     const handleDetailChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {

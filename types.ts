@@ -134,15 +134,15 @@ export interface PepInfo {
 export interface Patient {
   id: number;
   hn: string;
-  napId: string;
+  napId?: string;
   title?: string;
-  firstName: string;
-  lastName: string;
-  dob: string; // ISO date string e.g., "1980-05-15"
-  sex: string;
+  firstName?: string;
+  lastName?: string;
+  dob?: string; // ISO date string e.g., "1980-05-15"
+  sex?: string;
   riskBehavior?: string;
   status: PatientStatus;
-  registrationDate: string; // ISO date string
+  registrationDate?: string; // ISO date string
   nextAppointmentDate?: string; // ISO date string
   medicalHistory: MedicalEvent[];
   pregnancies?: PregnancyRecord[];

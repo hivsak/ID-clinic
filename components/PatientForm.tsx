@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Patient } from '../types';
 
@@ -93,15 +94,15 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
                         </div>
                         <div>
                             <label htmlFor="firstName" className={labelClass}>ชื่อ</label>
-                            <input type="text" name="firstName" id="firstName" value={formData.firstName} onChange={handleChange} className={inputClass} required />
+                            <input type="text" name="firstName" id="firstName" value={formData.firstName} onChange={handleChange} className={inputClass} />
                         </div>
                         <div>
                             <label htmlFor="lastName" className={labelClass}>นามสกุล</label>
-                            <input type="text" name="lastName" id="lastName" value={formData.lastName} onChange={handleChange} className={inputClass} required />
+                            <input type="text" name="lastName" id="lastName" value={formData.lastName} onChange={handleChange} className={inputClass} />
                         </div>
                          <div>
                             <label htmlFor="dob" className={labelClass}>วันเกิด</label>
-                            <input type="date" name="dob" id="dob" value={formData.dob} onChange={handleChange} className={inputClass} required />
+                            <input type="date" name="dob" id="dob" value={formData.dob} onChange={handleChange} className={inputClass} />
                         </div>
                         <div>
                             <label htmlFor="sex" className={labelClass}>เพศ</label>

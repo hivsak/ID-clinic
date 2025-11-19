@@ -152,11 +152,11 @@ export const PatientDetail: React.FC<PatientDetailProps> = ({ patient, onBack, o
                 <ChevronLeftIcon className="h-4 w-4 mr-1" />
                 กลับไปที่รายชื่อผู้ป่วย
             </a>
-            <h1 className="text-2xl font-bold text-gray-800">{`${patient.firstName} ${patient.lastName}`}</h1>
+            <h1 className="text-2xl font-bold text-gray-800">{`${patient.firstName || ''} ${patient.lastName || ''}`}</h1>
             <div className="flex items-center gap-x-4 text-sm text-gray-500 mt-2">
                 <span>HN: {patient.hn}</span>
                 <span>อายุ: {calculateAge(patient.dob)} ปี</span>
-                <span>เพศ: {patient.sex}</span>
+                <span>เพศ: {patient.sex || '-'}</span>
             </div>
         </div>
         {activeTab === 'GENERAL' && !isEditingGeneralInfo && (

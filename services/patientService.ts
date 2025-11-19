@@ -8,26 +8,26 @@ const mapRowToPatient = (row: any): Patient => ({
     id: row.id,
     hn: row.hn,
     napId: row.nap_id || '',
-    title: row.title,
-    firstName: row.first_name,
-    lastName: row.last_name,
-    dob: row.dob ? new Date(row.dob).toISOString().split('T')[0] : '',
-    sex: row.sex,
-    riskBehavior: row.risk_behavior,
+    title: row.title || '',
+    firstName: row.first_name || '',
+    lastName: row.last_name || '',
+    dob: row.dob ? new Date(row.dob).toISOString().split('T')[0] : undefined,
+    sex: row.sex || '',
+    riskBehavior: row.risk_behavior || '',
     status: row.status as PatientStatus,
-    registrationDate: row.registration_date ? new Date(row.registration_date).toISOString().split('T')[0] : '',
+    registrationDate: row.registration_date ? new Date(row.registration_date).toISOString().split('T')[0] : undefined,
     nextAppointmentDate: row.next_appointment_date ? new Date(row.next_appointment_date).toISOString().split('T')[0] : undefined,
-    occupation: row.occupation,
-    partnerStatus: row.partner_status,
-    partnerHivStatus: row.partner_hiv_status,
-    address: row.address,
-    district: row.district,
-    subdistrict: row.subdistrict,
-    province: row.province,
-    phone: row.phone,
-    healthcareScheme: row.healthcare_scheme,
+    occupation: row.occupation || '',
+    partnerStatus: row.partner_status || '',
+    partnerHivStatus: row.partner_hiv_status || '',
+    address: row.address || '',
+    district: row.district || '',
+    subdistrict: row.subdistrict || '',
+    province: row.province || '',
+    phone: row.phone || '',
+    healthcareScheme: row.healthcare_scheme || '',
     referralType: row.referral_type as any,
-    referredFrom: row.referred_from,
+    referredFrom: row.referred_from || '',
     referralDate: row.referral_date ? new Date(row.referral_date).toISOString().split('T')[0] : undefined,
     
     // Arrays will be populated by fetch detail logic
@@ -152,6 +152,9 @@ export const getPatientById = async (id: number): Promise<Patient | null> => {
     }
 };
 
+// Helper to convert empty string to null for dates
+const dateOrNull = (d: any) => d && d !== '' ? d : null;
+
 // Create a new patient
 export const createPatient = async (data: any): Promise<number> => {
     try {
@@ -168,10 +171,10 @@ export const createPatient = async (data: any): Promise<number> => {
                 $20, $21, $22
             ) RETURNING id
         `, [
-            data.hn, data.napId, data.title, data.firstName, data.lastName, data.dob, data.sex, data.riskBehavior,
+            data.hn, data.napId, data.title, data.firstName, data.lastName, dateOrNull(data.dob), data.sex, data.riskBehavior,
             'Active', new Date(), data.occupation, data.partnerStatus, data.partnerHivStatus,
             data.address, data.district, data.subdistrict, data.province, data.phone, data.healthcareScheme,
-            data.referralType, data.referredFrom, data.referralDate || null
+            data.referralType, data.referredFrom, dateOrNull(data.referralDate)
         ]);
         return res.rows[0].id;
     } catch (error) {
@@ -197,10 +200,10 @@ export const updatePatient = async (patient: Patient): Promise<void> => {
                 updated_at=CURRENT_TIMESTAMP
             WHERE id=$25
         `, [
-            patient.hn, patient.napId, patient.title, patient.firstName, patient.lastName, patient.dob, patient.sex, patient.riskBehavior,
-            patient.status, patient.nextAppointmentDate || null, patient.occupation, patient.partnerStatus, patient.partnerHivStatus,
+            patient.hn, patient.napId, patient.title, patient.firstName, patient.lastName, dateOrNull(patient.dob), patient.sex, patient.riskBehavior,
+            patient.status, dateOrNull(patient.nextAppointmentDate), patient.occupation, patient.partnerStatus, patient.partnerHivStatus,
             patient.address, patient.district, patient.subdistrict, patient.province, patient.phone, patient.healthcareScheme,
-            patient.referralType, patient.referredFrom, patient.referralDate || null,
+            patient.referralType, patient.referredFrom, dateOrNull(patient.referralDate),
             patient.hbvInfo?.manualSummary, patient.hcvInfo?.hcvVlNotTested || false,
             patient.id
         ]);
@@ -220,7 +223,7 @@ export const updatePatient = async (patient: Patient): Promise<void> => {
         for (const preg of (patient.pregnancies || [])) {
             await client.query(
                 'INSERT INTO pregnancy_records (patient_id, ga, ga_date, end_date, end_reason) VALUES ($1, $2, $3, $4, $5)',
-                [patient.id, preg.ga, preg.gaDate, preg.endDate || null, preg.endReason || null]
+                [patient.id, preg.ga, preg.gaDate, dateOrNull(preg.endDate), preg.endReason || null]
             );
         }
 
@@ -269,7 +272,7 @@ export const updatePatient = async (patient: Patient): Promise<void> => {
         // 7. Sync PrEP
         await client.query('DELETE FROM prep_records WHERE patient_id = $1', [patient.id]);
         for (const item of (patient.prepInfo?.records || [])) {
-             await client.query('INSERT INTO prep_records (patient_id, date_start, date_stop) VALUES ($1, $2, $3)', [patient.id, item.dateStart, item.dateStop || null]);
+             await client.query('INSERT INTO prep_records (patient_id, date_start, date_stop) VALUES ($1, $2, $3)', [patient.id, item.dateStart, dateOrNull(item.dateStop)]);
         }
 
         // 8. Sync PEP

@@ -1,6 +1,8 @@
+
 import React from 'react';
 import { Patient, PatientStatus } from '../types';
 import { PlusIcon, SearchIcon, ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon } from './icons';
+import { calculateAge } from './utils';
 
 interface PatientListProps {
   patients: Patient[];
@@ -25,20 +27,10 @@ const getStatusBadge = (status: PatientStatus) => {
   }
 };
 
-const calculateAge = (dob: string) => {
-  const birthDate = new Date(dob);
-  const today = new Date();
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const m = today.getMonth() - birthDate.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-    age--;
-  }
-  return age;
-};
-
 const formatThaiDate = (isoDate?: string) => {
     if (!isoDate) return '-';
     const date = new Date(isoDate);
+    if (isNaN(date.getTime())) return '-';
     return new Intl.DateTimeFormat('th-TH', {
         day: 'numeric',
         month: 'short',
@@ -104,7 +96,7 @@ export const PatientList: React.FC<PatientListProps> = ({ patients, onSelectPati
               {patients.map((patient) => (
                 <tr key={patient.id} className="bg-white border-b hover:bg-gray-50">
                   <td className="px-6 py-4 font-medium text-emerald-600">{patient.hn}</td>
-                  <td className="px-6 py-4">{`${patient.firstName} ${patient.lastName}`}</td>
+                  <td className="px-6 py-4">{`${patient.firstName || '-'} ${patient.lastName || ''}`}</td>
                   <td className="px-6 py-4">{calculateAge(patient.dob)}</td>
                   <td className="px-6 py-4">{patient.phone || '-'}</td>
                   <td className="px-6 py-4">{patient.healthcareScheme || '-'}</td>

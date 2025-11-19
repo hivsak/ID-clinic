@@ -1,7 +1,11 @@
+
 import React from 'react';
 
-export const calculateAge = (dob: string) => {
+export const calculateAge = (dob?: string) => {
+  if (!dob) return '-';
   const birthDate = new Date(dob);
+  if (isNaN(birthDate.getTime())) return '-';
+  
   const today = new Date();
   let age = today.getFullYear() - birthDate.getFullYear();
   const m = today.getMonth() - birthDate.getMonth();
@@ -14,6 +18,7 @@ export const calculateAge = (dob: string) => {
 export const formatThaiDateBE = (isoDate: string) => {
     if (!isoDate) return '-';
     const date = new Date(isoDate);
+    if (isNaN(date.getTime())) return '-';
     return new Intl.DateTimeFormat('th-TH-u-ca-buddhist', {
         day: 'numeric',
         month: 'short',
@@ -24,6 +29,7 @@ export const formatThaiDateBE = (isoDate: string) => {
 export const formatThaiDateShort = (isoDate: string) => {
     if (!isoDate) return '-';
     const date = new Date(isoDate);
+    if (isNaN(date.getTime())) return '-';
     return new Intl.DateTimeFormat('th-TH', {
         day: 'numeric',
         month: 'short',
@@ -35,8 +41,6 @@ export const inputClass = "mt-1 block w-full px-3 py-2 bg-white border border-gr
 export const labelClass = "block text-sm font-medium text-gray-700";
 export const textareaClass = `${inputClass} min-h-[80px]`;
 
-// FIX: Replaced JSX with React.createElement to be compatible with a .ts file extension.
-// JSX syntax is not allowed in .ts files and causes parsing errors.
 export const DisplayField: React.FC<{ label: string; value?: string | React.ReactNode | null }> = ({ label, value }) => {
     return React.createElement(
         'div',

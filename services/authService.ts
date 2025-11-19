@@ -1,5 +1,5 @@
 
-import { pool } from './db';
+import { pool, isDbConfigured } from './db';
 
 export interface User {
     id: number;
@@ -9,6 +9,10 @@ export interface User {
 }
 
 export const login = async (username: string, password: string): Promise<User | null> => {
+    if (!isDbConfigured) {
+        throw new Error('DB_NOT_CONFIGURED');
+    }
+
     try {
         // Note: In a real production app, passwords should be hashed (e.g., bcrypt).
         // This example uses plain text for demonstration purposes as per the SQL setup.
@@ -27,8 +31,10 @@ export const login = async (username: string, password: string): Promise<User | 
             };
         }
         return null;
-    } catch (error) {
+    } catch (error: any) {
         console.error("Login error:", error);
-        throw error;
+        // Convert object errors to string to avoid [object Object] in UI
+        const errorMessage = error.message || JSON.stringify(error);
+        throw new Error(errorMessage);
     }
 };

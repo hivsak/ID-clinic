@@ -27,13 +27,22 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
     try {
       await onLogin(username, password);
     } catch (err: any) {
-      console.error(err);
-      if (err.message === 'INVALID_CREDENTIALS') {
+      console.error("Login page caught error:", err);
+      
+      const msg = err.message || '';
+
+      if (msg === 'INVALID_CREDENTIALS') {
           setError('ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง');
-      } else if (err.isTrusted) { // Network error
-          setError('ไม่สามารถเชื่อมต่อฐานข้อมูลได้ (Network Error) กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต หรือตั้งค่า Database URL ใหม่');
+      } else if (msg === 'DB_NOT_CONFIGURED') {
+          setError('ไม่พบการตั้งค่าฐานข้อมูล กรุณาระบุ Connection String');
+          setShowSettings(true);
+      } else if (err.isTrusted || msg.includes('Network Error')) { 
+          setError('ไม่สามารถเชื่อมต่อฐานข้อมูลได้ (Network Error) กรุณาตรวจสอบอินเทอร์เน็ต หรือการตั้งค่า URL');
+          setShowSettings(true);
       } else {
-          setError('เกิดข้อผิดพลาด: ' + (err.message || 'Unknown error'));
+          // Handle [object Object] by trying to extract meaningful info or printing the string
+          const displayMsg = typeof err === 'string' ? err : msg;
+          setError('เกิดข้อผิดพลาด: ' + displayMsg);
       }
     } finally {
       setIsLoading(false);
@@ -126,7 +135,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
             </div>
 
             {error && (
-                <div className="text-red-500 text-sm text-center bg-red-50 p-2 rounded-md border border-red-200">
+                <div className="text-red-500 text-sm text-center bg-red-50 p-2 rounded-md border border-red-200 break-words">
                 {error}
                 </div>
             )}

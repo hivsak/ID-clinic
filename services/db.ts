@@ -42,6 +42,7 @@ const getConnectionString = () => {
         const stored = localStorage.getItem('ID_CLINIC_DB_URL');
         if (stored) return stored;
     }
+    // Explicitly check known keys to help bundlers
     return getEnv('VITE_DATABASE_URL') || getEnv('DATABASE_URL2') || getEnv('DATABASE_URL');
 }
 
@@ -54,6 +55,8 @@ if (!connectionString) {
     console.log(`Database connection initialized with: ${masked}`);
 }
 
+export const isDbConfigured = !!connectionString && !connectionString.includes('placeholder');
+
 export const pool = new Pool({ 
     connectionString: connectionString || 'postgres://placeholder:placeholder@placeholder/placeholder', // Prevent crash on empty string
     ssl: true,
@@ -61,5 +64,3 @@ export const pool = new Pool({
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 15000, 
 });
-
-export const isDbConfigured = !!connectionString;

@@ -8,6 +8,7 @@ import { LoginPage } from './components/LoginPage';
 import { Patient, PatientStatus } from './types';
 import { BellIcon } from './components/icons';
 import { getPatients, createPatient, updatePatient, getPatientById } from './services/patientService';
+import { login } from './services/authService';
 
 type View = 'list' | 'detail' | 'form';
 
@@ -66,18 +67,21 @@ const App: React.FC = () => {
           
           // Check for DOM Exception / Network Error (isTrusted: true)
           if (typeof err === 'object' && err.isTrusted === true) {
-             errorMsg = "ไม่สามารถเชื่อมต่อกับฐานข้อมูลได้ (Network Error)\nกรุณาตรวจสอบ:\n1. อินเทอร์เน็ตของคุณ\n2. ค่า DATABASE_URL2 ถูกต้องหรือไม่";
+             errorMsg = "ไม่สามารถเชื่อมต่อกับฐานข้อมูลได้ (Network Error)\nกรุณาตรวจสอบ:\n1. อินเทอร์เน็ตของคุณ\n2. ตรวจสอบว่าชื่อตัวแปร DATABASE_URL2 หรือ VITE_DATABASE_URL ถูกต้อง";
           } else if (err instanceof Error) {
              errorMsg = err.message;
              // Specific hint for missing tables
              if (err.message.includes('relation') && err.message.includes('does not exist')) {
-                 errorMsg += "\n\nคำแนะนำ: ดูเหมือนคุณยังไม่ได้สร้างตารางในฐานข้อมูล กรุณารัน SQL Code ที่ให้ไปใน SQL Editor";
+                 errorMsg += "\n\nคำแนะนำ: ดูเหมือนคุณยังไม่ได้สร้างตารางในฐานข้อมูล (public.patients) กรุณารัน SQL Code";
              }
           } else {
              errorMsg = JSON.stringify(err);
           }
           
-          alert(`ไม่สามารถดึงข้อมูลผู้ป่วยได้\n----------------\nสาเหตุ: ${errorMsg}`);
+          // Only alert if we are logged in, otherwise it pops up on login screen
+          if (localStorage.getItem('idClinic_isLoggedIn') === 'true') {
+               alert(`ไม่สามารถดึงข้อมูลผู้ป่วยได้\n----------------\nสาเหตุ: ${errorMsg}`);
+          }
       } finally {
           setIsLoading(false);
       }
@@ -119,10 +123,15 @@ const App: React.FC = () => {
     setNotifications(activeNotifications.sort((a,b) => a.dueDate.getTime() - b.dueDate.getTime()));
   }, [patients, isLoggedIn]);
 
-  const handleLogin = () => {
-      setIsLoggedIn(true);
-      localStorage.setItem('idClinic_isLoggedIn', 'true');
-      fetchPatients();
+  const handleLogin = async (username: string, password: string) => {
+      const user = await login(username, password);
+      if (user) {
+          setIsLoggedIn(true);
+          localStorage.setItem('idClinic_isLoggedIn', 'true');
+          fetchPatients();
+      } else {
+          throw new Error('INVALID_CREDENTIALS');
+      }
   };
 
   const handleLogout = () => {

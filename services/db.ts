@@ -36,12 +36,12 @@ const getEnv = (key: string) => {
   return undefined;
 };
 
-// Try to get DATABASE_URL2 first, then fallback to DATABASE_URL
-const connectionString = getEnv('DATABASE_URL2') || getEnv('DATABASE_URL');
+// Priority: VITE_DATABASE_URL (Standard Vite) -> DATABASE_URL2 (User custom) -> DATABASE_URL (Default)
+const connectionString = getEnv('VITE_DATABASE_URL') || getEnv('DATABASE_URL2') || getEnv('DATABASE_URL');
 
 // Check if connection string is valid
 if (!connectionString) {
-    console.warn("WARNING: Database connection string (DATABASE_URL2) is missing. Database features will fail.");
+    console.warn("WARNING: Database connection string is missing. Please set VITE_DATABASE_URL or DATABASE_URL2.");
 } else {
     // Mask the password for logging safety
     const maskedString = connectionString.replace(/:([^:@]+)@/, ':****@');
@@ -49,11 +49,11 @@ if (!connectionString) {
 }
 
 // Initialize pool with connection string.
-// Note: Neon requires SSL, so we explicitly set it, although the connection string usually handles it.
+// Note: Neon requires SSL.
 export const pool = new Pool({ 
     connectionString: connectionString || '',
-    ssl: true, // Enforce SSL for Neon
-    max: 20,   // Max clients in the pool
+    ssl: true, // Strict SSL for Neon
+    max: 20,
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 5000, // Fail relatively fast if connection is stuck
+    connectionTimeoutMillis: 10000, 
 });

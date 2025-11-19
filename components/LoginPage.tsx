@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 
 interface LoginPageProps {
-  onLogin: () => void;
+  onLogin: (username: string, password: string) => Promise<void>;
 }
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
@@ -11,21 +11,25 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
 
-    // Simulate network delay
-    setTimeout(() => {
-      // Mock authentication logic
-      if (username === 'admin' && password === 'password') {
-        onLogin();
+    try {
+      await onLogin(username, password);
+    } catch (err: any) {
+      console.error(err);
+      if (err.message === 'INVALID_CREDENTIALS') {
+          setError('ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง');
+      } else if (err.isTrusted) { // Network error
+          setError('ไม่สามารถเชื่อมต่อฐานข้อมูลได้ (Network Error) กรุณาตรวจสอบการตั้งค่า');
       } else {
-        setError('ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง');
-        setIsLoading(false);
+          setError('เกิดข้อผิดพลาดในการเข้าสู่ระบบ: ' + err.message);
       }
-    }, 800);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

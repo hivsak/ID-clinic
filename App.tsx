@@ -5,15 +5,15 @@ import { PatientList } from './components/PatientList';
 import { PatientDetail } from './components/PatientDetail';
 import { PatientForm, NewPatientData } from './components/PatientForm';
 import { LoginPage } from './components/LoginPage';
-import { mockPatients } from './data/mockData';
 import { Patient, PatientStatus } from './types';
 import { BellIcon } from './components/icons';
+import { getPatients, createPatient, updatePatient, getPatientById } from './services/patientService';
 
 type View = 'list' | 'detail' | 'form';
 
 // --- Utility Functions ---
 const calculateVlTestDate = (ga: string, gaDateStr: string): Date | null => {
-    // Relaxed regex to allow more than 2 digits for weeks (e.g. >99 weeks or historical data)
+    // Relaxed regex to allow more than 2 digits for weeks
     if (!ga || !gaDateStr || !/^\d+\+\d+$/.test(ga)) {
         return null;
     }
@@ -43,17 +43,29 @@ const App: React.FC = () => {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     // Check for existing session
     const storedLogin = localStorage.getItem('idClinic_isLoggedIn');
     if (storedLogin === 'true') {
         setIsLoggedIn(true);
+        fetchPatients();
     }
-
-    // Simulate fetching data - Deep clone to ensure references are fresh and deletions work correctly
-    setPatients(JSON.parse(JSON.stringify(mockPatients)));
   }, []);
+
+  const fetchPatients = async () => {
+      setIsLoading(true);
+      try {
+          const data = await getPatients();
+          setPatients(data);
+      } catch (err) {
+          console.error("Failed to fetch patients", err);
+          alert("ไม่สามารถดึงข้อมูลผู้ป่วยได้");
+      } finally {
+          setIsLoading(false);
+      }
+  };
 
   useEffect(() => {
     if (!isLoggedIn) return;
@@ -94,6 +106,7 @@ const App: React.FC = () => {
   const handleLogin = () => {
       setIsLoggedIn(true);
       localStorage.setItem('idClinic_isLoggedIn', 'true');
+      fetchPatients();
   };
 
   const handleLogout = () => {
@@ -101,19 +114,29 @@ const App: React.FC = () => {
       localStorage.removeItem('idClinic_isLoggedIn');
       setView('list');
       setSelectedPatient(null);
+      setPatients([]);
   };
 
-  const handleSelectPatient = useCallback((id: number) => {
-    const patient = patients.find(p => p.id === id);
-    if (patient) {
-      setSelectedPatient(patient);
-      setView('detail');
+  const handleSelectPatient = useCallback(async (id: number) => {
+    setIsLoading(true);
+    try {
+        const patient = await getPatientById(id);
+        if (patient) {
+            setSelectedPatient(patient);
+            setView('detail');
+        }
+    } catch (err) {
+        console.error("Error fetching patient details", err);
+        alert("เกิดข้อผิดพลาดในการดึงข้อมูลผู้ป่วย");
+    } finally {
+        setIsLoading(false);
     }
-  }, [patients]);
+  }, []);
 
   const handleBackToList = useCallback(() => {
     setSelectedPatient(null);
     setView('list');
+    fetchPatients(); // Refresh list on back
   }, []);
 
   const handleAddNew = useCallback(() => {
@@ -124,27 +147,45 @@ const App: React.FC = () => {
     setView('list');
   }, []);
 
-  const handleSavePatient = useCallback((newPatientData: NewPatientData) => {
-    const newPatient: Patient = {
-      ...newPatientData,
-      id: Date.now(), // Use a simple unique ID for this demo
-      medicalHistory: [],
-      status: PatientStatus.ACTIVE,
-      registrationDate: new Date().toISOString().split('T')[0], // Today's date
-    };
-    setPatients(prevPatients => [newPatient, ...prevPatients]);
-    setView('list');
+  const handleSavePatient = useCallback(async (newPatientData: NewPatientData) => {
+    setIsLoading(true);
+    try {
+        await createPatient(newPatientData);
+        await fetchPatients();
+        setView('list');
+    } catch (err) {
+        console.error("Error creating patient", err);
+        alert("บันทึกข้อมูลล้มเหลว");
+    } finally {
+        setIsLoading(false);
+    }
   }, []);
   
-  const handleUpdatePatient = useCallback((updatedPatient: Patient) => {
-    setPatients(prevPatients => 
-        prevPatients.map(p => p.id === updatedPatient.id ? updatedPatient : p)
-    );
+  const handleUpdatePatient = useCallback(async (updatedPatient: Patient) => {
+    // Optimistic UI update
     setSelectedPatient(updatedPatient);
+    
+    try {
+        await updatePatient(updatedPatient);
+        // We can re-fetch detailed data to ensure everything is synced (e.g. generated IDs)
+        const refreshedPatient = await getPatientById(updatedPatient.id);
+        if (refreshedPatient) {
+             setSelectedPatient(refreshedPatient);
+             // Update list in background
+             setPatients(prev => prev.map(p => p.id === refreshedPatient.id ? refreshedPatient : p));
+        }
+    } catch (err) {
+        console.error("Error updating patient", err);
+        alert("บันทึกการเปลี่ยนแปลงล้มเหลว");
+    }
   }, []);
 
 
   const renderContent = () => {
+    if (isLoading && patients.length === 0) {
+        return <div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div></div>;
+    }
+
     if (view === 'detail' && selectedPatient) {
         return <PatientDetail patient={selectedPatient} onBack={handleBackToList} onUpdate={handleUpdatePatient} />;
     }

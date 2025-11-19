@@ -1,9 +1,8 @@
 
 import { Pool } from '@neondatabase/serverless';
 
-// Helper to safely access environment variables across different environments (Vite, Node, Browser)
+// Helper to safely access environment variables across different environments
 const getEnv = (key: string) => {
-  // 1. Try import.meta.env (Vite standard)
   try {
     // @ts-ignore
     if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[key]) {
@@ -12,14 +11,12 @@ const getEnv = (key: string) => {
     }
   } catch (e) {}
 
-  // 2. Try process.env (Node.js / Webpack / Some build tools)
   try {
     if (typeof process !== 'undefined' && process.env && process.env[key]) {
       return process.env[key];
     }
   } catch (e) {}
 
-  // 3. Try direct window access (Runtime injection)
   try {
     // @ts-ignore
     if (typeof window !== 'undefined' && window[key]) {
@@ -36,24 +33,33 @@ const getEnv = (key: string) => {
   return undefined;
 };
 
-// Priority: VITE_DATABASE_URL (Standard Vite) -> DATABASE_URL2 (User custom) -> DATABASE_URL (Default)
-const connectionString = getEnv('VITE_DATABASE_URL') || getEnv('DATABASE_URL2') || getEnv('DATABASE_URL');
-
-// Check if connection string is valid
-if (!connectionString) {
-    console.warn("WARNING: Database connection string is missing. Please set VITE_DATABASE_URL or DATABASE_URL2.");
-} else {
-    // Mask the password for logging safety
-    const maskedString = connectionString.replace(/:([^:@]+)@/, ':****@');
-    console.log(`Database connection initialized with: ${maskedString}`);
+// 1. Try localStorage (Manual override from UI)
+// 2. Try VITE_DATABASE_URL (Standard Vite)
+// 3. Try DATABASE_URL2 (User custom)
+// 4. Try DATABASE_URL (Default)
+const getConnectionString = () => {
+    if (typeof window !== 'undefined') {
+        const stored = localStorage.getItem('ID_CLINIC_DB_URL');
+        if (stored) return stored;
+    }
+    return getEnv('VITE_DATABASE_URL') || getEnv('DATABASE_URL2') || getEnv('DATABASE_URL');
 }
 
-// Initialize pool with connection string.
-// Note: Neon requires SSL.
+const connectionString = getConnectionString();
+
+if (!connectionString) {
+    console.warn("WARNING: Database connection string is missing.");
+} else {
+    const masked = connectionString.replace(/:([^:@]+)@/, ':****@');
+    console.log(`Database connection initialized with: ${masked}`);
+}
+
 export const pool = new Pool({ 
-    connectionString: connectionString || '',
-    ssl: true, // Strict SSL for Neon
+    connectionString: connectionString || 'postgres://placeholder:placeholder@placeholder/placeholder', // Prevent crash on empty string
+    ssl: true,
     max: 20,
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 10000, 
+    connectionTimeoutMillis: 15000, 
 });
+
+export const isDbConfigured = !!connectionString;

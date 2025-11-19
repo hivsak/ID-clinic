@@ -39,12 +39,21 @@ const getEnv = (key: string) => {
 // Try to get DATABASE_URL2 first, then fallback to DATABASE_URL
 const connectionString = getEnv('DATABASE_URL2') || getEnv('DATABASE_URL');
 
+// Check if connection string is valid
 if (!connectionString) {
-  console.error("CRITICAL: Database connection string not found. Please ensure DATABASE_URL2 or DATABASE_URL is set in your .env file or environment.");
+    console.warn("WARNING: Database connection string (DATABASE_URL2) is missing. Database features will fail.");
 } else {
-    // Log partially hidden string for debugging purposes
-    console.log(`Database connection initialized with: ${connectionString.substring(0, 15)}...`);
+    // Mask the password for logging safety
+    const maskedString = connectionString.replace(/:([^:@]+)@/, ':****@');
+    console.log(`Database connection initialized with: ${maskedString}`);
 }
 
-// Initialize pool with connection string (or empty string to prevent immediate crash, though queries will fail)
-export const pool = new Pool({ connectionString: connectionString || '' });
+// Initialize pool with connection string.
+// Note: Neon requires SSL, so we explicitly set it, although the connection string usually handles it.
+export const pool = new Pool({ 
+    connectionString: connectionString || '',
+    ssl: true, // Enforce SSL for Neon
+    max: 20,   // Max clients in the pool
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 5000, // Fail relatively fast if connection is stuck
+});

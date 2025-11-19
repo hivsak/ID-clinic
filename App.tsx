@@ -61,8 +61,23 @@ const App: React.FC = () => {
           setPatients(data);
       } catch (err: any) {
           console.error("Failed to fetch patients", err);
-          const errorMsg = err instanceof Error ? err.message : JSON.stringify(err);
-          alert(`ไม่สามารถดึงข้อมูลผู้ป่วยได้\nสาเหตุ: ${errorMsg}`);
+          
+          let errorMsg = '';
+          
+          // Check for DOM Exception / Network Error (isTrusted: true)
+          if (typeof err === 'object' && err.isTrusted === true) {
+             errorMsg = "ไม่สามารถเชื่อมต่อกับฐานข้อมูลได้ (Network Error)\nกรุณาตรวจสอบ:\n1. อินเทอร์เน็ตของคุณ\n2. ค่า DATABASE_URL2 ถูกต้องหรือไม่";
+          } else if (err instanceof Error) {
+             errorMsg = err.message;
+             // Specific hint for missing tables
+             if (err.message.includes('relation') && err.message.includes('does not exist')) {
+                 errorMsg += "\n\nคำแนะนำ: ดูเหมือนคุณยังไม่ได้สร้างตารางในฐานข้อมูล กรุณารัน SQL Code ที่ให้ไปใน SQL Editor";
+             }
+          } else {
+             errorMsg = JSON.stringify(err);
+          }
+          
+          alert(`ไม่สามารถดึงข้อมูลผู้ป่วยได้\n----------------\nสาเหตุ: ${errorMsg}`);
       } finally {
           setIsLoading(false);
       }
@@ -128,7 +143,7 @@ const App: React.FC = () => {
         }
     } catch (err: any) {
         console.error("Error fetching patient details", err);
-        const errorMsg = err instanceof Error ? err.message : JSON.stringify(err);
+        const errorMsg = err instanceof Error ? err.message : (err.isTrusted ? 'Network Connection Failed' : JSON.stringify(err));
         alert(`เกิดข้อผิดพลาดในการดึงข้อมูลผู้ป่วย\nสาเหตุ: ${errorMsg}`);
     } finally {
         setIsLoading(false);
@@ -157,7 +172,7 @@ const App: React.FC = () => {
         setView('list');
     } catch (err: any) {
         console.error("Error creating patient", err);
-        const errorMsg = err instanceof Error ? err.message : JSON.stringify(err);
+        const errorMsg = err instanceof Error ? err.message : (err.isTrusted ? 'Network Connection Failed' : JSON.stringify(err));
         alert(`บันทึกข้อมูลล้มเหลว\nสาเหตุ: ${errorMsg}`);
     } finally {
         setIsLoading(false);
@@ -179,7 +194,7 @@ const App: React.FC = () => {
         }
     } catch (err: any) {
         console.error("Error updating patient", err);
-        const errorMsg = err instanceof Error ? err.message : JSON.stringify(err);
+        const errorMsg = err instanceof Error ? err.message : (err.isTrusted ? 'Network Connection Failed' : JSON.stringify(err));
         alert(`บันทึกการเปลี่ยนแปลงล้มเหลว\nสาเหตุ: ${errorMsg}`);
     }
   }, []);

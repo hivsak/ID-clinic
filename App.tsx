@@ -59,9 +59,10 @@ const App: React.FC = () => {
       try {
           const data = await getPatients();
           setPatients(data);
-      } catch (err) {
+      } catch (err: any) {
           console.error("Failed to fetch patients", err);
-          alert("ไม่สามารถดึงข้อมูลผู้ป่วยได้");
+          const errorMsg = err instanceof Error ? err.message : JSON.stringify(err);
+          alert(`ไม่สามารถดึงข้อมูลผู้ป่วยได้\nสาเหตุ: ${errorMsg}`);
       } finally {
           setIsLoading(false);
       }
@@ -125,9 +126,10 @@ const App: React.FC = () => {
             setSelectedPatient(patient);
             setView('detail');
         }
-    } catch (err) {
+    } catch (err: any) {
         console.error("Error fetching patient details", err);
-        alert("เกิดข้อผิดพลาดในการดึงข้อมูลผู้ป่วย");
+        const errorMsg = err instanceof Error ? err.message : JSON.stringify(err);
+        alert(`เกิดข้อผิดพลาดในการดึงข้อมูลผู้ป่วย\nสาเหตุ: ${errorMsg}`);
     } finally {
         setIsLoading(false);
     }
@@ -153,16 +155,17 @@ const App: React.FC = () => {
         await createPatient(newPatientData);
         await fetchPatients();
         setView('list');
-    } catch (err) {
+    } catch (err: any) {
         console.error("Error creating patient", err);
-        alert("บันทึกข้อมูลล้มเหลว");
+        const errorMsg = err instanceof Error ? err.message : JSON.stringify(err);
+        alert(`บันทึกข้อมูลล้มเหลว\nสาเหตุ: ${errorMsg}`);
     } finally {
         setIsLoading(false);
     }
   }, []);
   
   const handleUpdatePatient = useCallback(async (updatedPatient: Patient) => {
-    // Optimistic UI update
+    // Optimistic UI update (optional, but keeping it makes UI snappy)
     setSelectedPatient(updatedPatient);
     
     try {
@@ -174,9 +177,10 @@ const App: React.FC = () => {
              // Update list in background
              setPatients(prev => prev.map(p => p.id === refreshedPatient.id ? refreshedPatient : p));
         }
-    } catch (err) {
+    } catch (err: any) {
         console.error("Error updating patient", err);
-        alert("บันทึกการเปลี่ยนแปลงล้มเหลว");
+        const errorMsg = err instanceof Error ? err.message : JSON.stringify(err);
+        alert(`บันทึกการเปลี่ยนแปลงล้มเหลว\nสาเหตุ: ${errorMsg}`);
     }
   }, []);
 

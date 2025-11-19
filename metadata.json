@@ -1,0 +1,5 @@
+{
+  "name": "ID Clinic - Patient Management",
+  "description": "A web application for managing patient records at the ID Clinic, including general information, treatment history, and various medical test results.",
+  "requestFramePermissions": []
+}

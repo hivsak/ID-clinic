@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Patient } from '../../types';
 import { DisplayField, inputClass, labelClass } from '../utils';
@@ -82,6 +83,7 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, isEditi
                         </div>
                         <DisplayField label="เบอร์โทรศัพท์" value={patient.phone} />
                         <DisplayField label="สิทธิการรักษา" value={patient.healthcareScheme} />
+                        <DisplayField label="วันนัดหมายครั้งถัดไป" value={patient.nextAppointmentDate ? new Date(patient.nextAppointmentDate).toLocaleDateString('th-TH') : '-'} />
                     </div>
                 </div>
                  <div className="bg-white p-6 rounded-lg shadow-sm">
@@ -214,6 +216,10 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, isEditi
                             <option>สิทธิข้าราชการ</option>
                             <option>ชำระเงินเอง</option>
                         </select>
+                    </div>
+                     <div>
+                        <label htmlFor="nextAppointmentDate" className={labelClass}>วันนัดหมายครั้งถัดไป</label>
+                        <input type="date" name="nextAppointmentDate" id="nextAppointmentDate" value={formData.nextAppointmentDate || ''} onChange={handleChange} className={inputClass} />
                     </div>
                 </div>
             </div>

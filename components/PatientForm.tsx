@@ -34,6 +34,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
         referralType: 'มหาสารคาม',
         referredFrom: '',
         referralDate: '',
+        nextAppointmentDate: '',
     });
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -180,6 +181,10 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
                                 <option>สิทธิข้าราชการ</option>
                                 <option>ชำระเงินเอง</option>
                             </select>
+                        </div>
+                         <div>
+                            <label htmlFor="nextAppointmentDate" className={labelClass}>วันนัดหมายครั้งถัดไป</label>
+                            <input type="date" name="nextAppointmentDate" id="nextAppointmentDate" value={formData.nextAppointmentDate} onChange={handleChange} className={inputClass} />
                         </div>
                     </div>
                 </div>

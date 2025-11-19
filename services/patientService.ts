@@ -161,18 +161,18 @@ export const createPatient = async (data: any): Promise<number> => {
         const res = await pool.query(`
             INSERT INTO public.patients (
                 hn, nap_id, title, first_name, last_name, dob, sex, risk_behavior,
-                status, registration_date, occupation, partner_status, partner_hiv_status,
+                status, registration_date, next_appointment_date, occupation, partner_status, partner_hiv_status,
                 address, district, subdistrict, province, phone, healthcare_scheme,
                 referral_type, referred_from, referral_date
             ) VALUES (
                 $1, $2, $3, $4, $5, $6, $7, $8,
-                $9, $10, $11, $12, $13,
-                $14, $15, $16, $17, $18, $19,
-                $20, $21, $22
+                $9, $10, $11, $12, $13, $14,
+                $15, $16, $17, $18, $19, $20,
+                $21, $22, $23
             ) RETURNING id
         `, [
             data.hn, data.napId, data.title, data.firstName, data.lastName, dateOrNull(data.dob), data.sex, data.riskBehavior,
-            'Active', new Date(), data.occupation, data.partnerStatus, data.partnerHivStatus,
+            'Active', new Date(), dateOrNull(data.nextAppointmentDate), data.occupation, data.partnerStatus, data.partnerHivStatus,
             data.address, data.district, data.subdistrict, data.province, data.phone, data.healthcareScheme,
             data.referralType, data.referredFrom, dateOrNull(data.referralDate)
         ]);

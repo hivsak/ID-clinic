@@ -37,13 +37,17 @@ const getEnv = (key: string) => {
 // 2. Try VITE_DATABASE_URL (Standard Vite)
 // 3. Try DATABASE_URL2 (User custom)
 // 4. Try DATABASE_URL (Default)
+// 5. Fallback to hardcoded string provided by user
 const getConnectionString = () => {
     if (typeof window !== 'undefined') {
         const stored = localStorage.getItem('ID_CLINIC_DB_URL');
         if (stored) return stored;
     }
     // Explicitly check known keys to help bundlers
-    return getEnv('VITE_DATABASE_URL') || getEnv('DATABASE_URL2') || getEnv('DATABASE_URL');
+    return getEnv('VITE_DATABASE_URL') || 
+           getEnv('DATABASE_URL2') || 
+           getEnv('DATABASE_URL') || 
+           'postgresql://neondb_owner:npg_8XEHYI9AVRWq@ep-autumn-bush-a1wefwo1-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require';
 }
 
 const connectionString = getConnectionString();

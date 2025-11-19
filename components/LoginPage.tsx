@@ -114,7 +114,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                     type="text"
                     required
                     className="appearance-none rounded-lg relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 focus:z-10 sm:text-sm"
-                    placeholder="ชื่อผู้ใช้งาน (admin)"
+                    placeholder="ชื่อผู้ใช้งาน (username)"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                 />

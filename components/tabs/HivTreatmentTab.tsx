@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Patient, MedicalEvent, MedicalEventType } from '../../types';
 import { 
@@ -5,6 +6,112 @@ import {
     ProphylaxisIcon, LabResultIcon, OtherIcon, PlusIcon, EditIcon, TrashIcon
 } from '../icons';
 import { inputClass, labelClass, textareaClass, formatThaiDateBE } from '../utils';
+
+// --- ARV Constants & Helper Components ---
+
+const ARV_DRUGS = [
+    'TDF', 'TAF', 'AZT', 'ABC', '3TC', 'FTC', 'DTG', 
+    'DRV/r', 'DRV/c', 'RPV', 'EFV', 'NVP', 'D4T', 
+    'BIC', 'RAL', 'LPV/r', 'ATV/r'
+];
+
+const ARV_SHORTCUTS = [
+    { label: 'TLD', drugs: ['TDF', '3TC', 'DTG'] },
+    { label: 'Kocitaf', drugs: ['TAF', 'FTC', 'DTG'] },
+    { label: 'Goivir-T', drugs: ['TDF', 'FTC', 'EFV'] },
+];
+
+interface ArvRegimenSelectorProps {
+    value: string;
+    onChange: (newValue: string) => void;
+    name: string;
+}
+
+const ArvRegimenSelector: React.FC<ArvRegimenSelectorProps> = ({ value, onChange, name }) => {
+    // Parse current string "A + B" into array ["A", "B"]
+    const selectedDrugs = value ? value.split(' + ').filter(d => d.trim() !== '') : [];
+
+    const handleAddDrug = (drug: string) => {
+        if (selectedDrugs.length >= 5) return;
+        const newDrugs = [...selectedDrugs, drug];
+        onChange(newDrugs.join(' + '));
+    };
+
+    const handleRemoveDrug = (index: number) => {
+        const newDrugs = [...selectedDrugs];
+        newDrugs.splice(index, 1);
+        onChange(newDrugs.join(' + '));
+    };
+
+    const handleShortcut = (drugs: string[]) => {
+        onChange(drugs.join(' + '));
+    };
+
+    // Filter out drugs already selected
+    const availableDrugs = ARV_DRUGS.filter(d => !selectedDrugs.includes(d));
+
+    return (
+        <div className="space-y-3">
+            {/* Shortcuts */}
+            <div className="flex flex-wrap gap-2">
+                {ARV_SHORTCUTS.map(sc => (
+                    <button
+                        key={sc.label}
+                        type="button"
+                        onClick={() => handleShortcut(sc.drugs)}
+                        className="px-3 py-1 text-xs font-medium text-white bg-indigo-500 hover:bg-indigo-600 rounded-full transition-colors shadow-sm"
+                    >
+                        {sc.label}
+                    </button>
+                ))}
+            </div>
+
+            {/* Selected Drugs Tags (The "Slots") */}
+            <div className="flex flex-wrap gap-2 min-h-[38px] p-2 bg-gray-50 border border-gray-300 rounded-md items-center">
+                {selectedDrugs.length === 0 && <span className="text-gray-400 text-sm italic ml-1">ยังไม่ได้เลือกยา...</span>}
+                {selectedDrugs.map((drug, idx) => (
+                    <span key={`${drug}-${idx}`} className="inline-flex items-center px-2.5 py-0.5 rounded-md text-sm font-medium bg-emerald-100 text-emerald-800 border border-emerald-200">
+                        {drug}
+                        <button
+                            type="button"
+                            onClick={() => handleRemoveDrug(idx)}
+                            className="flex-shrink-0 ml-1.5 h-4 w-4 rounded-full inline-flex items-center justify-center text-emerald-600 hover:bg-emerald-200 focus:outline-none"
+                        >
+                            <span className="sr-only">Remove</span>
+                            &times;
+                        </button>
+                    </span>
+                ))}
+            </div>
+
+            {/* Add Drug Dropdown */}
+            {selectedDrugs.length < 5 && (
+                <div className="relative">
+                    <select
+                        onChange={(e) => {
+                            if (e.target.value) {
+                                handleAddDrug(e.target.value);
+                                e.target.value = ""; // Reset select
+                            }
+                        }}
+                        className={inputClass}
+                        defaultValue=""
+                    >
+                        <option value="" disabled>+ เพิ่มยาในสูตร ({selectedDrugs.length}/5)</option>
+                        {availableDrugs.map(drug => (
+                            <option key={drug} value={drug}>{drug}</option>
+                        ))}
+                    </select>
+                </div>
+            )}
+            
+            {/* Hidden input to ensure form data is passed correctly if needed by generic handlers, though we use onChange prop */}
+            <input type="hidden" name={name} value={value} />
+        </div>
+    );
+};
+
+// --- End ARV Helpers ---
 
 const getFirstEventDate = (history: MedicalEvent[], type: MedicalEventType): string => {
     const event = history.find(e => e.type === type);
@@ -80,7 +187,7 @@ const infections = {
 };
 
 
-const renderEventDetailForm = (type: MedicalEventType, details: Record<string, any>, handleDetailChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void) => {
+const renderEventDetailForm = (type: MedicalEventType, details: Record<string, any>, handleDetailChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void, handleArvChange: (name: string, value: string) => void) => {
     switch (type) {
         case MedicalEventType.DIAGNOSIS:
             return (
@@ -93,7 +200,14 @@ const renderEventDetailForm = (type: MedicalEventType, details: Record<string, a
         case MedicalEventType.ART_START:
              return (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div><label htmlFor="regimen" className={labelClass}>สูตรยา</label><input type="text" name="สูตรยา" id="regimen" value={details['สูตรยา'] || ''} onChange={handleDetailChange} className={inputClass} /></div>
+                    <div>
+                        <label htmlFor="regimen" className={labelClass}>สูตรยา</label>
+                        <ArvRegimenSelector 
+                            name="สูตรยา" 
+                            value={details['สูตรยา'] || ''} 
+                            onChange={(val) => handleArvChange('สูตรยา', val)} 
+                        />
+                    </div>
                     <div><label htmlFor="reason" className={labelClass}>เหตุผล</label><textarea name="เหตุผล" id="reason" value={details['เหตุผล'] || ''} onChange={handleDetailChange} className={textareaClass}></textarea></div>
                 </div>
             );
@@ -124,8 +238,18 @@ const renderEventDetailForm = (type: MedicalEventType, details: Record<string, a
         case MedicalEventType.ART_CHANGE:
             return (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div><label htmlFor="fromRegimen" className={labelClass}>จากสูตร</label><input type="text" name="จาก" id="fromRegimen" value={details['จาก'] || ''} onChange={handleDetailChange} className={inputClass} /></div>
-                    <div><label htmlFor="toRegimen" className={labelClass}>เป็นสูตร</label><input type="text" name="เป็น" id="toRegimen" value={details['เป็น'] || ''} onChange={handleDetailChange} className={inputClass} /></div>
+                    <div>
+                        <label htmlFor="fromRegimen" className={labelClass}>จากสูตร</label>
+                        <input type="text" name="จาก" id="fromRegimen" value={details['จาก'] || ''} onChange={handleDetailChange} className={inputClass} placeholder="ระบุหรือเลือกจากประวัติ" />
+                    </div>
+                    <div>
+                        <label htmlFor="toRegimen" className={labelClass}>เป็นสูตร</label>
+                        <ArvRegimenSelector 
+                            name="เป็น" 
+                            value={details['เป็น'] || ''} 
+                            onChange={(val) => handleArvChange('เป็น', val)} 
+                        />
+                    </div>
                     <div><label htmlFor="reason" className={labelClass}>เหตุผล</label><textarea name="เหตุผล" id="reason" value={details['เหตุผล'] || ''} onChange={handleDetailChange} className={textareaClass}></textarea></div>
                 </div>
             );
@@ -228,6 +352,12 @@ const EditEventModal: React.FC<EditEventModalProps> = ({ isOpen, event, onClose,
         setFormData(prev => prev ? { ...prev, details: newDetails } : null);
     };
 
+    const handleArvChange = (name: string, value: string) => {
+        const newDetails = { ...formData.details };
+        newDetails[name] = value;
+        setFormData(prev => prev ? { ...prev, details: newDetails } : null);
+    };
+
     const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFormData(prev => prev ? { ...prev, date: e.target.value } : null);
     };
@@ -258,7 +388,7 @@ const EditEventModal: React.FC<EditEventModalProps> = ({ isOpen, event, onClose,
                             <label htmlFor="eventDateEdit" className={labelClass}>ลงวันที่</label>
                             <input type="date" id="eventDateEdit" value={formData.date} onChange={handleDateChange} className={inputClass} style={{ maxWidth: '200px' }}/>
                         </div>
-                        {renderEventDetailForm(event.type, formData.details, handleDetailChange)}
+                        {renderEventDetailForm(event.type, formData.details, handleDetailChange, handleArvChange)}
                     </div>
                     <div className="p-6 border-t flex justify-end gap-x-3 bg-gray-50 rounded-b-lg sticky bottom-0">
                         <button onClick={onClose} type="button" className="px-6 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
@@ -346,6 +476,10 @@ const AddEventForm: React.FC<AddEventFormProps> = ({ onSave, patientHistory, onE
              setDetails(prev => ({...prev, [name]: value}));
         }
     };
+
+    const handleArvChange = (name: string, value: string) => {
+        setDetails(prev => ({ ...prev, [name]: value }));
+    };
     
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -404,7 +538,7 @@ const AddEventForm: React.FC<AddEventFormProps> = ({ onSave, patientHistory, onE
                         <h4 className="text-lg font-semibold text-gray-800 mb-4">
                             {eventTypes.find(e => e.type === eventType)?.label}
                         </h4>
-                        {renderEventDetailForm(eventType, details, handleDetailChange)}
+                        {renderEventDetailForm(eventType, details, handleDetailChange, handleArvChange)}
                          <div className="flex justify-end gap-x-3 mt-6">
                             <button onClick={resetForm} type="button" className="px-6 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
                                ยกเลิก

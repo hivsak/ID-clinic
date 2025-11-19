@@ -1,8 +1,10 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { PatientList } from './components/PatientList';
 import { PatientDetail } from './components/PatientDetail';
 import { PatientForm, NewPatientData } from './components/PatientForm';
+import { LoginPage } from './components/LoginPage';
 import { mockPatients } from './data/mockData';
 import { Patient, PatientStatus } from './types';
 import { BellIcon } from './components/icons';
@@ -36,17 +38,26 @@ interface Notification {
 }
 
 const App: React.FC = () => {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [view, setView] = useState<View>('list');
   const [patients, setPatients] = useState<Patient[]>([]);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
   useEffect(() => {
+    // Check for existing session
+    const storedLogin = localStorage.getItem('idClinic_isLoggedIn');
+    if (storedLogin === 'true') {
+        setIsLoggedIn(true);
+    }
+
     // Simulate fetching data - Deep clone to ensure references are fresh and deletions work correctly
     setPatients(JSON.parse(JSON.stringify(mockPatients)));
   }, []);
 
   useEffect(() => {
+    if (!isLoggedIn) return;
+
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Normalize to start of day
 
@@ -78,7 +89,19 @@ const App: React.FC = () => {
     });
 
     setNotifications(activeNotifications.sort((a,b) => a.dueDate.getTime() - b.dueDate.getTime()));
-  }, [patients]);
+  }, [patients, isLoggedIn]);
+
+  const handleLogin = () => {
+      setIsLoggedIn(true);
+      localStorage.setItem('idClinic_isLoggedIn', 'true');
+  };
+
+  const handleLogout = () => {
+      setIsLoggedIn(false);
+      localStorage.removeItem('idClinic_isLoggedIn');
+      setView('list');
+      setSelectedPatient(null);
+  };
 
   const handleSelectPatient = useCallback((id: number) => {
     const patient = patients.find(p => p.id === id);
@@ -131,6 +154,10 @@ const App: React.FC = () => {
     return <PatientList patients={patients} onSelectPatient={handleSelectPatient} onAddNew={handleAddNew} />;
   };
 
+  if (!isLoggedIn) {
+      return <LoginPage onLogin={handleLogin} />;
+  }
+
   return (
     <div className="bg-gray-50 min-h-screen text-gray-900 font-sans">
       <Sidebar 
@@ -138,6 +165,7 @@ const App: React.FC = () => {
         onNavigate={handleBackToList}
         notifications={notifications}
         onNotificationClick={handleSelectPatient}
+        onLogout={handleLogout}
       />
       <main className="md:pt-16 pb-20 md:pb-0">
         {renderContent()}

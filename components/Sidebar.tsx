@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { DashboardIcon, PatientsIcon, ReportsIcon, SettingsIcon, LogoutIcon, BellIcon } from './icons';
 
@@ -47,9 +48,10 @@ interface SidebarProps {
     onNavigate: () => void;
     notifications: Notification[];
     onNotificationClick: (patientId: number) => void;
+    onLogout: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, notifications, onNotificationClick }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, notifications, onNotificationClick, onLogout }) => {
   const isPatientSectionActive = ['list', 'detail', 'form'].includes(activeView);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
@@ -119,7 +121,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, notifi
             {/* User Info & Actions - Desktop only */}
             <div className="hidden md:flex items-center space-x-4">
                 <NotificationBell />
-                <NavItem icon={<LogoutIcon />} label="Logout" />
+                <NavItem icon={<LogoutIcon />} label="Logout" onClick={onLogout} />
             </div>
 
         </div>

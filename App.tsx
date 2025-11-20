@@ -255,7 +255,7 @@ const App: React.FC = () => {
         onNotificationClick={handleSelectPatient}
         onLogout={handleLogout}
       />
-      <main className="md:pt-16 pb-20 md:pb-0">
+      <main className="pt-16 pb-20 md:pb-0">
         {renderContent()}
       </main>
     </div>

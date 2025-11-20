@@ -810,20 +810,22 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
                     </p>
                 </div>
                 
-                <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200 flex flex-col md:flex-row items-end md:items-center gap-3">
-                    <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">ตั้งแต่วันที่</label>
-                        <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="block w-full md:w-40 px-2 py-1.5 text-sm bg-gray-50 border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500" />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">ถึงวันที่</label>
-                        <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="block w-full md:w-40 px-2 py-1.5 text-sm bg-gray-50 border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500" />
-                    </div>
-                    <div className="flex gap-2">
+                <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200 w-full md:w-auto">
+                     <div className="flex flex-row gap-2 items-end">
+                        <div className="flex-1 min-w-0">
+                            <label className="block text-xs font-medium text-gray-500 mb-1 truncate">ตั้งแต่วันที่</label>
+                            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="block w-full px-2 py-1.5 text-sm bg-gray-50 border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500 min-w-0" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <label className="block text-xs font-medium text-gray-500 mb-1 truncate">ถึงวันที่</label>
+                            <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="block w-full px-2 py-1.5 text-sm bg-gray-50 border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500 min-w-0" />
+                        </div>
                         {(startDate || endDate) && (
-                            <button onClick={clearFilter} className="px-3 py-1.5 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-md border border-red-200 transition-colors">
-                                ล้างตัวกรอง
-                            </button>
+                             <div className="flex-none">
+                                <button onClick={clearFilter} className="px-3 py-1.5 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-md border border-red-200 transition-colors h-[34px] whitespace-nowrap">
+                                    ล้าง
+                                </button>
+                            </div>
                         )}
                     </div>
                 </div>

@@ -68,7 +68,7 @@ export interface HbvInfo {
 
 export interface HcvTest {
   id: string;
-  type: 'Anti-HCV' | 'HCV-Ag';
+  type: 'Anti-HCV' | 'HCV-Ab';
   result: 'Positive' | 'Negative' | 'Inconclusive';
   date: string; // ISO string
 }

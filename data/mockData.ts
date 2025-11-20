@@ -183,7 +183,7 @@ export const mockPatients: Patient[] = [
     pregnancies: [],
     hcvInfo: {
       hcvTests: [
-        { id: 'hcv3-1', type: 'HCV-Ag', result: 'Inconclusive', date: '2020-10-08' }
+        { id: 'hcv3-1', type: 'HCV-Ab', result: 'Inconclusive', date: '2020-10-08' }
       ],
     }
   },

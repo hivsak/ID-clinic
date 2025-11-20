@@ -18,7 +18,7 @@ const HcvTestHistoryCard: React.FC<{
     onEdit: (updatedRecord: HcvTest) => void;
 }> = ({ records, onAdd, onDelete, onEdit }) => {
     const [isAdding, setIsAdding] = useState(false);
-    const [newTest, setNewTest] = useState<{date: string; type: 'Anti-HCV' | 'HCV-Ag'; result: 'Positive' | 'Negative' | 'Inconclusive'}>({
+    const [newTest, setNewTest] = useState<{date: string; type: 'Anti-HCV' | 'HCV-Ab'; result: 'Positive' | 'Negative' | 'Inconclusive'}>({
         date: new Date().toISOString().split('T')[0],
         type: 'Anti-HCV',
         result: 'Negative',
@@ -37,7 +37,7 @@ const HcvTestHistoryCard: React.FC<{
     return (
          <div className="bg-white p-4 rounded-lg shadow-sm border flex flex-col">
             <div className="flex justify-between items-center pb-2">
-                <h4 className="font-semibold text-gray-800">Anti-HCV / HCV-Ag</h4>
+                <h4 className="font-semibold text-gray-800">Anti-HCV / HCV-Ab</h4>
                 <button 
                     type="button"
                     onClick={() => setIsAdding(!isAdding)}
@@ -84,7 +84,7 @@ const HcvTestHistoryCard: React.FC<{
                 <div className="mt-4 pt-4 border-t space-y-3">
                     <div className="grid grid-cols-3 gap-x-2">
                         <div><label className="text-xs text-gray-500">Date</label><input type="date" value={newTest.date} onChange={e => setNewTest(p => ({...p, date: e.target.value}))} className={inputClass + " py-1.5 text-sm"} /></div>
-                        <div><label className="text-xs text-gray-500">Type</label><select value={newTest.type} onChange={e => setNewTest(p => ({...p, type: e.target.value as any}))} className={inputClass + " py-1.5 text-sm"}><option>Anti-HCV</option><option>HCV-Ag</option></select></div>
+                        <div><label className="text-xs text-gray-500">Type</label><select value={newTest.type} onChange={e => setNewTest(p => ({...p, type: e.target.value as any}))} className={inputClass + " py-1.5 text-sm"}><option>Anti-HCV</option><option>HCV-Ab</option></select></div>
                         <div><label className="text-xs text-gray-500">Result</label><select value={newTest.result} onChange={e => setNewTest(p => ({...p, result: e.target.value as any}))} className={inputClass + " py-1.5 text-sm"}><option>Negative</option><option>Positive</option><option>Inconclusive</option></select></div>
                     </div>
                     <button type="button" onClick={handleAddClick} className="w-full flex items-center justify-center gap-x-2 px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700">
@@ -110,7 +110,7 @@ const HcvTestHistoryCard: React.FC<{
                                 <label className="block text-sm font-medium text-gray-700">ประเภทการตรวจ</label>
                                 <select value={editingRecord.type} onChange={e => setEditingRecord({...editingRecord, type: e.target.value as any})} className={inputClass}>
                                     <option>Anti-HCV</option>
-                                    <option>HCV-Ag</option>
+                                    <option>HCV-Ab</option>
                                 </select>
                             </div>
                              <div>

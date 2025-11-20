@@ -63,9 +63,23 @@ const StdLineChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
         patients.forEach(p => {
             p.stdInfo?.records?.forEach(r => {
                 if (!r.date) return;
-                const d = new Date(r.date);
-                const y = d.getFullYear();
-                const m = d.getMonth();
+                
+                // Robust date parsing (YYYY-MM-DD) to avoid timezone issues
+                const parts = r.date.split('-');
+                let y: number, m: number;
+                
+                if (parts.length >= 2) {
+                    y = parseInt(parts[0], 10);
+                    m = parseInt(parts[1], 10) - 1; // Month is 0-indexed
+                } else {
+                    // Fallback if not standard YYYY-MM-DD
+                    const d = new Date(r.date);
+                    y = d.getFullYear();
+                    m = d.getMonth();
+                }
+
+                if (isNaN(y) || isNaN(m)) return;
+
                 yrs.add(y);
 
                 if (!db[y]) db[y] = {};
@@ -99,9 +113,7 @@ const StdLineChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
             const monthRecs = currentYearData[i] || {};
             const diseaseCounts = Object.entries(monthRecs);
             
-            // Track max for Y-axis
-            const monthTotal = diseaseCounts.reduce((sum, [, c]) => sum + c, 0); // Stacked max? No, let's do line chart max
-            
+            // Track max for Y-axis scaling
             diseaseCounts.forEach(([d, c]) => {
                 diseasesSet.add(d);
                 if (c > max) max = c;

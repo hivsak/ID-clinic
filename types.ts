@@ -164,4 +164,8 @@ export interface Patient {
   referralType?: 'มหาสารคาม' | 'ที่อื่น';
   referredFrom?: string;
   referralDate?: string; // ISO date string
+  // Discharge / Refer Out
+  referOutDate?: string; // ISO date string
+  referOutLocation?: string;
+  deathDate?: string; // ISO date string
 }

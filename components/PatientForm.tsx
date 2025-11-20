@@ -33,9 +33,13 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
         referredFrom: '',
         referralDate: '',
         nextAppointmentDate: '',
+        referOutDate: '',
+        referOutLocation: '',
+        deathDate: '',
     });
 
     const [age, setAge] = useState({ years: '', months: '', days: '' });
+    const [isDeceased, setIsDeceased] = useState(false);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -48,6 +52,14 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
             }));
         } else {
             setFormData(prev => ({ ...prev, [name]: value }));
+        }
+    };
+
+    const handleDeceasedChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const checked = e.target.checked;
+        setIsDeceased(checked);
+        if (!checked) {
+            setFormData(prev => ({ ...prev, deathDate: '' }));
         }
     };
 
@@ -252,9 +264,11 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
 
                 <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
                      <h3 className="text-lg font-semibold text-gray-800 mb-6">ข้อมูลการส่งตัว (Referral Information)</h3>
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                     
+                     {/* Refer In Section */}
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 pb-6 border-b">
                         <div className="md:col-span-2">
-                            <label className={labelClass}>ข้อมูลการส่งตัว</label>
+                            <label className={labelClass}>การส่งตัวเข้า (Refer In)</label>
                             <div className="mt-2 flex gap-x-6">
                                 <div className="flex items-center">
                                     <input
@@ -297,6 +311,41 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
                                     <input type="date" name="referralDate" id="referralDate" value={formData.referralDate} onChange={handleChange} className={inputClass} />
                                 </div>
                             </>
+                        )}
+                     </div>
+
+                     {/* Refer Out Section */}
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 pb-6 border-b">
+                        <div className="md:col-span-2">
+                            <label className="block text-sm font-semibold text-gray-800">การส่งตัวออก (Refer Out)</label>
+                        </div>
+                        <div>
+                            <label htmlFor="referOutDate" className={labelClass}>วันที่ส่งตัวออก</label>
+                            <input type="date" name="referOutDate" id="referOutDate" value={formData.referOutDate} onChange={handleChange} className={inputClass} />
+                        </div>
+                         <div>
+                            <label htmlFor="referOutLocation" className={labelClass}>ส่งตัวไปที่</label>
+                            <input type="text" name="referOutLocation" id="referOutLocation" value={formData.referOutLocation} onChange={handleChange} className={inputClass} />
+                        </div>
+                     </div>
+
+                     {/* Death Section */}
+                     <div>
+                        <div className="flex items-center">
+                             <input 
+                                type="checkbox" 
+                                id="isDeceasedCheck" 
+                                checked={isDeceased} 
+                                onChange={handleDeceasedChange} 
+                                className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" 
+                            />
+                             <label htmlFor="isDeceasedCheck" className="ml-2 text-sm font-semibold text-gray-800">เสียชีวิต (Deceased)</label>
+                        </div>
+                        {isDeceased && (
+                           <div className="mt-4 pl-6">
+                               <label htmlFor="deathDate" className={labelClass}>วันที่เสียชีวิต</label>
+                               <input type="date" name="deathDate" id="deathDate" value={formData.deathDate} onChange={handleChange} className={inputClass} style={{ maxWidth: '200px' }} />
+                           </div>
                         )}
                      </div>
                 </div>

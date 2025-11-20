@@ -29,6 +29,9 @@ const mapRowToPatient = (row: any): Patient => ({
     referralType: row.referral_type as any,
     referredFrom: row.referred_from || '',
     referralDate: row.referral_date ? new Date(row.referral_date).toISOString().split('T')[0] : undefined,
+    referOutDate: row.refer_out_date ? new Date(row.refer_out_date).toISOString().split('T')[0] : undefined,
+    referOutLocation: row.refer_out_location || '',
+    deathDate: row.death_date ? new Date(row.death_date).toISOString().split('T')[0] : undefined,
     
     // Arrays will be populated by fetch detail logic
     medicalHistory: [],
@@ -163,18 +166,19 @@ export const createPatient = async (data: any): Promise<number> => {
                 hn, nap_id, title, first_name, last_name, dob, sex, risk_behavior,
                 status, registration_date, next_appointment_date, occupation, partner_status, partner_hiv_status,
                 address, district, subdistrict, province, phone, healthcare_scheme,
-                referral_type, referred_from, referral_date
+                referral_type, referred_from, referral_date, refer_out_date, refer_out_location, death_date
             ) VALUES (
                 $1, $2, $3, $4, $5, $6, $7, $8,
                 $9, $10, $11, $12, $13, $14,
                 $15, $16, $17, $18, $19, $20,
-                $21, $22, $23
+                $21, $22, $23, $24, $25, $26
             ) RETURNING id
         `, [
             data.hn, data.napId, data.title, data.firstName, data.lastName, dateOrNull(data.dob), data.sex, data.riskBehavior,
             'Active', new Date(), dateOrNull(data.nextAppointmentDate), data.occupation, data.partnerStatus, data.partnerHivStatus,
             data.address, data.district, data.subdistrict, data.province, data.phone, data.healthcareScheme,
-            data.referralType, data.referredFrom, dateOrNull(data.referralDate)
+            data.referralType, data.referredFrom, dateOrNull(data.referralDate),
+            dateOrNull(data.referOutDate), data.referOutLocation, dateOrNull(data.deathDate)
         ]);
         return res.rows[0].id;
     } catch (error) {
@@ -197,14 +201,16 @@ export const updatePatient = async (patient: Patient): Promise<void> => {
                 address=$14, district=$15, subdistrict=$16, province=$17, phone=$18, healthcare_scheme=$19,
                 referral_type=$20, referred_from=$21, referral_date=$22,
                 hbv_manual_summary=$23, hcv_vl_not_tested=$24,
+                refer_out_date=$25, refer_out_location=$26, death_date=$27,
                 updated_at=CURRENT_TIMESTAMP
-            WHERE id=$25
+            WHERE id=$28
         `, [
             patient.hn, patient.napId, patient.title, patient.firstName, patient.lastName, dateOrNull(patient.dob), patient.sex, patient.riskBehavior,
             patient.status, dateOrNull(patient.nextAppointmentDate), patient.occupation, patient.partnerStatus, patient.partnerHivStatus,
             patient.address, patient.district, patient.subdistrict, patient.province, patient.phone, patient.healthcareScheme,
             patient.referralType, patient.referredFrom, dateOrNull(patient.referralDate),
             patient.hbvInfo?.manualSummary, patient.hcvInfo?.hcvVlNotTested || false,
+            dateOrNull(patient.referOutDate), patient.referOutLocation, dateOrNull(patient.deathDate),
             patient.id
         ]);
 

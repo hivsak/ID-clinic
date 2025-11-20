@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Patient, PatientStatus } from '../../types';
-import { DisplayField, calculateAgeBreakdown, calculateDobFromAge, inputClass, labelClass } from '../utils';
+import { DisplayField, calculateAgeBreakdown, calculateDobFromAge, calculatePatientStatus, inputClass, labelClass } from '../utils';
 
 interface GeneralInfoTabProps {
   patient: Patient;
@@ -26,6 +26,17 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, isEditi
             setIsDeceased(!!patient.deathDate);
         }
     }, [patient, isEditing]);
+
+    // Auto-calculate status when relevant dates change in edit mode
+    useEffect(() => {
+        if (isEditing) {
+            const computedStatus = calculatePatientStatus(formData);
+            const newStatus = computedStatus || PatientStatus.ACTIVE;
+            if (formData.status !== newStatus) {
+                setFormData(prev => ({ ...prev, status: newStatus }));
+            }
+        }
+    }, [formData.deathDate, formData.referOutDate, formData.nextAppointmentDate, isEditing]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -57,22 +68,15 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, isEditi
     const handleDeceasedChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const checked = e.target.checked;
         setIsDeceased(checked);
-        if (checked) {
-            setFormData(prev => ({ ...prev, status: PatientStatus.EXPIRED }));
-        } else {
-            // If unchecked, clear date and reset status to Active (or previous status if we tracked it, defaulting to Active for now)
-            setFormData(prev => ({ ...prev, deathDate: undefined, status: PatientStatus.ACTIVE }));
+        if (!checked) {
+            // If unchecked, clear date. Status will be recalculated by useEffect.
+            setFormData(prev => ({ ...prev, deathDate: undefined }));
         }
     };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        // Ensure status reflects deceased state if checked
-        let finalData = { ...formData };
-        if (isDeceased) {
-            finalData.status = PatientStatus.EXPIRED;
-        }
-        onUpdate(finalData);
+        onUpdate(formData);
     };
     
     const handleCancel = () => {
@@ -80,6 +84,9 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, isEditi
     }
 
     if (!isEditing) {
+        const currentCalculatedStatus = calculatePatientStatus(patient);
+        const displayStatus = currentCalculatedStatus ? currentCalculatedStatus : (patient.status || '-');
+
         return (
             <div className="space-y-6">
                 <div className="bg-white p-6 rounded-lg shadow-sm">
@@ -87,6 +94,7 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, isEditi
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <DisplayField label="HN (Hospital Number)" value={patient.hn} />
                         <DisplayField label="NAP ID" value={patient.napId} />
+                        <DisplayField label="สถานะ (ปัจจุบัน)" value={displayStatus} />
                     </div>
                 </div>
                 <div className="bg-white p-6 rounded-lg shadow-sm">
@@ -177,6 +185,15 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, isEditi
                     <div>
                         <label htmlFor="napId" className={labelClass}>NAP ID</label>
                         <input type="text" name="napId" id="napId" value={formData.napId} onChange={handleChange} className={inputClass} />
+                    </div>
+                    <div>
+                         <label className={labelClass}>สถานะ (คำนวณอัตโนมัติ)</label>
+                         <input 
+                            type="text" 
+                            disabled 
+                            value={calculatePatientStatus(formData) || '-'} 
+                            className={`${inputClass} bg-gray-100 text-gray-500 cursor-not-allowed`} 
+                        />
                     </div>
                 </div>
             </div>

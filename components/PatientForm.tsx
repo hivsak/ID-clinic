@@ -1,9 +1,9 @@
 
-import React, { useState } from 'react';
-import { Patient } from '../types';
-import { calculateAgeBreakdown, calculateDobFromAge, inputClass, labelClass } from './utils';
+import React, { useState, useEffect } from 'react';
+import { Patient, PatientStatus } from '../types';
+import { calculateAgeBreakdown, calculateDobFromAge, calculatePatientStatus, inputClass, labelClass } from './utils';
 
-export type NewPatientData = Omit<Patient, 'id' | 'medicalHistory' | 'status' | 'registrationDate'>;
+export type NewPatientData = Omit<Patient, 'id' | 'medicalHistory' | 'registrationDate'>;
 
 interface PatientFormProps {
     onSave: (patient: NewPatientData) => void;
@@ -20,6 +20,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
         dob: '',
         sex: 'ชาย',
         riskBehavior: 'Heterosexual',
+        status: PatientStatus.ACTIVE, // Default initial
         occupation: '',
         partnerStatus: 'ไม่มี',
         partnerHivStatus: 'ไม่ทราบ',
@@ -40,6 +41,18 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
 
     const [age, setAge] = useState({ years: '', months: '', days: '' });
     const [isDeceased, setIsDeceased] = useState(false);
+
+    // Auto-calculate status when relevant dates change
+    useEffect(() => {
+        const computedStatus = calculatePatientStatus(formData);
+        // If computedStatus is null (dash), we default to ACTIVE for the DB status to be safe,
+        // or we can leave it as is. Let's default to ACTIVE if null for new patients.
+        const newStatus = computedStatus || PatientStatus.ACTIVE;
+        if (formData.status !== newStatus) {
+            setFormData(prev => ({ ...prev, status: newStatus }));
+        }
+    }, [formData.deathDate, formData.referOutDate, formData.nextAppointmentDate]);
+
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -258,6 +271,15 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
                          <div>
                             <label htmlFor="nextAppointmentDate" className={labelClass}>วันนัดหมายครั้งถัดไป</label>
                             <input type="date" name="nextAppointmentDate" id="nextAppointmentDate" value={formData.nextAppointmentDate} onChange={handleChange} className={inputClass} />
+                        </div>
+                        <div>
+                             <label className={labelClass}>สถานะ (คำนวณอัตโนมัติ)</label>
+                             <input 
+                                type="text" 
+                                disabled 
+                                value={calculatePatientStatus(formData) || '-'} 
+                                className={`${inputClass} bg-gray-100 text-gray-500 cursor-not-allowed`} 
+                            />
                         </div>
                     </div>
                 </div>

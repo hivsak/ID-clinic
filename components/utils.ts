@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { Patient, PatientStatus } from '../types';
 
 export const calculateAge = (dob?: string) => {
   if (!dob) return '-';
@@ -62,6 +63,30 @@ export const calculateDobFromAge = (yStr: string, mStr: string, dStr: string) =>
     const month = String(targetDate.getMonth() + 1).padStart(2, '0');
     const day = String(targetDate.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+};
+
+export const calculatePatientStatus = (patient: Partial<Patient>): PatientStatus | null => {
+    // 1. Death
+    if (patient.deathDate) return PatientStatus.EXPIRED;
+    
+    // 2. Refer Out
+    if (patient.referOutDate) return PatientStatus.TRANSFERRED;
+    
+    // 3. Appointment Logic
+    if (patient.nextAppointmentDate) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const apptDate = new Date(patient.nextAppointmentDate);
+        apptDate.setHours(0, 0, 0, 0);
+        
+        if (apptDate < today) {
+            return PatientStatus.LTFU;
+        }
+        return PatientStatus.ACTIVE;
+    }
+    
+    // 4. Default (No conditions met)
+    return null;
 };
 
 export const formatThaiDateBE = (isoDate: string) => {

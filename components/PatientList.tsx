@@ -2,7 +2,7 @@
 import React from 'react';
 import { Patient, PatientStatus } from '../types';
 import { PlusIcon, SearchIcon, ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon } from './icons';
-import { calculateAge } from './utils';
+import { calculateAge, calculatePatientStatus } from './utils';
 
 interface PatientListProps {
   patients: Patient[];
@@ -10,7 +10,10 @@ interface PatientListProps {
   onAddNew: () => void;
 }
 
-const getStatusBadge = (status: PatientStatus) => {
+const getStatusBadge = (status: PatientStatus | null) => {
+  if (!status) {
+      return <span>-</span>;
+  }
   switch (status) {
     case PatientStatus.ACTIVE:
       return <span className="px-2 py-1 text-xs font-medium text-emerald-800 bg-emerald-100 rounded-full">Active</span>;
@@ -19,11 +22,11 @@ const getStatusBadge = (status: PatientStatus) => {
     case PatientStatus.TRANSFERRED:
       return <span className="px-2 py-1 text-xs font-medium text-gray-800 bg-gray-100 rounded-full">Transferred</span>;
     case PatientStatus.EXPIRED:
-      return <span className="px-2 py-1 text-xs font-medium text-white bg-gray-800 rounded-full">Expired</span>;
+      return <span className="px-2 py-1 text-xs font-medium text-white bg-black rounded-full">Expired</span>;
     case PatientStatus.RESTART:
         return <span className="px-2 py-1 text-xs font-medium text-orange-800 bg-orange-100 rounded-full">Restart</span>;
     default:
-      return null;
+      return <span>-</span>;
   }
 };
 
@@ -93,22 +96,25 @@ export const PatientList: React.FC<PatientListProps> = ({ patients, onSelectPati
               </tr>
             </thead>
             <tbody>
-              {patients.map((patient) => (
-                <tr key={patient.id} className="bg-white border-b hover:bg-gray-50">
-                  <td className="px-6 py-4 font-medium text-emerald-600">{patient.hn}</td>
-                  <td className="px-6 py-4">{`${patient.firstName || '-'} ${patient.lastName || ''}`}</td>
-                  <td className="px-6 py-4">{calculateAge(patient.dob)}</td>
-                  <td className="px-6 py-4">{patient.phone || '-'}</td>
-                  <td className="px-6 py-4">{patient.healthcareScheme || '-'}</td>
-                  <td className="px-6 py-4">{formatThaiDate(patient.nextAppointmentDate)}</td>
-                  <td className="px-6 py-4">{getStatusBadge(patient.status)}</td>
-                  <td className="px-6 py-4">
-                    <button onClick={() => onSelectPatient(patient.id)} className="font-medium text-emerald-600 hover:underline">
-                      ดูรายละเอียด
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {patients.map((patient) => {
+                const calculatedStatus = calculatePatientStatus(patient);
+                return (
+                    <tr key={patient.id} className="bg-white border-b hover:bg-gray-50">
+                    <td className="px-6 py-4 font-medium text-emerald-600">{patient.hn}</td>
+                    <td className="px-6 py-4">{`${patient.firstName || '-'} ${patient.lastName || ''}`}</td>
+                    <td className="px-6 py-4">{calculateAge(patient.dob)}</td>
+                    <td className="px-6 py-4">{patient.phone || '-'}</td>
+                    <td className="px-6 py-4">{patient.healthcareScheme || '-'}</td>
+                    <td className="px-6 py-4">{formatThaiDate(patient.nextAppointmentDate)}</td>
+                    <td className="px-6 py-4">{getStatusBadge(calculatedStatus)}</td>
+                    <td className="px-6 py-4">
+                        <button onClick={() => onSelectPatient(patient.id)} className="font-medium text-emerald-600 hover:underline">
+                        ดูรายละเอียด
+                        </button>
+                    </td>
+                    </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

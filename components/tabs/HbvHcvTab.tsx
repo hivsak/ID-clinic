@@ -1,17 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import { Patient, HcvInfo, HcvTest, HbvInfo } from '../../types';
 import { EditIcon, PlusIcon, TrashIcon } from '../icons';
-import { inputClass, formatThaiDateBE } from '../utils';
+import { inputClass, formatThaiDateBE, determineHbvStatus, determineHcvStatus, determineHcvDiagnosticStatus } from '../utils';
 import { TestHistoryCard } from '../TestHistoryCard';
-
-type HcvDiagnosticStatus = 'POSITIVE' | 'INCONCLUSIVE' | 'NEGATIVE' | 'UNKNOWN';
-
-const determineHcvDiagnosticStatus = (tests: HcvTest[]): HcvDiagnosticStatus => {
-    if (!tests || tests.length === 0) return 'UNKNOWN';
-    if (tests.some(t => t.result === 'Positive')) return 'POSITIVE';
-    if (tests.some(t => t.result === 'Inconclusive')) return 'INCONCLUSIVE';
-    return 'NEGATIVE';
-};
 
 interface HbvHcvTabProps {
     patient: Patient;
@@ -171,13 +163,8 @@ export const HbvHcvTab: React.FC<HbvHcvTabProps> = ({ patient, onUpdatePatient }
         if (!window.confirm('คุณแน่ใจหรือไม่ว่าต้องการลบข้อมูลนี้?')) return;
         
         const currentHbvInfo = patient.hbvInfo || { hbsAgTests: [], viralLoads: [], ultrasounds: [], ctScans: [] };
-        
-        // Robustly get the array, defaulting to empty if undefined
         const existingRecords = (currentHbvInfo[recordType] as {id: string}[] | undefined) || [];
-        
         const updatedRecords = existingRecords.filter(rec => rec.id !== idToDelete);
-        
-        // Construct new info, preserving other keys
         const newHbvInfo = { ...currentHbvInfo, [recordType]: updatedRecords };
         
         onUpdatePatient({ ...patient, hbvInfo: newHbvInfo });
@@ -186,27 +173,8 @@ export const HbvHcvTab: React.FC<HbvHcvTabProps> = ({ patient, onUpdatePatient }
     const hbvData = patient.hbvInfo || { hbsAgTests: [], viralLoads: [], ultrasounds: [], ctScans: [] };
     const latestHbsAgTest = [...(hbvData.hbsAgTests || [])].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
 
-    // --- HBV Summary Logic ---
-    const getAutomaticHbvSummary = () => {
-        if (!latestHbsAgTest) return { text: 'ไม่มีข้อมูล', color: 'bg-gray-100 text-gray-800' };
-        switch (latestHbsAgTest.result) {
-            case 'Negative': return { text: 'ไม่เป็น HBV', color: 'bg-emerald-100 text-emerald-800' };
-            case 'Positive': return { text: 'เป็น HBV', color: 'bg-red-100 text-red-800' };
-            case 'Inconclusive': return { text: 'รอตรวจเพิ่มเติม', color: 'bg-amber-100 text-amber-800' };
-            default: return { text: 'ไม่มีข้อมูล', color: 'bg-gray-100 text-gray-800' };
-        }
-    };
-
-    const getSummaryColor = (summaryText: string) => {
-        if (summaryText === 'ไม่เป็น HBV') return 'bg-emerald-100 text-emerald-800';
-        if (summaryText === 'เป็น HBV') return 'bg-red-100 text-red-800';
-        if (summaryText === 'รอตรวจเพิ่มเติม') return 'bg-amber-100 text-amber-800';
-        return 'bg-gray-100 text-gray-800';
-    };
-
-    const manualSummaryValue = patient.hbvInfo?.manualSummary;
-    const automaticSummary = getAutomaticHbvSummary();
-    const displaySummary = manualSummaryValue ? { text: manualSummaryValue, color: getSummaryColor(manualSummaryValue) } : automaticSummary;
+    // Use shared logic
+    const displaySummary = determineHbvStatus(patient);
     const manualSummaryOptions = ['ไม่เป็น HBV', 'เป็น HBV', 'รอตรวจเพิ่มเติม'];
 
     const handleEditHbvSummary = () => {
@@ -227,8 +195,6 @@ export const HbvHcvTab: React.FC<HbvHcvTabProps> = ({ patient, onUpdatePatient }
     ) => {
         const currentHcvInfo = patient.hcvInfo || { hcvTests: [] };
         const recordToAdd = { ...newRecord, id: `${recordType}-${Date.now()}` };
-
-        // Fix: Use 'unknown' to bypass strict type checking for union of arrays.
         const existingRecords = ((currentHcvInfo[recordType] as unknown) as T[] | undefined) || [];
         const updatedRecords = [...existingRecords, recordToAdd as T].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         
@@ -251,16 +217,10 @@ export const HbvHcvTab: React.FC<HbvHcvTabProps> = ({ patient, onUpdatePatient }
 
     const handleDeleteHcvRecord = (recordType: keyof Omit<HcvInfo, 'hcvVlNotTested' | 'hcvTests'>, idToDelete: string) => {
         if (!window.confirm('คุณแน่ใจหรือไม่ว่าต้องการลบข้อมูลนี้?')) return;
-        
         const currentHcvInfo = patient.hcvInfo || { hcvTests: [] };
-        
-        // Robustly get the array
         const existingRecords = ((currentHcvInfo[recordType] as unknown) as {id: string}[] | undefined) || [];
-        
         const updatedRecords = existingRecords.filter(rec => rec.id !== idToDelete);
-        
         const newHcvInfo = { ...currentHcvInfo, [recordType]: updatedRecords };
-        
         onUpdatePatient({ ...patient, hcvInfo: newHcvInfo });
     };
 
@@ -279,87 +239,25 @@ export const HbvHcvTab: React.FC<HbvHcvTabProps> = ({ patient, onUpdatePatient }
 
      const handleDeleteHcvTest = (idToDelete: string) => {
         if (!window.confirm('คุณแน่ใจหรือไม่ว่าต้องการลบข้อมูลนี้?')) return;
-        
         const currentHcvInfo = patient.hcvInfo || { hcvTests: [] };
         const currentTests = currentHcvInfo.hcvTests || [];
-        
         const updatedTests = currentTests.filter(t => t.id !== idToDelete);
-        
         onUpdatePatient({ ...patient, hcvInfo: { ...currentHcvInfo, hcvTests: updatedTests } });
     };
     
     // --- HCV Summary Logic ---
     const hcvInfo = patient.hcvInfo || { hcvTests: [] };
     const latestHcvTest = [...(hcvInfo.hcvTests || [])].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+    
+    // Use shared logic
     const hcvDiagnosticStatus = determineHcvDiagnosticStatus(hcvInfo.hcvTests || []);
+    const hcvTreatmentStatus = determineHcvStatus(patient);
+
     const latestPreVl = [...(hcvInfo.preTreatmentVls || [])].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
     const latestPostVl = [...(hcvInfo.postTreatmentVls || [])].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
     const latestTreatment = [...(hcvInfo.treatments || [])].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
 
-    const getHcvTreatmentStatus = (): { text: string; color: string } => {
-        const parseVl = (vlString?: string): number | null => {
-            if (!vlString) return null;
-            const lowerVl = vlString.toLowerCase();
-            if (lowerVl.includes('not detected')) {
-                return 0;
-            }
-            
-            const cleanedString = vlString.replace(/,/g, '');
-            const isLessThan = cleanedString.includes('<');
-            
-            const numericMatch = cleanedString.match(/(\d+(\.\d+)?)/);
-            if (numericMatch) {
-                const value = parseFloat(numericMatch[0]);
-                if (isLessThan) {
-                    return value - 1;
-                }
-                return value;
-            }
-            return null;
-        };
-        
-        const preVlValue = latestPreVl ? parseVl(latestPreVl.result) : null;
-        const postVlValue = latestPostVl ? parseVl(latestPostVl.result) : null;
-
-        // Rule 1: Patient is Negative
-        if (hcvDiagnosticStatus === 'NEGATIVE') {
-            return { text: 'ไม่เป็น HCV', color: 'bg-emerald-100 text-emerald-800' };
-        }
-
-        if (hcvDiagnosticStatus === 'POSITIVE' || hcvDiagnosticStatus === 'INCONCLUSIVE') {
-            // Rule 5: Has post-treatment data
-            if (preVlValue !== null && preVlValue > 15 && latestTreatment && postVlValue !== null) {
-                if (postVlValue < 15) {
-                    return { text: 'เคยเป็น HCV รักษาหายแล้ว', color: 'bg-emerald-100 text-emerald-800' };
-                } else {
-                    return { text: 'เป็น HCV รักษาแล้วไม่หาย', color: 'bg-red-100 text-red-800' };
-                }
-            }
-
-            // Rule 4: Currently in treatment
-            if (preVlValue !== null && preVlValue > 15 && latestTreatment) {
-                return { text: 'กำลังรักษา HCV', color: 'bg-amber-100 text-amber-800' };
-            }
-
-            // Rule 3: Has pre-treatment data only
-            if (preVlValue !== null) {
-                if (preVlValue < 15) {
-                    return { text: 'เคยเป็น HCV หายเอง', color: 'bg-emerald-100 text-emerald-800' };
-                } else {
-                    return { text: 'เป็น HCV', color: 'bg-red-100 text-red-800' };
-                }
-            }
-
-            // Rule 2: Positive/Inconclusive but no further data
-            return { text: 'รอการตรวจเพิ่มเติม', color: 'bg-amber-100 text-amber-800' };
-        }
-
-        // Default/Unknown case
-        return { text: 'ไม่มีข้อมูล', color: 'bg-gray-100 text-gray-800' };
-    };
-
-    const hcvTreatmentStatus = getHcvTreatmentStatus();
-    
+    // Helper to display correct date based on status
     let hcvDateText = 'ยังไม่เริ่มการรักษา';
     if (hcvTreatmentStatus.text === 'เคยเป็น HCV รักษาหายแล้ว' && latestPostVl) {
         hcvDateText = `ตรวจ VL ล่าสุด: ${formatThaiDateBE(latestPostVl.date)}`;
@@ -437,7 +335,7 @@ export const HbvHcvTab: React.FC<HbvHcvTabProps> = ({ patient, onUpdatePatient }
                                 <span className={`px-3 py-1 text-base font-bold rounded-full ${displaySummary.color}`}>
                                     {displaySummary.text}
                                 </span>
-                                {manualSummaryValue && (
+                                {patient.hbvInfo?.manualSummary && (
                                      <span className="ml-2 text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded-md">Edited</span>
                                 )}
                             </div>

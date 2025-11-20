@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Patient, PatientStatus } from '../types';
+import { Patient, PatientStatus, HcvTest, HcvInfo } from '../types';
 
 export const calculateAge = (dob?: string) => {
   if (!dob) return '-';
@@ -122,4 +122,115 @@ export const DisplayField: React.FC<{ label: string; value?: string | React.Reac
         React.createElement('p', { className: "text-sm font-medium text-gray-500" }, label),
         React.createElement('div', { className: "mt-1 text-gray-900" }, value || '-')
     );
+};
+
+// --- Analytics / Status Determination Helpers ---
+
+export const determineHbvStatus = (patient: Patient): { text: string; color: string } => {
+    // 1. Manual Override
+    if (patient.hbvInfo?.manualSummary) {
+        const summary = patient.hbvInfo.manualSummary;
+        let color = 'bg-gray-100 text-gray-800';
+        if (summary === 'ไม่เป็น HBV') color = 'bg-emerald-100 text-emerald-800';
+        else if (summary === 'เป็น HBV') color = 'bg-red-100 text-red-800';
+        else if (summary === 'รอตรวจเพิ่มเติม') color = 'bg-amber-100 text-amber-800';
+        return { text: summary, color };
+    }
+
+    // 2. Automatic Logic based on latest HBsAg
+    const hbvData = patient.hbvInfo || { hbsAgTests: [] };
+    const latestHbsAgTest = [...(hbvData.hbsAgTests || [])].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+
+    if (!latestHbsAgTest) return { text: 'ไม่มีข้อมูล', color: 'bg-gray-100 text-gray-800' };
+    
+    switch (latestHbsAgTest.result) {
+        case 'Negative': return { text: 'ไม่เป็น HBV', color: 'bg-emerald-100 text-emerald-800' };
+        case 'Positive': return { text: 'เป็น HBV', color: 'bg-red-100 text-red-800' };
+        case 'Inconclusive': return { text: 'รอตรวจเพิ่มเติม', color: 'bg-amber-100 text-amber-800' };
+        default: return { text: 'ไม่มีข้อมูล', color: 'bg-gray-100 text-gray-800' };
+    }
+};
+
+export const determineHcvDiagnosticStatus = (tests: HcvTest[]): 'POSITIVE' | 'INCONCLUSIVE' | 'NEGATIVE' | 'UNKNOWN' => {
+    if (!tests || tests.length === 0) return 'UNKNOWN';
+    // Logic: if any positive -> positive, else if any inconclusive -> inconclusive, else negative
+    // Real world might be more complex (latest result), but this mimics current logic
+    // Better logic: Check LATEST result
+    const sortedTests = [...tests].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const latest = sortedTests[0];
+    
+    if (latest.result === 'Positive') return 'POSITIVE';
+    if (latest.result === 'Inconclusive') return 'INCONCLUSIVE';
+    return 'NEGATIVE';
+};
+
+export const determineHcvStatus = (patient: Patient): { text: string; color: string } => {
+    const hcvInfo = patient.hcvInfo || { hcvTests: [] };
+    const hcvDiagnosticStatus = determineHcvDiagnosticStatus(hcvInfo.hcvTests || []);
+    
+    const latestPreVl = [...(hcvInfo.preTreatmentVls || [])].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+    const latestPostVl = [...(hcvInfo.postTreatmentVls || [])].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+    const latestTreatment = [...(hcvInfo.treatments || [])].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+
+    const parseVl = (vlString?: string): number | null => {
+        if (!vlString) return null;
+        const lowerVl = vlString.toLowerCase();
+        if (lowerVl.includes('not detected') || lowerVl.includes('undetected')) {
+            return 0;
+        }
+        
+        const cleanedString = vlString.replace(/,/g, '');
+        const isLessThan = cleanedString.includes('<');
+        
+        const numericMatch = cleanedString.match(/(\d+(\.\d+)?)/);
+        if (numericMatch) {
+            const value = parseFloat(numericMatch[0]);
+            if (isLessThan) {
+                return value - 1; // Treat <15 as 14
+            }
+            return value;
+        }
+        return null;
+    };
+    
+    const preVlValue = latestPreVl ? parseVl(latestPreVl.result) : null;
+    const postVlValue = latestPostVl ? parseVl(latestPostVl.result) : null;
+
+    // Rule 1: Patient is Negative
+    if (hcvDiagnosticStatus === 'NEGATIVE') {
+        return { text: 'ไม่เป็น HCV', color: 'bg-emerald-100 text-emerald-800' };
+    }
+
+    if (hcvDiagnosticStatus === 'POSITIVE' || hcvDiagnosticStatus === 'INCONCLUSIVE') {
+        // Rule 5: Has post-treatment data
+        // Logic: Treated (preVL > 15) AND has postVL
+        if (preVlValue !== null && preVlValue > 15 && latestTreatment && postVlValue !== null) {
+            if (postVlValue < 15) {
+                return { text: 'เคยเป็น HCV รักษาหายแล้ว', color: 'bg-emerald-100 text-emerald-800' };
+            } else {
+                return { text: 'เป็น HCV รักษาแล้วไม่หาย', color: 'bg-red-100 text-red-800' };
+            }
+        }
+
+        // Rule 4: Currently in treatment
+        if (preVlValue !== null && preVlValue > 15 && latestTreatment) {
+            return { text: 'กำลังรักษา HCV', color: 'bg-amber-100 text-amber-800' };
+        }
+
+        // Rule 3: Has pre-treatment data only (Spontaneous clearance check)
+        if (preVlValue !== null) {
+            if (preVlValue < 15) {
+                return { text: 'เคยเป็น HCV หายเอง', color: 'bg-emerald-100 text-emerald-800' };
+            } else {
+                // High VL, but no treatment yet
+                return { text: 'เป็น HCV', color: 'bg-red-100 text-red-800' };
+            }
+        }
+
+        // Rule 2: Positive/Inconclusive but no further VL data
+        return { text: 'รอการตรวจเพิ่มเติม', color: 'bg-amber-100 text-amber-800' };
+    }
+
+    // Default/Unknown case
+    return { text: 'ไม่มีข้อมูล', color: 'bg-gray-100 text-gray-800' };
 };

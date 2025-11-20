@@ -5,13 +5,14 @@ import { PatientList } from './components/PatientList';
 import { PatientDetail } from './components/PatientDetail';
 import { PatientForm, NewPatientData } from './components/PatientForm';
 import { Dashboard } from './components/Dashboard';
+import { Reports } from './components/Reports';
 import { LoginPage } from './components/LoginPage';
 import { Patient, PatientStatus } from './types';
 import { BellIcon } from './components/icons';
 import { getPatients, createPatient, updatePatient, getPatientById } from './services/patientService';
 import { login } from './services/authService';
 
-type View = 'dashboard' | 'list' | 'detail' | 'form';
+type View = 'dashboard' | 'list' | 'detail' | 'form' | 'reports';
 
 // --- Utility Functions ---
 const calculateVlTestDate = (ga: string, gaDateStr: string): Date | null => {
@@ -161,7 +162,7 @@ const App: React.FC = () => {
     }
   }, []);
 
-  const handleChangeView = useCallback((newView: 'dashboard' | 'list') => {
+  const handleChangeView = useCallback((newView: 'dashboard' | 'list' | 'reports') => {
     setView(newView);
     setSelectedPatient(null);
     fetchPatients(); // Refresh data on main navigation changes
@@ -230,6 +231,9 @@ const App: React.FC = () => {
     }
     if (view === 'dashboard') {
         return <Dashboard patients={patients} onNavigateToPatients={() => handleChangeView('list')} />;
+    }
+    if (view === 'reports') {
+        return <Reports patients={patients} />;
     }
     return <PatientList patients={patients} onSelectPatient={handleSelectPatient} onAddNew={handleAddNew} />;
   };

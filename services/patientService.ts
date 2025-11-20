@@ -2,6 +2,14 @@
 import { pool } from './db';
 import { Patient, PatientStatus, MedicalEvent, MedicalEventType, PregnancyRecord, HcvInfo, HbvInfo, StdInfo, PrepInfo, PepInfo } from '../types';
 
+// --- Helper ---
+const groupBy = (arr: any[], key: string) => {
+    return arr.reduce((acc, item) => {
+        (acc[item[key]] = acc[item[key]] || []).push(item);
+        return acc;
+    }, {} as Record<string, any[]>);
+};
+
 // --- Mappers (Row -> Object) ---
 
 const mapRowToPatient = (row: any): Patient => ({
@@ -54,17 +62,119 @@ const mapMedicalEvent = (row: any): MedicalEvent => ({
 // --- API Functions ---
 
 export const getPatients = async (): Promise<Patient[]> => {
+    const client = await pool.connect();
     try {
-        const { rows } = await pool.query('SELECT * FROM public.patients ORDER BY updated_at DESC');
-        return rows.map(mapRowToPatient);
+        // 1. Fetch Patients
+        const { rows: patientRows } = await client.query('SELECT * FROM public.patients ORDER BY updated_at DESC');
+        
+        // 2. Fetch All Related Data in bulk to avoid N+1
+        const [
+            eventsRes, pregRes, 
+            hbsRes, hbvVlRes, hbvUsRes, hbvCtRes,
+            hcvTestRes, hcvPreRes, hcvTreatRes, hcvPostRes,
+            stdRes, prepRes, pepRes
+        ] = await Promise.all([
+            client.query('SELECT * FROM public.medical_events ORDER BY date DESC'),
+            client.query('SELECT * FROM public.pregnancy_records ORDER BY ga_date DESC'),
+            client.query('SELECT * FROM public.hbv_hbsag_tests ORDER BY date DESC'),
+            client.query('SELECT * FROM public.hbv_viral_loads ORDER BY date DESC'),
+            client.query('SELECT * FROM public.hbv_ultrasounds ORDER BY date DESC'),
+            client.query('SELECT * FROM public.hbv_ct_scans ORDER BY date DESC'),
+            client.query('SELECT * FROM public.hcv_tests ORDER BY date DESC'),
+            client.query('SELECT * FROM public.hcv_pre_treatment_vls ORDER BY date DESC'),
+            client.query('SELECT * FROM public.hcv_treatments ORDER BY date DESC'),
+            client.query('SELECT * FROM public.hcv_post_treatment_vls ORDER BY date DESC'),
+            client.query('SELECT * FROM public.std_records ORDER BY date DESC'),
+            client.query('SELECT * FROM public.prep_records ORDER BY date_start DESC'),
+            client.query('SELECT * FROM public.pep_records ORDER BY date DESC'),
+        ]);
+
+        // 3. Group by Patient ID
+        const eventsByPid = groupBy(eventsRes.rows, 'patient_id');
+        const pregByPid = groupBy(pregRes.rows, 'patient_id');
+        const hbsByPid = groupBy(hbsRes.rows, 'patient_id');
+        const hbvVlByPid = groupBy(hbvVlRes.rows, 'patient_id');
+        const hbvUsByPid = groupBy(hbvUsRes.rows, 'patient_id');
+        const hbvCtByPid = groupBy(hbvCtRes.rows, 'patient_id');
+        const hcvTestByPid = groupBy(hcvTestRes.rows, 'patient_id');
+        const hcvPreByPid = groupBy(hcvPreRes.rows, 'patient_id');
+        const hcvTreatByPid = groupBy(hcvTreatRes.rows, 'patient_id');
+        const hcvPostByPid = groupBy(hcvPostRes.rows, 'patient_id');
+        const stdByPid = groupBy(stdRes.rows, 'patient_id');
+        const prepByPid = groupBy(prepRes.rows, 'patient_id');
+        const pepByPid = groupBy(pepRes.rows, 'patient_id');
+
+        // 4. Assemble Patients
+        return patientRows.map(row => {
+             const p = mapRowToPatient(row);
+             
+             // Populate Arrays
+             p.medicalHistory = (eventsByPid[p.id] || []).map(mapMedicalEvent);
+             
+             p.pregnancies = (pregByPid[p.id] || []).map(r => ({
+                id: r.id,
+                ga: r.ga,
+                gaDate: r.ga_date ? new Date(r.ga_date).toISOString().split('T')[0] : '',
+                endDate: r.end_date ? new Date(r.end_date).toISOString().split('T')[0] : undefined,
+                endReason: r.end_reason
+            }));
+
+            p.hbvInfo = {
+                manualSummary: p.hbvInfo?.manualSummary,
+                hbsAgTests: (hbsByPid[p.id] || []).map(r => ({ id: r.id, result: r.result, date: new Date(r.date).toISOString() })),
+                viralLoads: (hbvVlByPid[p.id] || []).map(r => ({ id: r.id, result: r.result, date: new Date(r.date).toISOString() })),
+                ultrasounds: (hbvUsByPid[p.id] || []).map(r => ({ id: r.id, result: r.result, date: new Date(r.date).toISOString() })),
+                ctScans: (hbvCtByPid[p.id] || []).map(r => ({ id: r.id, result: r.result, date: new Date(r.date).toISOString() }))
+            };
+
+            p.hcvInfo = {
+                hcvVlNotTested: p.hcvInfo?.hcvVlNotTested,
+                hcvTests: (hcvTestByPid[p.id] || []).map(r => ({ id: r.id, type: r.type, result: r.result, date: new Date(r.date).toISOString() })),
+                preTreatmentVls: (hcvPreByPid[p.id] || []).map(r => ({ id: r.id, result: r.result, date: new Date(r.date).toISOString() })),
+                treatments: (hcvTreatByPid[p.id] || []).map(r => ({ id: r.id, regimen: r.regimen, date: new Date(r.date).toISOString() })),
+                postTreatmentVls: (hcvPostByPid[p.id] || []).map(r => ({ id: r.id, result: r.result, date: new Date(r.date).toISOString() }))
+            };
+
+            p.stdInfo = {
+                 records: (stdByPid[p.id] || []).map(r => ({
+                     id: r.id,
+                     diseases: r.diseases || [],
+                     date: new Date(r.date).toISOString().split('T')[0]
+                 }))
+            };
+
+            p.prepInfo = {
+                records: (prepByPid[p.id] || []).map(r => ({
+                    id: r.id,
+                    dateStart: new Date(r.date_start).toISOString().split('T')[0],
+                    dateStop: r.date_stop ? new Date(r.date_stop).toISOString().split('T')[0] : undefined
+                }))
+            };
+
+            p.pepInfo = {
+                 records: (pepByPid[p.id] || []).map(r => ({
+                     id: r.id,
+                     date: new Date(r.date).toISOString().split('T')[0],
+                     type: r.type
+                 }))
+            };
+
+            return p;
+        });
+
     } catch (error) {
         console.error('Error fetching patients:', error);
         throw error;
+    } finally {
+        client.release();
     }
 };
 
 export const getPatientById = async (id: number): Promise<Patient | null> => {
     try {
+        // Reuse getPatients logic but filtered (or keep specific optimized query for single item)
+        // For simplicity and consistency, we can keep the specific query as it is cleaner for single items.
+        
         // 1. Fetch Patient Core
         const patientRes = await pool.query('SELECT * FROM public.patients WHERE id = $1', [id]);
         if (patientRes.rows.length === 0) return null;

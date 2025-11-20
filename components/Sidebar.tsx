@@ -45,7 +45,7 @@ const NavItem: React.FC<NavItemProps> = ({ icon, label, active = false, onClick 
 
 interface SidebarProps {
     activeView: string;
-    onChangeView: (view: 'dashboard' | 'list' | 'reports') => void;
+    onChangeView: (view: 'dashboard' | 'list' | 'reports' | 'settings') => void;
     notifications: Notification[];
     onNotificationClick: (patientId: number) => void;
     onLogout: () => void;
@@ -55,6 +55,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onChangeView, noti
   const isPatientSectionActive = ['list', 'detail', 'form'].includes(activeView);
   const isDashboardActive = activeView === 'dashboard';
   const isReportsActive = activeView === 'reports';
+  const isSettingsActive = activeView === 'settings';
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
   const handleNotificationItemClick = (patientId: number) => {
@@ -117,7 +118,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onChangeView, noti
                 <NavItem icon={<DashboardIcon />} label="Dashboard" active={isDashboardActive} onClick={() => onChangeView('dashboard')} />
                 <NavItem icon={<PatientsIcon />} label="Patients" active={isPatientSectionActive} onClick={() => onChangeView('list')} />
                 <NavItem icon={<ReportsIcon />} label="Reports" active={isReportsActive} onClick={() => onChangeView('reports')} />
-                <NavItem icon={<SettingsIcon />} label="Settings" />
+                <NavItem icon={<SettingsIcon />} label="Settings" active={isSettingsActive} onClick={() => onChangeView('settings')} />
             </nav>
 
             {/* User Info & Actions - Desktop only */}

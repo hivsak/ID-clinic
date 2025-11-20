@@ -183,8 +183,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                     </button>
                 </div>
                 <div className="text-center mt-4">
-                    <button type="button" onClick={toggleMode} className="text-sm text-emerald-600 hover:text-emerald-500 font-medium">
-                        มีบัญชีอยู่แล้ว? เข้าสู่ระบบ
+                    <span className="text-sm text-gray-600">มีบัญชีอยู่แล้ว? </span>
+                    <button type="button" onClick={toggleMode} className="text-sm text-emerald-600 hover:text-emerald-500 font-medium hover:underline">
+                        เข้าสู่ระบบ
                     </button>
                 </div>
             </form>
@@ -248,8 +249,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                 </div>
 
                 <div className="text-center mt-4">
-                    <button type="button" onClick={toggleMode} className="text-sm text-emerald-600 hover:text-emerald-500 font-medium">
-                        สมัครสมาชิกใหม่
+                    <span className="text-sm text-gray-600">ยังไม่มีบัญชี? </span>
+                    <button type="button" onClick={toggleMode} className="text-sm text-emerald-600 hover:text-emerald-500 font-medium hover:underline">
+                        ลงทะเบียน
                     </button>
                 </div>
             </form>

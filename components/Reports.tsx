@@ -2,7 +2,8 @@
 import React, { useMemo, useState } from 'react';
 import { Patient, MedicalEventType } from '../types';
 import { determineHbvStatus, determineHcvStatus } from './utils';
-import { SearchIcon } from './icons';
+// @ts-ignore
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 interface ReportsProps {
     patients: Patient[];
@@ -31,9 +32,14 @@ const BarChartRow: React.FC<{ label: string; count: number; total: number; color
     );
 };
 
+const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#e15759', '#4e79a7', '#76b7b2', '#59a14f', '#edc948', '#b07aa1'];
+
 export const Reports: React.FC<ReportsProps> = ({ patients }) => {
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
+    
+    // State for STD Chart Year Filter
+    const [stdYear, setStdYear] = useState(new Date().getFullYear());
 
     const stats = useMemo(() => {
         const s = {
@@ -186,6 +192,54 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
         return s;
     }, [patients, startDate, endDate]);
 
+    // --- STD Chart Logic ---
+    const availableYears = useMemo(() => {
+        const years = new Set<number>();
+        const currentYear = new Date().getFullYear();
+        years.add(currentYear);
+        patients.forEach(p => {
+            p.stdInfo?.records?.forEach(r => {
+                const y = new Date(r.date).getFullYear();
+                if (!isNaN(y)) years.add(y);
+            });
+        });
+        return Array.from(years).sort((a, b) => b - a);
+    }, [patients]);
+
+    const stdChartData = useMemo(() => {
+        const months = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+        const data = months.map(m => ({ name: m } as any)); 
+        const diseaseSet = new Set<string>();
+
+        patients.forEach(p => {
+            p.stdInfo?.records?.forEach(r => {
+                const d = new Date(r.date);
+                if (d.getFullYear() === stdYear) {
+                    const monthIndex = d.getMonth();
+                    r.diseases.forEach(disease => {
+                        diseaseSet.add(disease);
+                        if (data[monthIndex][disease] === undefined) {
+                            data[monthIndex][disease] = 0;
+                        }
+                        data[monthIndex][disease] += 1;
+                    });
+                }
+            });
+        });
+        
+        const diseases = Array.from(diseaseSet).sort();
+        
+        // Fill undefined with 0 for chart continuity
+        data.forEach(d => {
+            diseases.forEach(disease => {
+                if (d[disease] === undefined) d[disease] = 0;
+            });
+        });
+
+        return { data, diseases };
+    }, [patients, stdYear]);
+    // -----------------------
+
     const clearFilter = () => {
         setStartDate('');
         setEndDate('');
@@ -261,30 +315,52 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
                         <BarChartRow label="เคยเป็น HCV รักษาหายแล้ว" count={stats.hcv.cured} total={stats.totalPatients} colorClass="bg-emerald-600" />
                         <BarChartRow label="เป็น HCV (ยังไม่เริ่มรักษา)" count={stats.hcv.activeHcv} total={stats.totalPatients} colorClass="bg-red-400" />
                     </div>
-                    {/* Note: Total patients usage in percentage might be skewed if filtering by date, but kept for relative visualization */}
                 </div>
 
-                {/* STD Breakdown */}
+                {/* STD Breakdown - CHART */}
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <h3 className="text-lg font-bold text-gray-800 mb-6 pb-2 border-b">สถิติโรคติดต่อทางเพศสัมพันธ์ (STD)</h3>
+                    <div className="flex justify-between items-center mb-6 pb-2 border-b">
+                        <h3 className="text-lg font-bold text-gray-800">สถิติโรคติดต่อทางเพศสัมพันธ์ (STD)</h3>
+                        <div className="flex items-center space-x-2">
+                            <label className="text-sm text-gray-500">ปี:</label>
+                            <select 
+                                value={stdYear} 
+                                onChange={(e) => setStdYear(Number(e.target.value))}
+                                className="text-sm border-gray-300 rounded-md shadow-sm focus:border-emerald-500 focus:ring-emerald-500 bg-gray-50"
+                            >
+                                {availableYears.map(y => (
+                                    <option key={y} value={y}>{y + 543} (ค.ศ. {y})</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
                     
-                    {Object.keys(stats.std.breakdown).length > 0 ? (
-                        <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
-                            {Object.entries(stats.std.breakdown)
-                                .sort(([, a], [, b]) => (b as number) - (a as number)) // Sort by count descending
-                                .map(([disease, count]) => (
-                                    <div key={disease} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                        <span className="font-medium text-gray-700">{disease}</span>
-                                        <span className="bg-pink-100 text-pink-800 px-3 py-1 rounded-full text-sm font-bold">{count}</span>
-                                    </div>
-                                ))
-                            }
-                        </div>
-                    ) : (
-                         <div className="flex flex-col items-center justify-center h-40 text-gray-400">
-                            <p>ไม่มีข้อมูลการวินิจฉัย STD ในช่วงเวลานี้</p>
-                        </div>
-                    )}
+                    <div className="h-[300px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={stdChartData.data} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                                <XAxis dataKey="name" tick={{fontSize: 12, fill: '#6b7280'}} axisLine={false} tickLine={false} />
+                                <YAxis allowDecimals={false} tick={{fontSize: 12, fill: '#6b7280'}} axisLine={false} tickLine={false} />
+                                <Tooltip 
+                                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
+                                />
+                                <Legend />
+                                {stdChartData.diseases.map((disease, index) => (
+                                    <Line 
+                                        key={disease}
+                                        type="monotone" 
+                                        dataKey={disease} 
+                                        stroke={COLORS[index % COLORS.length]} 
+                                        strokeWidth={2} 
+                                        dot={{ r: 3, strokeWidth: 1, fill: '#fff' }} 
+                                        activeDot={{ r: 5 }} 
+                                        name={disease} 
+                                    />
+                                ))}
+                            </LineChart>
+                        </ResponsiveContainer>
+                    </div>
+                    <p className="text-center text-xs text-gray-400 mt-4">แสดงจำนวนครั้งที่ได้รับการวินิจฉัยรายเดือน (แยกรายโรค)</p>
                 </div>
             </div>
         </div>

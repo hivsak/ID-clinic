@@ -21,7 +21,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
         lastName: '',
         dob: '',
         sex: 'ชาย',
-        riskBehavior: 'MSM',
+        riskBehavior: 'Heterosexual',
         occupation: '',
         partnerStatus: 'ไม่มี',
         partnerHivStatus: 'ไม่ทราบ',
@@ -30,7 +30,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
         district: '',
         province: '',
         phone: '',
-        healthcareScheme: 'สิทธิบัตรทอง',
+        healthcareScheme: 'บัตรทอง ในเขต',
         referralType: 'มหาสารคาม',
         referredFrom: '',
         referralDate: '',
@@ -140,11 +140,15 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
                         <div>
                             <label htmlFor="riskBehavior" className={labelClass}>พฤติกรรมเสี่ยง</label>
                             <select name="riskBehavior" id="riskBehavior" value={formData.riskBehavior} onChange={handleChange} className={inputClass}>
-                                <option>MSM</option>
-                                <option>IDU</option>
-                                <option>Heterosexual</option>
-                                <option>SW</option>
-                                <option>Other</option>
+                                <option value="MSM insertive">MSM insertive</option>
+                                <option value="MSM receptive">MSM receptive</option>
+                                <option value="MSM both">MSM both</option>
+                                <option value="Bisexual">Bisexual</option>
+                                <option value="Transgender">Transgender</option>
+                                <option value="Sex worker">Sex worker</option>
+                                <option value="IDU">IDU</option>
+                                <option value="Heterosexual">Heterosexual</option>
+                                <option value="Other">Other</option>
                             </select>
                         </div>
                     </div>
@@ -176,9 +180,12 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
                         <div>
                             <label htmlFor="healthcareScheme" className={labelClass}>สิทธิการรักษา</label>
                              <select name="healthcareScheme" id="healthcareScheme" value={formData.healthcareScheme} onChange={handleChange} className={inputClass}>
-                                <option>สิทธิบัตรทอง</option>
-                                <option>ประกันสังคม</option>
-                                <option>สิทธิข้าราชการ</option>
+                                <option>บัตรทอง นอกเขต</option>
+                                <option>บัตรทอง ในเขต</option>
+                                <option>ประกันสังคม นอกเขต</option>
+                                <option>ประกันสังคม ในเขต</option>
+                                <option>จ่ายตรง กรมบัญชีกลาง</option>
+                                <option>จ่ายตรง ท้องถิ่น</option>
                                 <option>ชำระเงินเอง</option>
                             </select>
                         </div>

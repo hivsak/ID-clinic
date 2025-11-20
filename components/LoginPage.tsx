@@ -158,7 +158,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
         )}
         
         <div className="text-center mt-4">
-             <p className="text-xs text-gray-400">Version 1.1.0 | ID Clinic</p>
+             <p className="text-xs text-gray-400">© 2025 ID Clinic | Version 1.1.1</p>
         </div>
       </div>
     </div>

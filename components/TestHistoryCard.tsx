@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import { PlusIcon, TrashIcon, EditIcon } from './icons';
 import { inputClass, formatThaiDateBE } from './utils';
 
-interface TestHistoryCardProps<T extends {id: string; date: string; [key: string]: any}, K extends string> {
+interface TestHistoryCardProps<T extends {id: string; date: string} & Record<K, any>, K extends string> {
     title: string;
     records: T[];
     onAdd: (newRecord: { date: string } & Record<K, string>) => void;
@@ -79,7 +80,7 @@ const EditModal: React.FC<EditModalProps> = ({
     );
 };
 
-export const TestHistoryCard = <T extends {id: string; date: string; [key: string]: any;}, K extends string>({
+export const TestHistoryCard = <T extends {id: string; date: string} & Record<K, any>, K extends string>({
     title, records, onAdd, onDelete, onEdit, recordKey, resultLabel, resultInputType, resultOptions = [], resultPlaceholder
 }: TestHistoryCardProps<T, K>) => {
 

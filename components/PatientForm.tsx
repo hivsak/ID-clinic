@@ -108,7 +108,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
             <form onSubmit={handleSubmit}>
                 <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
                     <h3 className="text-lg font-semibold text-gray-800 mb-6">ข้อมูลระบุตัวตนผู้ป่วย (Patient Identification)</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div>
                             <label htmlFor="hn" className={labelClass}>HN (Hospital Number)</label>
                             <input type="text" name="hn" id="hn" value={formData.hn} onChange={handleChange} className={inputClass} required />
@@ -116,6 +116,15 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
                         <div>
                             <label htmlFor="napId" className={labelClass}>NAP ID</label>
                             <input type="text" name="napId" id="napId" value={formData.napId} onChange={handleChange} className={inputClass} />
+                        </div>
+                         <div>
+                             <label className={labelClass}>สถานะ (คำนวณอัตโนมัติ)</label>
+                             <input 
+                                type="text" 
+                                disabled 
+                                value={calculatePatientStatus(formData) || '-'} 
+                                className={`${inputClass} bg-gray-100 text-gray-500 cursor-not-allowed`} 
+                            />
                         </div>
                     </div>
                 </div>
@@ -271,15 +280,6 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
                          <div>
                             <label htmlFor="nextAppointmentDate" className={labelClass}>วันนัดหมายครั้งถัดไป</label>
                             <input type="date" name="nextAppointmentDate" id="nextAppointmentDate" value={formData.nextAppointmentDate} onChange={handleChange} className={inputClass} />
-                        </div>
-                        <div>
-                             <label className={labelClass}>สถานะ (คำนวณอัตโนมัติ)</label>
-                             <input 
-                                type="text" 
-                                disabled 
-                                value={calculatePatientStatus(formData) || '-'} 
-                                className={`${inputClass} bg-gray-100 text-gray-500 cursor-not-allowed`} 
-                            />
                         </div>
                     </div>
                 </div>

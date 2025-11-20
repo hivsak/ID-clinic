@@ -124,7 +124,7 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, onUpdat
                 <SectionHeader title="ข้อมูลระบุตัวตนผู้ป่วย (Patient Identification)" section="ID" />
                 {editSection === 'ID' ? (
                     <form>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <div>
                                 <label htmlFor="hn" className={labelClass}>HN (Hospital Number)</label>
                                 <input type="text" name="hn" id="hn" value={formData.hn} onChange={handleChange} className={inputClass} required />
@@ -146,7 +146,7 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, onUpdat
                         <ActionButtons />
                     </form>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <DisplayField label="HN (Hospital Number)" value={patient.hn} />
                         <DisplayField label="NAP ID" value={patient.napId} />
                         <DisplayField label="สถานะ (ปัจจุบัน)" value={displayStatus} />
@@ -477,8 +477,8 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, onUpdat
                             </div>
 
                             {/* Refer Out */}
-                            <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
-                                <p className="text-sm font-bold text-gray-700 mb-2">Refer Out</p>
+                            <div className="bg-red-50 p-4 rounded-md border border-red-100">
+                                <p className="text-sm font-bold text-red-800 mb-2">Refer Out</p>
                                 <div className="flex flex-wrap gap-x-4 gap-y-2">
                                     <div className="flex flex-col">
                                         <span className="text-xs text-gray-500">วันที่ส่งตัวออก</span>

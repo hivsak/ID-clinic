@@ -106,7 +106,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                 <span className="text-white text-2xl font-bold">ID</span>
            </div>
           <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
-            ID Clinic Management
+            ID Clinic Manager
           </h2>
           <p className="mt-2 text-sm text-gray-600">
             {isRegistering ? 'สมัครสมาชิกเพื่อขอเข้าใช้งาน' : 'กรุณาเข้าสู่ระบบเพื่อใช้งาน'}
@@ -256,7 +256,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
         )}
         
         <div className="text-center mt-4">
-             <p className="text-xs text-gray-400">© 2025 ID Clinic | Version 1.1.1</p>
+             <p className="text-xs text-gray-400">© 2025 ID CLINIC MANAGER | Version 1.1.2</p>
         </div>
       </div>
     </div>

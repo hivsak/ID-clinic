@@ -1,10 +1,17 @@
-
 import React, { useState, useEffect } from 'react';
 import { Patient, HcvInfo, HcvTest, HbvInfo } from '../../types';
 import { EditIcon, PlusIcon, TrashIcon } from '../icons';
-import { inputClass, formatThaiDateBE, determineHcvStatus, determineHcvDiagnosticStatus } from '../utils';
+import { inputClass, formatThaiDateBE } from '../utils';
 import { TestHistoryCard } from '../TestHistoryCard';
 
+type HcvDiagnosticStatus = 'POSITIVE' | 'INCONCLUSIVE' | 'NEGATIVE' | 'UNKNOWN';
+
+const determineHcvDiagnosticStatus = (tests: HcvTest[]): HcvDiagnosticStatus => {
+    if (!tests || tests.length === 0) return 'UNKNOWN';
+    if (tests.some(t => t.result === 'Positive')) return 'POSITIVE';
+    if (tests.some(t => t.result === 'Inconclusive')) return 'INCONCLUSIVE';
+    return 'NEGATIVE';
+};
 
 interface HbvHcvTabProps {
     patient: Patient;
@@ -284,13 +291,74 @@ export const HbvHcvTab: React.FC<HbvHcvTabProps> = ({ patient, onUpdatePatient }
     // --- HCV Summary Logic ---
     const hcvInfo = patient.hcvInfo || { hcvTests: [] };
     const latestHcvTest = [...(hcvInfo.hcvTests || [])].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+    const hcvDiagnosticStatus = determineHcvDiagnosticStatus(hcvInfo.hcvTests || []);
     const latestPreVl = [...(hcvInfo.preTreatmentVls || [])].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
     const latestPostVl = [...(hcvInfo.postTreatmentVls || [])].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
     const latestTreatment = [...(hcvInfo.treatments || [])].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
-    
-    // Use Shared Logic
-    const hcvDiagnosticStatus = determineHcvDiagnosticStatus(hcvInfo.hcvTests || []);
-    const hcvTreatmentStatus = determineHcvStatus(hcvInfo);
+
+    const getHcvTreatmentStatus = (): { text: string; color: string } => {
+        const parseVl = (vlString?: string): number | null => {
+            if (!vlString) return null;
+            const lowerVl = vlString.toLowerCase();
+            if (lowerVl.includes('not detected')) {
+                return 0;
+            }
+            
+            const cleanedString = vlString.replace(/,/g, '');
+            const isLessThan = cleanedString.includes('<');
+            
+            const numericMatch = cleanedString.match(/(\d+(\.\d+)?)/);
+            if (numericMatch) {
+                const value = parseFloat(numericMatch[0]);
+                if (isLessThan) {
+                    return value - 1;
+                }
+                return value;
+            }
+            return null;
+        };
+        
+        const preVlValue = latestPreVl ? parseVl(latestPreVl.result) : null;
+        const postVlValue = latestPostVl ? parseVl(latestPostVl.result) : null;
+
+        // Rule 1: Patient is Negative
+        if (hcvDiagnosticStatus === 'NEGATIVE') {
+            return { text: 'ไม่เป็น HCV', color: 'bg-emerald-100 text-emerald-800' };
+        }
+
+        if (hcvDiagnosticStatus === 'POSITIVE' || hcvDiagnosticStatus === 'INCONCLUSIVE') {
+            // Rule 5: Has post-treatment data
+            if (preVlValue !== null && preVlValue > 15 && latestTreatment && postVlValue !== null) {
+                if (postVlValue < 15) {
+                    return { text: 'เคยเป็น HCV รักษาหายแล้ว', color: 'bg-emerald-100 text-emerald-800' };
+                } else {
+                    return { text: 'เป็น HCV รักษาแล้วไม่หาย', color: 'bg-red-100 text-red-800' };
+                }
+            }
+
+            // Rule 4: Currently in treatment
+            if (preVlValue !== null && preVlValue > 15 && latestTreatment) {
+                return { text: 'กำลังรักษา HCV', color: 'bg-amber-100 text-amber-800' };
+            }
+
+            // Rule 3: Has pre-treatment data only
+            if (preVlValue !== null) {
+                if (preVlValue < 15) {
+                    return { text: 'เคยเป็น HCV หายเอง', color: 'bg-emerald-100 text-emerald-800' };
+                } else {
+                    return { text: 'เป็น HCV', color: 'bg-red-100 text-red-800' };
+                }
+            }
+
+            // Rule 2: Positive/Inconclusive but no further data
+            return { text: 'รอการตรวจเพิ่มเติม', color: 'bg-amber-100 text-amber-800' };
+        }
+
+        // Default/Unknown case
+        return { text: 'ไม่มีข้อมูล', color: 'bg-gray-100 text-gray-800' };
+    };
+
+    const hcvTreatmentStatus = getHcvTreatmentStatus();
     
     let hcvDateText = 'ยังไม่เริ่มการรักษา';
     if (hcvTreatmentStatus.text === 'เคยเป็น HCV รักษาหายแล้ว' && latestPostVl) {

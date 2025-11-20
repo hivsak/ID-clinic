@@ -3,7 +3,7 @@ import React, { useMemo, useState } from 'react';
 import { Patient, MedicalEventType } from '../types';
 import { determineHbvStatus, determineHcvStatus } from './utils';
 // @ts-ignore
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from 'recharts';
 
 interface ReportsProps {
     patients: Patient[];
@@ -16,21 +16,6 @@ const Card: React.FC<{ title: string; value: number | string; subtitle?: string;
         {subtitle && <p className="text-xs text-gray-400 mt-1">{subtitle}</p>}
     </div>
 );
-
-const BarChartRow: React.FC<{ label: string; count: number; total: number; colorClass: string }> = ({ label, count, total, colorClass }) => {
-    const percentage = total > 0 ? (count / total) * 100 : 0;
-    return (
-        <div className="mb-3">
-            <div className="flex justify-between items-end mb-1">
-                <span className="text-sm font-medium text-gray-700">{label}</span>
-                <span className="text-sm text-gray-500">{count} ({percentage.toFixed(1)}%)</span>
-            </div>
-            <div className="w-full bg-gray-100 rounded-full h-2.5">
-                <div className={`h-2.5 rounded-full ${colorClass}`} style={{ width: `${percentage}%` }}></div>
-            </div>
-        </div>
-    );
-};
 
 const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#e15759', '#4e79a7', '#76b7b2', '#59a14f', '#edc948', '#b07aa1'];
 
@@ -192,6 +177,16 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
         return s;
     }, [patients, startDate, endDate]);
 
+    // --- HCV Chart Data ---
+    const hcvChartData = useMemo(() => [
+        { name: 'รอการตรวจเพิ่มเติม', value: stats.hcv.waitForTest, color: '#fbbf24' },
+        { name: 'หายเอง', value: stats.hcv.clearedSpontaneously, color: '#34d399' },
+        { name: 'กำลังรักษา', value: stats.hcv.treating, color: '#3b82f6' },
+        { name: 'รักษาไม่หาย', value: stats.hcv.treatmentFailed, color: '#ef4444' },
+        { name: 'รักษาหายแล้ว', value: stats.hcv.cured, color: '#059669' },
+        { name: 'ยังไม่เริ่มรักษา', value: stats.hcv.activeHcv, color: '#f87171' },
+    ].filter(d => d.value > 0), [stats]);
+
     // --- STD Chart Logic ---
     const availableYears = useMemo(() => {
         const years = new Set<number>();
@@ -301,19 +296,36 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* HCV Breakdown */}
+                {/* HCV Breakdown - Donut Chart */}
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                     <h3 className="text-lg font-bold text-gray-800 mb-6 pb-2 border-b flex justify-between">
                         <span>สรุปสถานการณ์ HCV</span>
                         <span className="text-xs font-normal text-gray-500 self-end">อิงตามวันที่เกิดผล/การรักษา</span>
                     </h3>
-                    <div className="space-y-4">
-                        <BarChartRow label="รอการตรวจเพิ่มเติม (Anti-HCV+)" count={stats.hcv.waitForTest} total={stats.totalPatients} colorClass="bg-amber-400" />
-                        <BarChartRow label="เคยเป็น HCV หายเอง" count={stats.hcv.clearedSpontaneously} total={stats.totalPatients} colorClass="bg-emerald-400" />
-                        <BarChartRow label="กำลังรักษา HCV (เริ่มยา)" count={stats.hcv.treating} total={stats.totalPatients} colorClass="bg-blue-500" />
-                        <BarChartRow label="เป็น HCV รักษาแล้วไม่หาย" count={stats.hcv.treatmentFailed} total={stats.totalPatients} colorClass="bg-red-500" />
-                        <BarChartRow label="เคยเป็น HCV รักษาหายแล้ว" count={stats.hcv.cured} total={stats.totalPatients} colorClass="bg-emerald-600" />
-                        <BarChartRow label="เป็น HCV (ยังไม่เริ่มรักษา)" count={stats.hcv.activeHcv} total={stats.totalPatients} colorClass="bg-red-400" />
+                    <div className="h-[300px] w-full flex items-center justify-center">
+                        {hcvChartData.length > 0 ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie
+                                        data={hcvChartData}
+                                        cx="50%"
+                                        cy="50%"
+                                        innerRadius={60}
+                                        outerRadius={90}
+                                        paddingAngle={5}
+                                        dataKey="value"
+                                    >
+                                        {hcvChartData.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={entry.color} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip formatter={(value: number) => [value, 'จำนวน (ราย)']} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} />
+                                    <Legend iconType="circle" layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: '12px' }}/>
+                                </PieChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="text-gray-400 text-sm">ไม่มีข้อมูลในช่วงเวลาที่เลือก</div>
+                        )}
                     </div>
                 </div>
 

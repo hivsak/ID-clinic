@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Patient, MedicalEvent } from '../types';
-import { EditIcon, ChevronLeftIcon, PrepPepIcon } from './icons';
+import { ChevronLeftIcon, PrepPepIcon } from './icons';
 import { calculateAge } from './utils';
 
 // Import tab components
@@ -25,11 +25,9 @@ type Tab = 'GENERAL' | 'HIV' | 'HBV_HCV' | 'TPT' | 'STD' | 'PREGNANCY' | 'PREP' 
 
 export const PatientDetail: React.FC<PatientDetailProps> = ({ patient, onBack, onUpdate }) => {
   const [activeTab, setActiveTab] = useState<Tab>('GENERAL');
-  const [isEditingGeneralInfo, setIsEditingGeneralInfo] = useState(false);
 
   const handleUpdatePatient = (updatedPatient: Patient) => {
     onUpdate(updatedPatient);
-    setIsEditingGeneralInfo(false); // Assume edit is finished
   };
 
   const handleSaveEvent = (eventData: Omit<MedicalEvent, 'id'> | MedicalEvent) => {
@@ -124,7 +122,7 @@ export const PatientDetail: React.FC<PatientDetailProps> = ({ patient, onBack, o
   const renderTabContent = () => {
     switch (activeTab) {
       case 'GENERAL':
-        return <GeneralInfoTab patient={patient} isEditing={isEditingGeneralInfo} onUpdate={handleUpdatePatient} onCancelEdit={() => setIsEditingGeneralInfo(false)} />;
+        return <GeneralInfoTab patient={patient} onUpdate={handleUpdatePatient} />;
       case 'HIV':
         return <HivTreatmentTab patient={patient} onSaveEvent={handleSaveEvent} onDeleteEvent={handleDeleteEvent} />;
       case 'HBV_HCV':
@@ -159,15 +157,6 @@ export const PatientDetail: React.FC<PatientDetailProps> = ({ patient, onBack, o
                 <span>เพศ: {patient.sex || '-'}</span>
             </div>
         </div>
-        {activeTab === 'GENERAL' && !isEditingGeneralInfo && (
-            <button 
-                onClick={() => setIsEditingGeneralInfo(true)}
-                className="flex items-center mt-4 md:mt-0 px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
-            >
-                <EditIcon className="mr-2 h-4 w-4" />
-                แก้ไขข้อมูล
-            </button>
-        )}
       </div>
 
       <div className="border-b border-gray-200 mb-6">

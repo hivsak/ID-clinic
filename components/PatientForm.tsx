@@ -325,12 +325,12 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
                         {formData.referralType === 'ที่อื่น' && (
                             <>
                                 <div>
-                                    <label htmlFor="referredFrom" className={labelClass}>ส่งตัวมาจาก</label>
-                                    <input type="text" name="referredFrom" id="referredFrom" value={formData.referredFrom} onChange={handleChange} className={inputClass} />
-                                </div>
-                                <div>
                                     <label htmlFor="referralDate" className={labelClass}>วันที่ส่งตัว</label>
                                     <input type="date" name="referralDate" id="referralDate" value={formData.referralDate} onChange={handleChange} className={inputClass} />
+                                </div>
+                                <div>
+                                    <label htmlFor="referredFrom" className={labelClass}>ส่งตัวมาจาก</label>
+                                    <input type="text" name="referredFrom" id="referredFrom" value={formData.referredFrom} onChange={handleChange} className={inputClass} />
                                 </div>
                             </>
                         )}

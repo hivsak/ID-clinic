@@ -16,16 +16,99 @@ const Card: React.FC<{ title: string; value: number | string; subtitle?: string;
     </div>
 );
 
-const BarChartRow: React.FC<{ label: string; count: number; total: number; colorClass: string }> = ({ label, count, total, colorClass }) => {
-    const percentage = total > 0 ? (count / total) * 100 : 0;
-    return (
-        <div className="mb-3">
-            <div className="flex justify-between items-end mb-1">
-                <span className="text-sm font-medium text-gray-700">{label}</span>
-                <span className="text-sm text-gray-500">{count} ({percentage.toFixed(1)}%)</span>
+// --- Donut Chart Component ---
+const DonutChart: React.FC<{ data: { label: string; count: number; color: string }[] }> = ({ data }) => {
+    const total = data.reduce((acc, cur) => acc + cur.count, 0);
+    const radius = 70;
+    const innerRadius = 50;
+    const center = 100;
+    let accumulatedAngle = 0;
+
+    if (total === 0) {
+        return (
+            <div className="flex items-center justify-center h-64 text-gray-400">
+                ไม่มีข้อมูล
             </div>
-            <div className="w-full bg-gray-100 rounded-full h-2.5">
-                <div className={`h-2.5 rounded-full ${colorClass}`} style={{ width: `${percentage}%` }}></div>
+        );
+    }
+
+    const slices = data.map((item, index) => {
+        if (item.count === 0) return null;
+        
+        const percentage = item.count / total;
+        const startAngle = accumulatedAngle;
+        const endAngle = accumulatedAngle + percentage;
+        accumulatedAngle += percentage;
+
+        // Handle single item taking up 100% (360 degrees)
+        if (percentage > 0.999) {
+             return (
+                <circle
+                    key={item.label}
+                    cx={center}
+                    cy={center}
+                    r={(radius + innerRadius) / 2}
+                    fill="none"
+                    stroke={item.color}
+                    strokeWidth={radius - innerRadius}
+                />
+            );
+        }
+
+        const getCoords = (percent: number, r: number) => {
+             const x = center + r * Math.cos(2 * Math.PI * percent - Math.PI / 2);
+             const y = center + r * Math.sin(2 * Math.PI * percent - Math.PI / 2);
+             return [x, y];
+        };
+
+        const [startX, startY] = getCoords(startAngle, radius);
+        const [endX, endY] = getCoords(endAngle, radius);
+        const [startInnerX, startInnerY] = getCoords(startAngle, innerRadius);
+        const [endInnerX, endInnerY] = getCoords(endAngle, innerRadius);
+
+        const largeArcFlag = percentage > 0.5 ? 1 : 0;
+
+        const pathData = [
+            `M ${startX} ${startY}`,
+            `A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endX} ${endY}`,
+            `L ${endInnerX} ${endInnerY}`,
+            `A ${innerRadius} ${innerRadius} 0 ${largeArcFlag} 0 ${startInnerX} ${startInnerY}`,
+            `Z`
+        ].join(' ');
+
+        return (
+            <path
+                key={item.label}
+                d={pathData}
+                fill={item.color}
+                className="transition-all duration-300 hover:opacity-80"
+            >
+                <title>{`${item.label}: ${item.count} (${(percentage * 100).toFixed(1)}%)`}</title>
+            </path>
+        );
+    });
+
+    return (
+        <div className="flex flex-col items-center justify-center py-4">
+            <div className="relative w-48 h-48">
+                <svg viewBox="0 0 200 200" className="w-full h-full">
+                    {slices}
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    <span className="text-3xl font-bold text-gray-700">{total}</span>
+                    <span className="text-xs text-gray-500">Cases</span>
+                </div>
+            </div>
+            <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 w-full">
+                {data.map((item) => (
+                    <div key={item.label} className="flex justify-between items-center text-sm">
+                        <div className="flex items-center">
+                            <span className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: item.color }}></span>
+                            <span className="text-gray-600 truncate max-w-[140px]" title={item.label}>{item.label}</span>
+                        </div>
+                        <span className="font-semibold text-gray-800">{item.count}</span>
+                    </div>
+                ))}
             </div>
         </div>
     );
@@ -406,6 +489,15 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
         return s;
     }, [patients, startDate, endDate]);
 
+    const hcvChartData = [
+        { label: 'รอการตรวจเพิ่มเติม', count: stats.hcv.waitForTest, color: '#fbbf24' },
+        { label: 'หายเอง (Spontaneous)', count: stats.hcv.clearedSpontaneously, color: '#34d399' },
+        { label: 'กำลังรักษา (Treating)', count: stats.hcv.treating, color: '#3b82f6' },
+        { label: 'รักษาไม่หาย (Failed)', count: stats.hcv.treatmentFailed, color: '#ef4444' },
+        { label: 'รักษาหายแล้ว (Cured)', count: stats.hcv.cured, color: '#059669' },
+        { label: 'Active HCV (ยังไม่รักษา)', count: stats.hcv.activeHcv, color: '#f87171' },
+    ].filter(d => d.count > 0);
+
     const clearFilter = () => {
         setStartDate('');
         setEndDate('');
@@ -459,14 +551,7 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
                         <span>สรุปสถานการณ์ HCV</span>
                         <span className="text-xs font-normal text-gray-500 self-end">อิงตามวันที่เกิดผล/การรักษา</span>
                     </h3>
-                    <div className="space-y-4">
-                        <BarChartRow label="รอการตรวจเพิ่มเติม (Anti-HCV+)" count={stats.hcv.waitForTest} total={stats.totalPatients} colorClass="bg-amber-400" />
-                        <BarChartRow label="เคยเป็น HCV หายเอง" count={stats.hcv.clearedSpontaneously} total={stats.totalPatients} colorClass="bg-emerald-400" />
-                        <BarChartRow label="กำลังรักษา HCV (เริ่มยา)" count={stats.hcv.treating} total={stats.totalPatients} colorClass="bg-blue-500" />
-                        <BarChartRow label="เป็น HCV รักษาแล้วไม่หาย" count={stats.hcv.treatmentFailed} total={stats.totalPatients} colorClass="bg-red-500" />
-                        <BarChartRow label="เคยเป็น HCV รักษาหายแล้ว" count={stats.hcv.cured} total={stats.totalPatients} colorClass="bg-emerald-600" />
-                        <BarChartRow label="เป็น HCV (ยังไม่เริ่มรักษา)" count={stats.hcv.activeHcv} total={stats.totalPatients} colorClass="bg-red-400" />
-                    </div>
+                    <DonutChart data={hcvChartData} />
                 </div>
 
                 {/* STD Chart */}

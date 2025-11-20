@@ -45,14 +45,15 @@ const NavItem: React.FC<NavItemProps> = ({ icon, label, active = false, onClick 
 
 interface SidebarProps {
     activeView: string;
-    onNavigate: () => void;
+    onChangeView: (view: 'dashboard' | 'list') => void;
     notifications: Notification[];
     onNotificationClick: (patientId: number) => void;
     onLogout: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, notifications, onNotificationClick, onLogout }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ activeView, onChangeView, notifications, onNotificationClick, onLogout }) => {
   const isPatientSectionActive = ['list', 'detail', 'form'].includes(activeView);
+  const isDashboardActive = activeView === 'dashboard';
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
   const handleNotificationItemClick = (patientId: number) => {
@@ -112,8 +113,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, notifi
 
             {/* Navigation Items - Mobile: takes full width; Desktop: centered */}
             <nav className="flex flex-row justify-around items-center w-full md:w-auto md:absolute md:left-1/2 md:-translate-x-1/2 md:space-x-2">
-                <NavItem icon={<DashboardIcon />} label="Dashboard" />
-                <NavItem icon={<PatientsIcon />} label="Patients" active={isPatientSectionActive} onClick={onNavigate} />
+                <NavItem icon={<DashboardIcon />} label="Dashboard" active={isDashboardActive} onClick={() => onChangeView('dashboard')} />
+                <NavItem icon={<PatientsIcon />} label="Patients" active={isPatientSectionActive} onClick={() => onChangeView('list')} />
                 <NavItem icon={<ReportsIcon />} label="Reports" />
                 <NavItem icon={<SettingsIcon />} label="Settings" />
             </nav>

@@ -5,12 +5,13 @@ import { PatientList } from './components/PatientList';
 import { PatientDetail } from './components/PatientDetail';
 import { PatientForm, NewPatientData } from './components/PatientForm';
 import { LoginPage } from './components/LoginPage';
+import { Dashboard } from './components/Dashboard'; // Import Dashboard
 import { Patient, PatientStatus } from './types';
 import { BellIcon } from './components/icons';
 import { getPatients, createPatient, updatePatient, getPatientById } from './services/patientService';
 import { login } from './services/authService';
 
-type View = 'list' | 'detail' | 'form';
+type View = 'list' | 'detail' | 'form' | 'dashboard'; // Add 'dashboard'
 
 // --- Utility Functions ---
 const calculateVlTestDate = (ga: string, gaDateStr: string): Date | null => {
@@ -40,7 +41,7 @@ interface Notification {
 
 const App: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [view, setView] = useState<View>('list');
+  const [view, setView] = useState<View>('dashboard'); // Default to dashboard or list? Let's keep dashboard as new feature
   const [patients, setPatients] = useState<Patient[]>([]);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -129,6 +130,7 @@ const App: React.FC = () => {
           setIsLoggedIn(true);
           localStorage.setItem('idClinic_isLoggedIn', 'true');
           fetchPatients();
+          setView('dashboard'); // Go to dashboard on login
       } else {
           throw new Error('INVALID_CREDENTIALS');
       }
@@ -163,6 +165,12 @@ const App: React.FC = () => {
     setSelectedPatient(null);
     setView('list');
     fetchPatients(); // Refresh list on back
+  }, []);
+  
+  const handleNavigateToDashboard = useCallback(() => {
+      setSelectedPatient(null);
+      setView('dashboard');
+      fetchPatients();
   }, []);
 
   const handleAddNew = useCallback(() => {
@@ -214,12 +222,16 @@ const App: React.FC = () => {
         return <div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div></div>;
     }
 
+    if (view === 'dashboard') {
+        return <Dashboard patients={patients} />;
+    }
     if (view === 'detail' && selectedPatient) {
         return <PatientDetail patient={selectedPatient} onBack={handleBackToList} onUpdate={handleUpdatePatient} />;
     }
     if (view === 'form') {
         return <PatientForm onSave={handleSavePatient} onCancel={handleCancelAdd} />;
     }
+    // Default list view
     return <PatientList patients={patients} onSelectPatient={handleSelectPatient} onAddNew={handleAddNew} />;
   };
 
@@ -232,6 +244,7 @@ const App: React.FC = () => {
       <Sidebar 
         activeView={view} 
         onNavigate={handleBackToList}
+        onDashboard={handleNavigateToDashboard}
         notifications={notifications}
         onNotificationClick={handleSelectPatient}
         onLogout={handleLogout}

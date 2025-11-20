@@ -132,6 +132,19 @@ const GENERAL_COLORS = {
 const GeneralTrendChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
     const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
     const [hoveredMonth, setHoveredMonth] = useState<number | null>(null);
+    const [visibleCategories, setVisibleCategories] = useState<Set<string>>(new Set(GENERAL_LABELS));
+
+    const toggleCategory = (cat: string) => {
+        setVisibleCategories(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(cat)) {
+                newSet.delete(cat);
+            } else {
+                newSet.add(cat);
+            }
+            return newSet;
+        });
+    };
 
     const { years, dataByYear } = useMemo(() => {
         const yrs = new Set<number>();
@@ -202,14 +215,17 @@ const GeneralTrendChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
         const mData = Array.from({ length: 12 }, (_, i) => {
             const counts = currentYearData[i] || {};
             GENERAL_LABELS.forEach(cat => {
-                const c = counts[cat] || 0;
-                if (c > max) max = c;
+                // Only calculate max for visible categories
+                if (visibleCategories.has(cat)) {
+                    const c = counts[cat] || 0;
+                    if (c > max) max = c;
+                }
             });
             return { monthIndex: i, counts };
         });
 
         return { monthlyData: mData, maxCount: Math.max(max, 4) };
-    }, [selectedYear, dataByYear]);
+    }, [selectedYear, dataByYear, visibleCategories]);
 
     const svgHeight = 320;
     const svgWidth = 800;
@@ -234,7 +250,7 @@ const GeneralTrendChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
 
     return (
          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
                 <h3 className="text-lg font-bold text-gray-800">แนวโน้มรายเดือน (Monthly Trends)</h3>
                 {years.length > 0 && (
                     <div className="relative mt-2 sm:mt-0">
@@ -250,6 +266,32 @@ const GeneralTrendChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
                         </div>
                     </div>
                 )}
+            </div>
+
+            {/* Filter Controls */}
+            <div className="flex flex-wrap gap-2 mb-6">
+                {GENERAL_LABELS.map(cat => {
+                    const color = GENERAL_COLORS[cat as keyof typeof GENERAL_COLORS];
+                    const isActive = visibleCategories.has(cat);
+                    return (
+                        <button
+                            key={cat}
+                            onClick={() => toggleCategory(cat)}
+                            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border shadow-sm flex items-center gap-2 ${
+                                isActive 
+                                ? `text-white border-transparent` 
+                                : 'bg-white text-gray-400 border-gray-200 hover:bg-gray-50'
+                            }`}
+                            style={{ 
+                                backgroundColor: isActive ? color : undefined,
+                                borderColor: isActive ? color : undefined
+                            }}
+                        >
+                             <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-white' : 'bg-gray-300'}`}></span>
+                            {cat}
+                        </button>
+                    );
+                })}
             </div>
 
             {years.length === 0 ? (
@@ -270,7 +312,7 @@ const GeneralTrendChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
                          >
                              <p className="font-bold text-gray-800 mb-2 border-b pb-1">{THAI_MONTHS[hoveredMonth]} {selectedYear}</p>
                              <ul className="space-y-1">
-                                 {GENERAL_LABELS.map(cat => (
+                                 {GENERAL_LABELS.filter(c => visibleCategories.has(c)).map(cat => (
                                      <li key={cat} className="flex justify-between items-center">
                                           <div className="flex items-center">
                                              <span className="w-2 h-2 rounded-full mr-1.5" style={{ backgroundColor: GENERAL_COLORS[cat as keyof typeof GENERAL_COLORS] }}></span>
@@ -279,6 +321,9 @@ const GeneralTrendChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
                                          <span className="font-bold text-gray-900 ml-2">{monthlyData[hoveredMonth].counts[cat] || 0}</span>
                                      </li>
                                  ))}
+                                 {GENERAL_LABELS.filter(c => visibleCategories.has(c)).length === 0 && (
+                                     <li className="text-gray-400 italic">ไม่ได้เลือกกราฟ</li>
+                                 )}
                              </ul>
                          </div>
                      )}
@@ -303,39 +348,45 @@ const GeneralTrendChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
                         })}
 
                         {/* Lines */}
-                        {GENERAL_LABELS.map(cat => (
-                            <path
-                                key={cat}
-                                d={getPath(cat)}
-                                fill="none"
-                                stroke={GENERAL_COLORS[cat as keyof typeof GENERAL_COLORS]}
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                className="transition-all duration-300"
-                            />
-                        ))}
+                        {GENERAL_LABELS.map(cat => {
+                            if (!visibleCategories.has(cat)) return null;
+                            return (
+                                <path
+                                    key={cat}
+                                    d={getPath(cat)}
+                                    fill="none"
+                                    stroke={GENERAL_COLORS[cat as keyof typeof GENERAL_COLORS]}
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    className="transition-all duration-300"
+                                />
+                            );
+                        })}
 
                         {/* Dots */}
-                        {GENERAL_LABELS.map(cat => (
-                            <g key={`dots-${cat}`}>
-                                {monthlyData.map((d, i) => {
-                                    const count = d.counts[cat];
-                                    if (count === undefined || count === 0) return null;
-                                    return (
-                                        <circle 
-                                            key={i} 
-                                            cx={getX(i)} 
-                                            cy={getY(count)} 
-                                            r="3" 
-                                            fill={GENERAL_COLORS[cat as keyof typeof GENERAL_COLORS]} 
-                                            stroke="white" 
-                                            strokeWidth="1"
-                                        />
-                                    );
-                                })}
-                            </g>
-                        ))}
+                        {GENERAL_LABELS.map(cat => {
+                            if (!visibleCategories.has(cat)) return null;
+                            return (
+                                <g key={`dots-${cat}`}>
+                                    {monthlyData.map((d, i) => {
+                                        const count = d.counts[cat];
+                                        if (count === undefined || count === 0) return null;
+                                        return (
+                                            <circle 
+                                                key={i} 
+                                                cx={getX(i)} 
+                                                cy={getY(count)} 
+                                                r="3" 
+                                                fill={GENERAL_COLORS[cat as keyof typeof GENERAL_COLORS]} 
+                                                stroke="white" 
+                                                strokeWidth="1"
+                                            />
+                                        );
+                                    })}
+                                </g>
+                            );
+                        })}
 
                          {/* Interactive Area */}
                         {monthlyData.map((_, i) => (
@@ -354,19 +405,6 @@ const GeneralTrendChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
                      </svg>
                  </div>
             )}
-            
-            {/* Legend */}
-            <div className="mt-6 flex flex-wrap gap-3 justify-center">
-                {GENERAL_LABELS.map(cat => (
-                    <div key={cat} className="flex items-center text-xs sm:text-sm bg-gray-50 px-2 py-1 rounded-md border border-gray-100">
-                        <span 
-                            className="w-3 h-3 rounded-full mr-2" 
-                            style={{ backgroundColor: GENERAL_COLORS[cat as keyof typeof GENERAL_COLORS] }}
-                        ></span>
-                        <span className="text-gray-700 font-medium">{cat}</span>
-                    </div>
-                ))}
-            </div>
          </div>
     );
 };

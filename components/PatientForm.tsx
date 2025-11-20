@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { Patient } from '../types';
+import { calculateAgeBreakdown, calculateDobFromAge, inputClass, labelClass } from './utils';
 
 export type NewPatientData = Omit<Patient, 'id' | 'medicalHistory' | 'status' | 'registrationDate'>;
 
@@ -8,9 +9,6 @@ interface PatientFormProps {
     onSave: (patient: NewPatientData) => void;
     onCancel: () => void;
 }
-
-const inputClass = "mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm";
-const labelClass = "block text-sm font-medium text-gray-700";
 
 export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) => {
     const [formData, setFormData] = useState<NewPatientData>({
@@ -37,6 +35,8 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
         nextAppointmentDate: '',
     });
 
+    const [age, setAge] = useState({ years: '', months: '', days: '' });
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         if (name === 'referralType' && value === 'มหาสารคาม') {
@@ -49,6 +49,20 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
         } else {
             setFormData(prev => ({ ...prev, [name]: value }));
         }
+    };
+
+    const handleDobChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value;
+        setFormData(prev => ({ ...prev, dob: val }));
+        const breakdown = calculateAgeBreakdown(val);
+        setAge(breakdown);
+    };
+
+    const handleAgeChange = (field: 'years' | 'months' | 'days', val: string) => {
+        const newAge = { ...age, [field]: val };
+        setAge(newAge);
+        const dob = calculateDobFromAge(newAge.years, newAge.months, newAge.days);
+        setFormData(prev => ({ ...prev, dob }));
     };
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -103,7 +117,47 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
                         </div>
                          <div>
                             <label htmlFor="dob" className={labelClass}>วันเกิด</label>
-                            <input type="date" name="dob" id="dob" value={formData.dob} onChange={handleChange} className={inputClass} />
+                            <input type="date" name="dob" id="dob" value={formData.dob} onChange={handleDobChange} className={inputClass} />
+                        </div>
+                        <div>
+                            <label className={labelClass}>อายุ (คำนวณอัตโนมัติ)</label>
+                            <div className="flex space-x-2 mt-1">
+                                <div className="flex-1 relative">
+                                    <input 
+                                        type="number" 
+                                        min="0"
+                                        placeholder="ปี" 
+                                        value={age.years} 
+                                        onChange={(e) => handleAgeChange('years', e.target.value)} 
+                                        className="block w-full px-2 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm" 
+                                    />
+                                    <span className="absolute right-2 top-2 text-xs text-gray-400">ปี</span>
+                                </div>
+                                <div className="flex-1 relative">
+                                    <input 
+                                        type="number" 
+                                        min="0"
+                                        max="11"
+                                        placeholder="เดือน" 
+                                        value={age.months} 
+                                        onChange={(e) => handleAgeChange('months', e.target.value)} 
+                                        className="block w-full px-2 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm" 
+                                    />
+                                    <span className="absolute right-2 top-2 text-xs text-gray-400">ด</span>
+                                </div>
+                                <div className="flex-1 relative">
+                                    <input 
+                                        type="number" 
+                                        min="0"
+                                        max="31"
+                                        placeholder="วัน" 
+                                        value={age.days} 
+                                        onChange={(e) => handleAgeChange('days', e.target.value)} 
+                                        className="block w-full px-2 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm" 
+                                    />
+                                    <span className="absolute right-2 top-2 text-xs text-gray-400">ว</span>
+                                </div>
+                            </div>
                         </div>
                         <div>
                             <label htmlFor="sex" className={labelClass}>เพศ</label>

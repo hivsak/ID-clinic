@@ -15,6 +15,55 @@ export const calculateAge = (dob?: string) => {
   return age;
 };
 
+export const calculateAgeBreakdown = (dobString?: string) => {
+    if (!dobString) return { years: '', months: '', days: '' };
+    const dob = new Date(dobString);
+    const today = new Date();
+    // Reset hours to ensure date calculations are based on calendar days
+    dob.setHours(0,0,0,0);
+    today.setHours(0,0,0,0);
+    
+    if (isNaN(dob.getTime())) return { years: '', months: '', days: '' };
+
+    let years = today.getFullYear() - dob.getFullYear();
+    let months = today.getMonth() - dob.getMonth();
+    let days = today.getDate() - dob.getDate();
+
+    if (days < 0) {
+        months--;
+        // Days in the previous month of today
+        const prevMonth = new Date(today.getFullYear(), today.getMonth(), 0); 
+        days += prevMonth.getDate();
+    }
+    if (months < 0) {
+        years--;
+        months += 12;
+    }
+    return {
+        years: years.toString(),
+        months: months.toString(),
+        days: days.toString()
+    };
+};
+
+export const calculateDobFromAge = (yStr: string, mStr: string, dStr: string) => {
+    const y = parseInt(yStr) || 0;
+    const m = parseInt(mStr) || 0;
+    const d = parseInt(dStr) || 0;
+    
+    if (!yStr && !mStr && !dStr) return '';
+
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    
+    const targetDate = new Date(today.getFullYear() - y, today.getMonth() - m, today.getDate() - d);
+    
+    const year = targetDate.getFullYear();
+    const month = String(targetDate.getMonth() + 1).padStart(2, '0');
+    const day = String(targetDate.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
 export const formatThaiDateBE = (isoDate: string) => {
     if (!isoDate) return '-';
     const date = new Date(isoDate);

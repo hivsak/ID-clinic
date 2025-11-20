@@ -2,8 +2,7 @@
 import React, { useMemo, useState } from 'react';
 import { Patient, MedicalEventType } from '../types';
 import { determineHbvStatus, determineHcvStatus } from './utils';
-// @ts-ignore
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from 'recharts';
+import { SearchIcon } from './icons';
 
 interface ReportsProps {
     patients: Patient[];
@@ -17,14 +16,24 @@ const Card: React.FC<{ title: string; value: number | string; subtitle?: string;
     </div>
 );
 
-const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#e15759', '#4e79a7', '#76b7b2', '#59a14f', '#edc948', '#b07aa1'];
+const BarChartRow: React.FC<{ label: string; count: number; total: number; colorClass: string }> = ({ label, count, total, colorClass }) => {
+    const percentage = total > 0 ? (count / total) * 100 : 0;
+    return (
+        <div className="mb-3">
+            <div className="flex justify-between items-end mb-1">
+                <span className="text-sm font-medium text-gray-700">{label}</span>
+                <span className="text-sm text-gray-500">{count} ({percentage.toFixed(1)}%)</span>
+            </div>
+            <div className="w-full bg-gray-100 rounded-full h-2.5">
+                <div className={`h-2.5 rounded-full ${colorClass}`} style={{ width: `${percentage}%` }}></div>
+            </div>
+        </div>
+    );
+};
 
 export const Reports: React.FC<ReportsProps> = ({ patients }) => {
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
-    
-    // State for STD Chart Year Filter
-    const [stdYear, setStdYear] = useState(new Date().getFullYear());
 
     const stats = useMemo(() => {
         const s = {
@@ -177,64 +186,6 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
         return s;
     }, [patients, startDate, endDate]);
 
-    // --- HCV Chart Data ---
-    const hcvChartData = useMemo(() => [
-        { name: 'รอการตรวจเพิ่มเติม', value: stats.hcv.waitForTest, color: '#fbbf24' },
-        { name: 'หายเอง', value: stats.hcv.clearedSpontaneously, color: '#34d399' },
-        { name: 'กำลังรักษา', value: stats.hcv.treating, color: '#3b82f6' },
-        { name: 'รักษาไม่หาย', value: stats.hcv.treatmentFailed, color: '#ef4444' },
-        { name: 'รักษาหายแล้ว', value: stats.hcv.cured, color: '#059669' },
-        { name: 'ยังไม่เริ่มรักษา', value: stats.hcv.activeHcv, color: '#f87171' },
-    ].filter(d => d.value > 0), [stats]);
-
-    // --- STD Chart Logic ---
-    const availableYears = useMemo(() => {
-        const years = new Set<number>();
-        const currentYear = new Date().getFullYear();
-        years.add(currentYear);
-        patients.forEach(p => {
-            p.stdInfo?.records?.forEach(r => {
-                const y = new Date(r.date).getFullYear();
-                if (!isNaN(y)) years.add(y);
-            });
-        });
-        return Array.from(years).sort((a, b) => b - a);
-    }, [patients]);
-
-    const stdChartData = useMemo(() => {
-        const months = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
-        const data = months.map(m => ({ name: m } as any)); 
-        const diseaseSet = new Set<string>();
-
-        patients.forEach(p => {
-            p.stdInfo?.records?.forEach(r => {
-                const d = new Date(r.date);
-                if (d.getFullYear() === stdYear) {
-                    const monthIndex = d.getMonth();
-                    r.diseases.forEach(disease => {
-                        diseaseSet.add(disease);
-                        if (data[monthIndex][disease] === undefined) {
-                            data[monthIndex][disease] = 0;
-                        }
-                        data[monthIndex][disease] += 1;
-                    });
-                }
-            });
-        });
-        
-        const diseases = Array.from(diseaseSet).sort();
-        
-        // Fill undefined with 0 for chart continuity
-        data.forEach(d => {
-            diseases.forEach(disease => {
-                if (d[disease] === undefined) d[disease] = 0;
-            });
-        });
-
-        return { data, diseases };
-    }, [patients, stdYear]);
-    // -----------------------
-
     const clearFilter = () => {
         setStartDate('');
         setEndDate('');
@@ -296,83 +247,44 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* HCV Breakdown - Donut Chart */}
+                {/* HCV Breakdown */}
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                     <h3 className="text-lg font-bold text-gray-800 mb-6 pb-2 border-b flex justify-between">
                         <span>สรุปสถานการณ์ HCV</span>
                         <span className="text-xs font-normal text-gray-500 self-end">อิงตามวันที่เกิดผล/การรักษา</span>
                     </h3>
-                    <div className="h-[300px] w-full flex items-center justify-center">
-                        {hcvChartData.length > 0 ? (
-                            <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie
-                                        data={hcvChartData}
-                                        cx="50%"
-                                        cy="50%"
-                                        innerRadius={60}
-                                        outerRadius={90}
-                                        paddingAngle={5}
-                                        dataKey="value"
-                                    >
-                                        {hcvChartData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={entry.color} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip formatter={(value: number) => [value, 'จำนวน (ราย)']} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} />
-                                    <Legend iconType="circle" layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: '12px' }}/>
-                                </PieChart>
-                            </ResponsiveContainer>
-                        ) : (
-                            <div className="text-gray-400 text-sm">ไม่มีข้อมูลในช่วงเวลาที่เลือก</div>
-                        )}
+                    <div className="space-y-4">
+                        <BarChartRow label="รอการตรวจเพิ่มเติม (Anti-HCV+)" count={stats.hcv.waitForTest} total={stats.totalPatients} colorClass="bg-amber-400" />
+                        <BarChartRow label="เคยเป็น HCV หายเอง" count={stats.hcv.clearedSpontaneously} total={stats.totalPatients} colorClass="bg-emerald-400" />
+                        <BarChartRow label="กำลังรักษา HCV (เริ่มยา)" count={stats.hcv.treating} total={stats.totalPatients} colorClass="bg-blue-500" />
+                        <BarChartRow label="เป็น HCV รักษาแล้วไม่หาย" count={stats.hcv.treatmentFailed} total={stats.totalPatients} colorClass="bg-red-500" />
+                        <BarChartRow label="เคยเป็น HCV รักษาหายแล้ว" count={stats.hcv.cured} total={stats.totalPatients} colorClass="bg-emerald-600" />
+                        <BarChartRow label="เป็น HCV (ยังไม่เริ่มรักษา)" count={stats.hcv.activeHcv} total={stats.totalPatients} colorClass="bg-red-400" />
                     </div>
+                    {/* Note: Total patients usage in percentage might be skewed if filtering by date, but kept for relative visualization */}
                 </div>
 
-                {/* STD Breakdown - CHART */}
+                {/* STD Breakdown */}
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <div className="flex justify-between items-center mb-6 pb-2 border-b">
-                        <h3 className="text-lg font-bold text-gray-800">สถิติโรคติดต่อทางเพศสัมพันธ์ (STD)</h3>
-                        <div className="flex items-center space-x-2">
-                            <label className="text-sm text-gray-500">ปี:</label>
-                            <select 
-                                value={stdYear} 
-                                onChange={(e) => setStdYear(Number(e.target.value))}
-                                className="text-sm border-gray-300 rounded-md shadow-sm focus:border-emerald-500 focus:ring-emerald-500 bg-gray-50"
-                            >
-                                {availableYears.map(y => (
-                                    <option key={y} value={y}>{y + 543} (ค.ศ. {y})</option>
-                                ))}
-                            </select>
-                        </div>
-                    </div>
+                    <h3 className="text-lg font-bold text-gray-800 mb-6 pb-2 border-b">สถิติโรคติดต่อทางเพศสัมพันธ์ (STD)</h3>
                     
-                    <div className="h-[300px] w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={stdChartData.data} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                                <XAxis dataKey="name" tick={{fontSize: 12, fill: '#6b7280'}} axisLine={false} tickLine={false} />
-                                <YAxis allowDecimals={false} tick={{fontSize: 12, fill: '#6b7280'}} axisLine={false} tickLine={false} />
-                                <Tooltip 
-                                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
-                                />
-                                <Legend />
-                                {stdChartData.diseases.map((disease, index) => (
-                                    <Line 
-                                        key={disease}
-                                        type="monotone" 
-                                        dataKey={disease} 
-                                        stroke={COLORS[index % COLORS.length]} 
-                                        strokeWidth={2} 
-                                        dot={{ r: 3, strokeWidth: 1, fill: '#fff' }} 
-                                        activeDot={{ r: 5 }} 
-                                        name={disease} 
-                                    />
-                                ))}
-                            </LineChart>
-                        </ResponsiveContainer>
-                    </div>
-                    <p className="text-center text-xs text-gray-400 mt-4">แสดงจำนวนครั้งที่ได้รับการวินิจฉัยรายเดือน (แยกรายโรค)</p>
+                    {Object.keys(stats.std.breakdown).length > 0 ? (
+                        <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+                            {Object.entries(stats.std.breakdown)
+                                .sort(([, a], [, b]) => (b as number) - (a as number)) // Sort by count descending
+                                .map(([disease, count]) => (
+                                    <div key={disease} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                        <span className="font-medium text-gray-700">{disease}</span>
+                                        <span className="bg-pink-100 text-pink-800 px-3 py-1 rounded-full text-sm font-bold">{count}</span>
+                                    </div>
+                                ))
+                            }
+                        </div>
+                    ) : (
+                         <div className="flex flex-col items-center justify-center h-40 text-gray-400">
+                            <p>ไม่มีข้อมูลการวินิจฉัย STD ในช่วงเวลานี้</p>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

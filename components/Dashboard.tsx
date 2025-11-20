@@ -130,7 +130,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ patients, onNavigateToPati
                     </div>
                     <div className="p-4 bg-gray-50 rounded-lg">
                         <div className="flex justify-between items-center">
-                            <span className="text-gray-600 text-sm">มี NAP ID</span>
+                            <span className="text-gray-600 text-sm">ผู้ป่วย HIV ที่มี NAP ID</span>
                             <span className="font-bold text-gray-800">{stats.nap} ราย</span>
                         </div>
                         <div className="mt-2 w-full bg-gray-200 rounded-full h-2">

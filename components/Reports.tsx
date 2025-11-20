@@ -114,9 +114,266 @@ const DonutChart: React.FC<{ data: { label: string; count: number; color: string
     );
 };
 
+// --- Charts Commons ---
+
+const THAI_MONTHS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+
+const GENERAL_LABELS = ['HIV', 'HBV', 'TPT', 'PrEP', 'PEP'];
+const GENERAL_COLORS = {
+    HIV: '#3b82f6', // Blue
+    HBV: '#10b981', // Emerald
+    TPT: '#f97316', // Orange
+    PrEP: '#6366f1', // Indigo
+    PEP: '#a855f7', // Purple
+};
+
+// --- General Trend Chart ---
+
+const GeneralTrendChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
+    const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+    const [hoveredMonth, setHoveredMonth] = useState<number | null>(null);
+
+    const { years, dataByYear } = useMemo(() => {
+        const yrs = new Set<number>();
+        // Structure: Year -> Month -> Category -> Count
+        const db: Record<number, Record<number, Record<string, number>>> = {};
+
+        const add = (dateStr: string | undefined, category: string) => {
+            if (!dateStr) return;
+            const parts = dateStr.split('-');
+            let y: number, m: number;
+            if (parts.length >= 2) {
+                 y = parseInt(parts[0], 10);
+                 m = parseInt(parts[1], 10) - 1;
+            } else {
+                const d = new Date(dateStr);
+                y = d.getFullYear();
+                m = d.getMonth();
+            }
+            if (isNaN(y) || isNaN(m)) return;
+
+            yrs.add(y);
+            if (!db[y]) db[y] = {};
+            if (!db[y][m]) db[y][m] = {};
+            db[y][m][category] = (db[y][m][category] || 0) + 1;
+        };
+
+        patients.forEach(p => {
+            // HIV
+            const hivDiag = p.medicalHistory.find(e => e.type === MedicalEventType.DIAGNOSIS);
+            if (hivDiag) add(hivDiag.date, 'HIV');
+
+            // HBV (Positive tests)
+            p.hbvInfo?.hbsAgTests?.forEach(t => {
+                if (t.result === 'Positive') add(t.date, 'HBV');
+            });
+
+            // TPT
+            p.medicalHistory.forEach(e => {
+                if (e.type === MedicalEventType.PROPHYLAXIS && e.details.TPT) {
+                    add(e.date, 'TPT');
+                }
+            });
+
+            // PrEP
+            p.prepInfo?.records?.forEach(r => {
+                add(r.dateStart, 'PrEP');
+            });
+
+            // PEP
+            p.pepInfo?.records?.forEach(r => {
+                add(r.date, 'PEP');
+            });
+        });
+
+        return { years: Array.from(yrs).sort((a, b) => b - a), dataByYear: db };
+    }, [patients]);
+
+    React.useEffect(() => {
+        if (years.length > 0 && !years.includes(selectedYear)) {
+            setSelectedYear(years[0]);
+        }
+    }, [years, selectedYear]);
+
+    const { monthlyData, maxCount } = useMemo(() => {
+        const currentYearData = dataByYear[selectedYear] || {};
+        let max = 0;
+
+        const mData = Array.from({ length: 12 }, (_, i) => {
+            const counts = currentYearData[i] || {};
+            GENERAL_LABELS.forEach(cat => {
+                const c = counts[cat] || 0;
+                if (c > max) max = c;
+            });
+            return { monthIndex: i, counts };
+        });
+
+        return { monthlyData: mData, maxCount: Math.max(max, 4) };
+    }, [selectedYear, dataByYear]);
+
+    const svgHeight = 320;
+    const svgWidth = 800;
+    const padding = { top: 20, right: 20, bottom: 40, left: 40 };
+    const chartWidth = svgWidth - padding.left - padding.right;
+    const chartHeight = svgHeight - padding.top - padding.bottom;
+
+    const getX = (monthIndex: number) => padding.left + (monthIndex * (chartWidth / 11));
+    const getY = (count: number) => padding.top + chartHeight - ((count / maxCount) * chartHeight);
+
+    const getPath = (category: string) => {
+        let d = '';
+        monthlyData.forEach((data, i) => {
+            const count = data.counts[category] || 0;
+            const x = getX(i);
+            const y = getY(count);
+            if (i === 0) d += `M ${x} ${y}`;
+            else d += ` L ${x} ${y}`;
+        });
+        return d;
+    };
+
+    return (
+         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
+                <h3 className="text-lg font-bold text-gray-800">แนวโน้มรายเดือน (Monthly Trends)</h3>
+                {years.length > 0 && (
+                    <div className="relative mt-2 sm:mt-0">
+                         <select 
+                            value={selectedYear} 
+                            onChange={(e) => setSelectedYear(Number(e.target.value))}
+                            className="appearance-none bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-full p-2.5 pr-8"
+                        >
+                            {years.map(y => <option key={y} value={y}>{y}</option>)}
+                        </select>
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                            <ChevronDownIcon />
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {years.length === 0 ? (
+                 <div className="flex flex-col items-center justify-center h-64 text-gray-400 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                    <p>ไม่มีข้อมูลประวัติในระบบ</p>
+                </div>
+            ) : (
+                 <div className="relative w-full overflow-hidden">
+                     {/* Tooltip */}
+                     {hoveredMonth !== null && (
+                         <div 
+                            className="absolute z-10 bg-white border border-gray-200 shadow-lg rounded-lg p-3 text-xs min-w-[120px] pointer-events-none"
+                            style={{ 
+                                left: `${(hoveredMonth / 11) * 80}%`, 
+                                top: '10%',
+                                transform: hoveredMonth > 8 ? 'translateX(-100%)' : 'translateX(0)' 
+                            }}
+                         >
+                             <p className="font-bold text-gray-800 mb-2 border-b pb-1">{THAI_MONTHS[hoveredMonth]} {selectedYear}</p>
+                             <ul className="space-y-1">
+                                 {GENERAL_LABELS.map(cat => (
+                                     <li key={cat} className="flex justify-between items-center">
+                                          <div className="flex items-center">
+                                             <span className="w-2 h-2 rounded-full mr-1.5" style={{ backgroundColor: GENERAL_COLORS[cat as keyof typeof GENERAL_COLORS] }}></span>
+                                             <span className="text-gray-600">{cat}</span>
+                                         </div>
+                                         <span className="font-bold text-gray-900 ml-2">{monthlyData[hoveredMonth].counts[cat] || 0}</span>
+                                     </li>
+                                 ))}
+                             </ul>
+                         </div>
+                     )}
+                     
+                     <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className="w-full h-auto font-sans text-xs">
+                         {/* Grid & Y-Axis */}
+                        {Array.from({ length: 6 }).map((_, i) => {
+                            const val = (maxCount / 5) * i;
+                            const y = getY(val);
+                            return (
+                                <g key={i}>
+                                    <line x1={padding.left} y1={y} x2={svgWidth - padding.right} y2={y} stroke="#e5e7eb" strokeWidth="1" />
+                                    <text x={padding.left - 10} y={y + 4} textAnchor="end" fill="#9ca3af">{Math.round(val)}</text>
+                                </g>
+                            );
+                        })}
+
+                        {/* X-Axis */}
+                        {THAI_MONTHS.map((m, i) => {
+                            const x = getX(i);
+                            return <text key={m} x={x} y={svgHeight - 10} textAnchor="middle" fill="#6b7280">{m}</text>;
+                        })}
+
+                        {/* Lines */}
+                        {GENERAL_LABELS.map(cat => (
+                            <path
+                                key={cat}
+                                d={getPath(cat)}
+                                fill="none"
+                                stroke={GENERAL_COLORS[cat as keyof typeof GENERAL_COLORS]}
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="transition-all duration-300"
+                            />
+                        ))}
+
+                        {/* Dots */}
+                        {GENERAL_LABELS.map(cat => (
+                            <g key={`dots-${cat}`}>
+                                {monthlyData.map((d, i) => {
+                                    const count = d.counts[cat];
+                                    if (count === undefined || count === 0) return null;
+                                    return (
+                                        <circle 
+                                            key={i} 
+                                            cx={getX(i)} 
+                                            cy={getY(count)} 
+                                            r="3" 
+                                            fill={GENERAL_COLORS[cat as keyof typeof GENERAL_COLORS]} 
+                                            stroke="white" 
+                                            strokeWidth="1"
+                                        />
+                                    );
+                                })}
+                            </g>
+                        ))}
+
+                         {/* Interactive Area */}
+                        {monthlyData.map((_, i) => (
+                            <rect
+                                key={`overlay-${i}`}
+                                x={getX(i) - (chartWidth / 22)}
+                                y={padding.top}
+                                width={chartWidth / 11}
+                                height={chartHeight}
+                                fill="transparent"
+                                className="cursor-pointer hover:bg-gray-500 hover:bg-opacity-5 transition-colors"
+                                onMouseEnter={() => setHoveredMonth(i)}
+                                onMouseLeave={() => setHoveredMonth(null)}
+                            />
+                        ))}
+                     </svg>
+                 </div>
+            )}
+            
+            {/* Legend */}
+            <div className="mt-6 flex flex-wrap gap-3 justify-center">
+                {GENERAL_LABELS.map(cat => (
+                    <div key={cat} className="flex items-center text-xs sm:text-sm bg-gray-50 px-2 py-1 rounded-md border border-gray-100">
+                        <span 
+                            className="w-3 h-3 rounded-full mr-2" 
+                            style={{ backgroundColor: GENERAL_COLORS[cat as keyof typeof GENERAL_COLORS] }}
+                        ></span>
+                        <span className="text-gray-700 font-medium">{cat}</span>
+                    </div>
+                ))}
+            </div>
+         </div>
+    );
+};
+
 // --- STD Chart Component ---
 
-const COLORS = [
+const STD_COLORS = [
     '#ef4444', // Red
     '#f97316', // Orange
     '#f59e0b', // Amber
@@ -130,8 +387,6 @@ const COLORS = [
     '#f43f5e', // Rose
     '#881337'  // Dark Red
 ];
-
-const THAI_MONTHS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 
 const StdLineChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
     const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
@@ -277,11 +532,11 @@ const StdLineChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
                                  {Object.entries(monthlyData[hoveredMonth].details).length > 0 ? (
                                      <ul className="space-y-1">
                                          {Object.entries(monthlyData[hoveredMonth].details).map(([dis, count]) => {
-                                             const colorIndex = activeDiseases.indexOf(dis) % COLORS.length;
+                                             const colorIndex = activeDiseases.indexOf(dis) % STD_COLORS.length;
                                              return (
                                                  <li key={dis} className="flex justify-between items-center">
                                                      <div className="flex items-center">
-                                                         <span className="w-2 h-2 rounded-full mr-1.5" style={{ backgroundColor: COLORS[colorIndex] }}></span>
+                                                         <span className="w-2 h-2 rounded-full mr-1.5" style={{ backgroundColor: STD_COLORS[colorIndex] }}></span>
                                                          <span className="text-gray-600">{dis}</span>
                                                      </div>
                                                      <span className="font-bold text-gray-900 ml-2">{count}</span>
@@ -322,7 +577,7 @@ const StdLineChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
                                     key={disease}
                                     d={getPath(disease)}
                                     fill="none"
-                                    stroke={COLORS[idx % COLORS.length]}
+                                    stroke={STD_COLORS[idx % STD_COLORS.length]}
                                     strokeWidth="2"
                                     strokeLinecap="round"
                                     strokeLinejoin="round"
@@ -342,7 +597,7 @@ const StdLineChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
                                                 cx={getX(i)} 
                                                 cy={getY(count)} 
                                                 r="3" 
-                                                fill={COLORS[idx % COLORS.length]} 
+                                                fill={STD_COLORS[idx % STD_COLORS.length]} 
                                                 stroke="white" 
                                                 strokeWidth="1"
                                             />
@@ -374,7 +629,7 @@ const StdLineChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
                             <div key={disease} className="flex items-center text-xs sm:text-sm bg-gray-50 px-2 py-1 rounded-md border border-gray-100">
                                 <span 
                                     className="w-3 h-3 rounded-full mr-2" 
-                                    style={{ backgroundColor: COLORS[idx % COLORS.length] }}
+                                    style={{ backgroundColor: STD_COLORS[idx % STD_COLORS.length] }}
                                 ></span>
                                 <span className="text-gray-700 font-medium">{disease}</span>
                             </div>
@@ -418,10 +673,12 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
             if (!dateStr) return false;
             const d = new Date(dateStr).getTime();
             const start = startDate ? new Date(startDate).getTime() : -Infinity;
-            const end = endDate ? new Date(endDate).getTime() : Infinity;
-            const endFinal = endDate ? new Date(endDate).setHours(23,59,59,999) : Infinity;
+            const end = endDate ? new Date(endDate).setHours(23,59,59,999) : Infinity;
             return d >= start && d <= endFinal;
         };
+        
+        // Helper for endDate calculation in range check
+        const endFinal = endDate ? new Date(endDate).setHours(23,59,59,999) : Infinity;
 
         patients.forEach(p => {
             // HIV
@@ -543,6 +800,9 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
                 <Card title="ได้รับ PEP" value={stats.pep} className="bg-purple-50 border-purple-100 text-purple-900" />
                 <Card title="วินิจฉัย STD" value={stats.std.totalDiagnoses} subtitle="(จำนวนครั้ง)" className="bg-pink-50 border-pink-100 text-pink-900" />
             </div>
+
+            {/* General Monthly Trends */}
+            <GeneralTrendChart patients={patients} />
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* HCV Breakdown */}

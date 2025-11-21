@@ -82,6 +82,12 @@ export const calculatePatientStatus = (patient: Partial<Patient>): PatientStatus
         if (apptDate < today) {
             return PatientStatus.LTFU;
         }
+
+        // If explicitly marked as Restart in DB, keep it as Restart while they are Active (have valid appt)
+        if (patient.status === PatientStatus.RESTART) {
+            return PatientStatus.RESTART;
+        }
+
         return PatientStatus.ACTIVE;
     }
     

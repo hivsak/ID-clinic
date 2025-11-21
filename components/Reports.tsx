@@ -834,7 +834,7 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
             {/* Top Level Overview */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 <Card title="ผู้ป่วย HIV (รายใหม่)" value={stats.totalHiv} subtitle={startDate ? "ในช่วงเวลาที่เลือก" : "ทั้งหมด"} className="bg-blue-50 border-blue-100 text-blue-900" />
-                <Card title="ตรวจพบ HBV" value={stats.hbv.positive} subtitle="(HBsAg + ในช่วงเวลา)" className="bg-emerald-50 border-emerald-100 text-emerald-900" />
+                <Card title="ตรวจพบ HBV" value={stats.hbv.positive} className="bg-emerald-50 border-emerald-100 text-emerald-900" />
                 <Card title="ได้รับ TPT" value={stats.tpt} className="bg-orange-50 border-orange-100 text-orange-900" />
                 <Card title="เริ่ม PrEP" value={stats.prep} className="bg-indigo-50 border-indigo-100 text-indigo-900" />
                 <Card title="ได้รับ PEP" value={stats.pep} className="bg-purple-50 border-purple-100 text-purple-900" />

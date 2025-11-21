@@ -36,8 +36,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ patients, onNavigateToPati
         };
 
         patients.forEach(p => {
-            // Use calculated status to ensure real-time accuracy (e.g. if appointment missed today)
-            const status = calculatePatientStatus(p) || p.status;
+            // Use calculated status to ensure real-time accuracy. 
+            // If calculatePatientStatus returns null (no date), we treat it as No Data/Inactive.
+            const status = calculatePatientStatus(p);
 
             if (status === PatientStatus.ACTIVE) s.active++;
             else if (status === PatientStatus.LTFU) s.ltfu++;

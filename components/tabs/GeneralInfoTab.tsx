@@ -94,7 +94,7 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, onUpdat
     };
 
     const currentCalculatedStatus = calculatePatientStatus(patient);
-    const displayStatus = currentCalculatedStatus ? currentCalculatedStatus : (patient.status || '-');
+    const displayStatus = currentCalculatedStatus || '-';
 
     const SectionHeader = ({ title, section }: { title: string, section: EditSection }) => (
         <div className="flex justify-between items-center mb-6">

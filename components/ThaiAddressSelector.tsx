@@ -168,21 +168,21 @@ export const ThaiAddressSelector: React.FC<ThaiAddressSelectorProps> = ({ subdis
     const provinces = useMemo(() => {
         if (!data.length) return [];
         const unique = new Set(data.map(d => d.province));
-        return Array.from(unique).sort((a, b) => a.localeCompare(b, 'th'));
+        return Array.from(unique).sort((a: string, b: string) => a.localeCompare(b, 'th'));
     }, [data]);
 
     const amphoes = useMemo(() => {
         if (!province || !data.length) return [];
         const filtered = data.filter(d => d.province === province);
         const unique = new Set(filtered.map(d => d.amphoe));
-        return Array.from(unique).sort((a, b) => a.localeCompare(b, 'th'));
+        return Array.from(unique).sort((a: string, b: string) => a.localeCompare(b, 'th'));
     }, [data, province]);
 
     const tambons = useMemo(() => {
         if (!province || !district || !data.length) return [];
         const filtered = data.filter(d => d.province === province && d.amphoe === district);
         const unique = new Set(filtered.map(d => d.district)); // Note: source uses 'district' key for Tambon
-        return Array.from(unique).sort((a, b) => a.localeCompare(b, 'th'));
+        return Array.from(unique).sort((a: string, b: string) => a.localeCompare(b, 'th'));
     }, [data, province, district]);
 
     const handleProvinceChange = (val: string) => {

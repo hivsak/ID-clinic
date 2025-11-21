@@ -69,7 +69,8 @@ export const PatientList: React.FC<PatientListProps> = ({ patients, onSelectPati
   // --- Filtering Logic ---
   const filteredPatients = useMemo(() => {
     return patients.filter(p => {
-        const calculatedStatus = calculatePatientStatus(p) || p.status;
+        // Use strictly calculated status. If no date, this is null.
+        const calculatedStatus = calculatePatientStatus(p);
 
         // 1. Text Search (HN, Name, Phone)
         if (searchText) {
@@ -309,7 +310,8 @@ export const PatientList: React.FC<PatientListProps> = ({ patients, onSelectPati
             </thead>
             <tbody>
               {paginatedPatients.length > 0 ? paginatedPatients.map((patient) => {
-                const calculatedStatus = calculatePatientStatus(patient) || patient.status;
+                // Use strictly calculated status
+                const calculatedStatus = calculatePatientStatus(patient);
                 return (
                     <tr key={patient.id} className="bg-white border-b hover:bg-gray-50">
                         <td className="px-6 py-4 font-medium text-emerald-600">{patient.hn}</td>

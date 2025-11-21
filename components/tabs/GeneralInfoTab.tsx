@@ -73,7 +73,7 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, onUpdat
         const checked = e.target.checked;
         setIsDeceased(checked);
         if (!checked) {
-            setFormData(prev => ({ ...prev, deathDate: undefined }));
+            setFormData(prev => ({ ...prev, deathDate: undefined, causeOfDeath: undefined }));
         }
     };
 
@@ -436,9 +436,38 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, onUpdat
                                  <label htmlFor="isDeceasedCheckDetail" className="ml-2 text-sm font-semibold text-gray-800">เสียชีวิต (Deceased)</label>
                             </div>
                             {isDeceased && (
-                               <div className="mt-4 pl-6">
-                                   <label htmlFor="deathDate" className={labelClass}>วันที่เสียชีวิต</label>
-                                   <input type="date" name="deathDate" id="deathDate" value={formData.deathDate || ''} onChange={handleChange} className={inputClass} style={{ maxWidth: '200px' }} />
+                               <div className="mt-4 pl-6 space-y-4">
+                                   <div>
+                                       <label htmlFor="deathDate" className={labelClass}>วันที่เสียชีวิต</label>
+                                       <input type="date" name="deathDate" id="deathDate" value={formData.deathDate || ''} onChange={handleChange} className={inputClass} style={{ maxWidth: '200px' }} />
+                                   </div>
+                                   <div>
+                                        <label className={labelClass}>สาเหตุการเสียชีวิต</label>
+                                        <div className="flex items-center space-x-4 mt-2">
+                                                <label className="inline-flex items-center">
+                                                    <input 
+                                                        type="radio" 
+                                                        name="causeOfDeath" 
+                                                        value="HIV-related" 
+                                                        checked={formData.causeOfDeath === 'HIV-related'} 
+                                                        onChange={handleChange} 
+                                                        className="h-4 w-4 border-gray-300 text-emerald-600 focus:ring-emerald-500" 
+                                                    />
+                                                    <span className="ml-2 text-sm text-gray-700">HIV related death</span>
+                                                </label>
+                                                <label className="inline-flex items-center">
+                                                    <input 
+                                                        type="radio" 
+                                                        name="causeOfDeath" 
+                                                        value="Non-HIV-related" 
+                                                        checked={formData.causeOfDeath === 'Non-HIV-related'} 
+                                                        onChange={handleChange} 
+                                                        className="h-4 w-4 border-gray-300 text-emerald-600 focus:ring-emerald-500" 
+                                                    />
+                                                    <span className="ml-2 text-sm text-gray-700">Non-HIV related death</span>
+                                                </label>
+                                        </div>
+                                    </div>
                                </div>
                             )}
                          </div>
@@ -493,10 +522,13 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, onUpdat
                         </div>
 
                         <div className="mt-6 pt-4 border-t">
-                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                  <DisplayField label="สถานะ" value={patient.deathDate ? 'เสียชีวิต' : 'มีชีวิตอยู่'} />
                                  {patient.deathDate && (
-                                     <DisplayField label="วันที่เสียชีวิต" value={new Date(patient.deathDate).toLocaleDateString('th-TH')} />
+                                     <>
+                                        <DisplayField label="วันที่เสียชีวิต" value={new Date(patient.deathDate).toLocaleDateString('th-TH')} />
+                                        <DisplayField label="สาเหตุการเสียชีวิต" value={patient.causeOfDeath === 'HIV-related' ? 'HIV related death' : (patient.causeOfDeath === 'Non-HIV-related' ? 'Non-HIV related death' : '-')} />
+                                     </>
                                  )}
                              </div>
                         </div>

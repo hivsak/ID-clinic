@@ -407,3 +407,31 @@ export const updatePatient = async (patient: Patient): Promise<void> => {
         client.release();
     }
 };
+
+export const deletePatient = async (id: number): Promise<void> => {
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        
+        const tables = [
+            'medical_events', 'pregnancy_records',
+            'hbv_hbsag_tests', 'hbv_viral_loads', 'hbv_ultrasounds', 'hbv_ct_scans',
+            'hcv_tests', 'hcv_pre_treatment_vls', 'hcv_treatments', 'hcv_post_treatment_vls',
+            'std_records', 'prep_records', 'pep_records'
+        ];
+        
+        for (const table of tables) {
+             await client.query(`DELETE FROM public.${table} WHERE patient_id = $1`, [id]);
+        }
+
+        await client.query('DELETE FROM public.patients WHERE id = $1', [id]);
+        
+        await client.query('COMMIT');
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('Error deleting patient:', error);
+        throw error;
+    } finally {
+        client.release();
+    }
+};

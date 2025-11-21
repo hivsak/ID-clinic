@@ -4,17 +4,56 @@ import * as XLSX from 'xlsx';
 import { getPatients } from '../services/patientService';
 import { DownloadIcon } from './icons';
 import { calculateAge, determineHbvStatus, determineHcvStatus } from './utils';
-import { MedicalEventType } from '../types';
+import { MedicalEventType, Patient } from '../types';
 
 export const Settings: React.FC = () => {
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
+    const [loadingType, setLoadingType] = useState<string | null>(null);
 
-    const handleExport = async () => {
-        setIsLoading(true);
+    const handleExport = async (type: string = 'ALL') => {
+        setLoadingType(type);
         try {
-            const patients = await getPatients();
+            const allPatients = await getPatients();
+            let patients: Patient[] = allPatients;
+
+            // Filter based on Type
+            switch (type) {
+                case 'HIV':
+                     patients = allPatients.filter(p => p.medicalHistory.some(e => e.type === MedicalEventType.DIAGNOSIS));
+                     break;
+                case 'HBV':
+                     patients = allPatients.filter(p => determineHbvStatus(p).text === 'เป็น HBV');
+                     break;
+                case 'HCV':
+                     patients = allPatients.filter(p => {
+                         const s = determineHcvStatus(p).text;
+                         return s !== 'ไม่เป็น HCV' && s !== 'ไม่มีข้อมูล';
+                     });
+                     break;
+                case 'TPT':
+                     patients = allPatients.filter(p => p.medicalHistory.some(e => e.type === MedicalEventType.PROPHYLAXIS && e.details.TPT));
+                     break;
+                case 'STD':
+                     patients = allPatients.filter(p => p.stdInfo && p.stdInfo.records && p.stdInfo.records.length > 0);
+                     break;
+                case 'PrEP':
+                     patients = allPatients.filter(p => p.prepInfo && p.prepInfo.records && p.prepInfo.records.length > 0);
+                     break;
+                case 'PEP':
+                     patients = allPatients.filter(p => p.pepInfo && p.pepInfo.records && p.pepInfo.records.length > 0);
+                     break;
+                default:
+                     // ALL - No filtering
+                     break;
+            }
+
+            if (patients.length === 0) {
+                alert('ไม่พบข้อมูลผู้ป่วยตามเงื่อนไขที่เลือก');
+                setLoadingType(null);
+                return;
+            }
+
             const wb = XLSX.utils.book_new();
 
             // Helper: Check if date is in range
@@ -31,7 +70,7 @@ export const Settings: React.FC = () => {
             const safeStr = (val: any) => (val === null || val === undefined) ? '' : String(val);
 
             // =========================================
-            // Sheet 1: Patients (Master List - All Patients)
+            // Sheet 1: Patients List
             // =========================================
             const patientRows = patients.map(p => {
                 // 1. Latest ARV Regimen
@@ -64,7 +103,7 @@ export const Settings: React.FC = () => {
 
                 // 6. PEP Status
                 const pepRecords = p.pepInfo?.records || [];
-                const pepStatus = pepRecords.length > 0 ? `Yes (${pepRecords.length} times)` : 'Never';
+                const pepStatusStr = pepRecords.length > 0 ? `Yes (${pepRecords.length} times)` : 'Never';
 
                 // 7. Pregnancy Status
                 const activePreg = p.pregnancies?.find(r => !r.endDate);
@@ -91,7 +130,7 @@ export const Settings: React.FC = () => {
                     TPT_Status: tptStatus,
                     STD_Summary: uniqueStds,
                     PrEP_Status: prepStatus,
-                    PEP_Status: pepStatus,
+                    PEP_Status: pepStatusStr,
                     Pregnancy_Status: pregStatus,
                     // --------------------------
 
@@ -115,22 +154,23 @@ export const Settings: React.FC = () => {
                     Death_Date: safeStr(p.deathDate)
                 };
             });
-            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(patientRows), "Patients_Master");
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(patientRows), "Patients_List");
 
             // =========================================
-            // Sheet 2: HIV Medical History (Flattened)
+            // Sheets 2+: Details (Filtered by Patients AND Date Range)
             // =========================================
+            
+            // Medical Events (HIV History)
             const historyRows: any[] = [];
             patients.forEach(p => {
                 p.medicalHistory.forEach(e => {
                     if (isInRange(e.date)) {
                         const d = e.details || {};
                         
-                        // Extract Infections
                         let infections = [];
                         if (Array.isArray(d.infections)) infections.push(...d.infections);
                         if (d['การติดเชื้ออื่นๆ']) infections.push(d['การติดเชื้ออื่นๆ']);
-                        if (d['โรค']) infections.push(d['โรค']); // Legacy data
+                        if (d['โรค']) infections.push(d['โรค']);
 
                         historyRows.push({
                             Date: e.date.split('T')[0],
@@ -138,7 +178,6 @@ export const Settings: React.FC = () => {
                             Patient_Name: `${p.firstName} ${p.lastName}`,
                             Event_Type: e.type,
                             Event_Title: e.title,
-                            // Specific Fields
                             CD4_Count: safeStr(d['CD4'] || d['Initial CD4 count']),
                             CD4_Percent: safeStr(d['CD4 %'] || d['Initial CD4 %']),
                             Viral_Load: safeStr(d['Viral load']),
@@ -150,55 +189,35 @@ export const Settings: React.FC = () => {
                             OI_Infections: infections.join(', '),
                             Reason: safeStr(d['เหตุผล'] || d['สาเหตุที่ตรวจพบ']),
                             Other_Details: safeStr(d['รายละเอียด'] || d['อื่นๆ']),
-                            Full_JSON: JSON.stringify(d) // Keep raw data just in case
+                            Full_JSON: JSON.stringify(d)
                         });
                     }
                 });
             });
             if (historyRows.length > 0) {
-                XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(historyRows), "HIV_History");
+                XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(historyRows), "Medical_Events");
             }
 
-            // =========================================
-            // Sheet 3: Hepatitis Records (HBV & HCV Combined)
-            // =========================================
+            // Hepatitis Records
             const hepatitisRows: any[] = [];
             patients.forEach(p => {
                 // HBV
-                p.hbvInfo?.hbsAgTests?.forEach(t => {
-                    if (isInRange(t.date)) hepatitisRows.push({ Date: t.date.split('T')[0], HN: p.hn, Disease: 'HBV', Test_Type: 'HBsAg', Result: t.result, Regimen: '' });
-                });
-                p.hbvInfo?.viralLoads?.forEach(t => {
-                    if (isInRange(t.date)) hepatitisRows.push({ Date: t.date.split('T')[0], HN: p.hn, Disease: 'HBV', Test_Type: 'Viral Load', Result: t.result, Regimen: '' });
-                });
-                p.hbvInfo?.ultrasounds?.forEach(t => {
-                    if (isInRange(t.date)) hepatitisRows.push({ Date: t.date.split('T')[0], HN: p.hn, Disease: 'HBV', Test_Type: 'Ultrasound', Result: t.result, Regimen: '' });
-                });
-                p.hbvInfo?.ctScans?.forEach(t => {
-                    if (isInRange(t.date)) hepatitisRows.push({ Date: t.date.split('T')[0], HN: p.hn, Disease: 'HBV', Test_Type: 'CT Scan', Result: t.result, Regimen: '' });
-                });
+                p.hbvInfo?.hbsAgTests?.forEach(t => { if (isInRange(t.date)) hepatitisRows.push({ Date: t.date.split('T')[0], HN: p.hn, Disease: 'HBV', Test_Type: 'HBsAg', Result: t.result, Regimen: '' }); });
+                p.hbvInfo?.viralLoads?.forEach(t => { if (isInRange(t.date)) hepatitisRows.push({ Date: t.date.split('T')[0], HN: p.hn, Disease: 'HBV', Test_Type: 'Viral Load', Result: t.result, Regimen: '' }); });
+                p.hbvInfo?.ultrasounds?.forEach(t => { if (isInRange(t.date)) hepatitisRows.push({ Date: t.date.split('T')[0], HN: p.hn, Disease: 'HBV', Test_Type: 'Ultrasound', Result: t.result, Regimen: '' }); });
+                p.hbvInfo?.ctScans?.forEach(t => { if (isInRange(t.date)) hepatitisRows.push({ Date: t.date.split('T')[0], HN: p.hn, Disease: 'HBV', Test_Type: 'CT Scan', Result: t.result, Regimen: '' }); });
 
                 // HCV
-                p.hcvInfo?.hcvTests?.forEach(t => {
-                    if (isInRange(t.date)) hepatitisRows.push({ Date: t.date.split('T')[0], HN: p.hn, Disease: 'HCV', Test_Type: t.type, Result: t.result, Regimen: '' });
-                });
-                p.hcvInfo?.preTreatmentVls?.forEach(t => {
-                    if (isInRange(t.date)) hepatitisRows.push({ Date: t.date.split('T')[0], HN: p.hn, Disease: 'HCV', Test_Type: 'Pre-Treatment VL', Result: t.result, Regimen: '' });
-                });
-                p.hcvInfo?.treatments?.forEach(t => {
-                    if (isInRange(t.date)) hepatitisRows.push({ Date: t.date.split('T')[0], HN: p.hn, Disease: 'HCV', Test_Type: 'Treatment Start', Result: '', Regimen: t.regimen });
-                });
-                p.hcvInfo?.postTreatmentVls?.forEach(t => {
-                    if (isInRange(t.date)) hepatitisRows.push({ Date: t.date.split('T')[0], HN: p.hn, Disease: 'HCV', Test_Type: 'Post-Treatment VL', Result: t.result, Regimen: '' });
-                });
+                p.hcvInfo?.hcvTests?.forEach(t => { if (isInRange(t.date)) hepatitisRows.push({ Date: t.date.split('T')[0], HN: p.hn, Disease: 'HCV', Test_Type: t.type, Result: t.result, Regimen: '' }); });
+                p.hcvInfo?.preTreatmentVls?.forEach(t => { if (isInRange(t.date)) hepatitisRows.push({ Date: t.date.split('T')[0], HN: p.hn, Disease: 'HCV', Test_Type: 'Pre-Treatment VL', Result: t.result, Regimen: '' }); });
+                p.hcvInfo?.treatments?.forEach(t => { if (isInRange(t.date)) hepatitisRows.push({ Date: t.date.split('T')[0], HN: p.hn, Disease: 'HCV', Test_Type: 'Treatment Start', Result: '', Regimen: t.regimen }); });
+                p.hcvInfo?.postTreatmentVls?.forEach(t => { if (isInRange(t.date)) hepatitisRows.push({ Date: t.date.split('T')[0], HN: p.hn, Disease: 'HCV', Test_Type: 'Post-Treatment VL', Result: t.result, Regimen: '' }); });
             });
             if (hepatitisRows.length > 0) {
                 XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(hepatitisRows), "Hepatitis_Records");
             }
 
-            // =========================================
-            // Sheet 4: STD History
-            // =========================================
+            // STD History
             const stdRows: any[] = [];
             patients.forEach(p => {
                 p.stdInfo?.records?.forEach(r => {
@@ -216,34 +235,22 @@ export const Settings: React.FC = () => {
                 XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(stdRows), "STD_History");
             }
 
-            // =========================================
-            // Sheet 5: Prevention (PrEP & PEP)
-            // =========================================
+            // Prevention (PrEP & PEP)
             const prevRows: any[] = [];
             patients.forEach(p => {
-                // PrEP
                 p.prepInfo?.records?.forEach(r => {
-                    if (isInRange(r.dateStart)) {
-                        prevRows.push({ Date: r.dateStart, HN: p.hn, Type: 'PrEP', Event: 'Start', Detail: '' });
-                    }
-                    if (r.dateStop && isInRange(r.dateStop)) {
-                        prevRows.push({ Date: r.dateStop, HN: p.hn, Type: 'PrEP', Event: 'Stop', Detail: '' });
-                    }
+                    if (isInRange(r.dateStart)) prevRows.push({ Date: r.dateStart, HN: p.hn, Type: 'PrEP', Event: 'Start', Detail: '' });
+                    if (r.dateStop && isInRange(r.dateStop)) prevRows.push({ Date: r.dateStop, HN: p.hn, Type: 'PrEP', Event: 'Stop', Detail: '' });
                 });
-                // PEP
                 p.pepInfo?.records?.forEach(r => {
-                    if (isInRange(r.date)) {
-                        prevRows.push({ Date: r.date, HN: p.hn, Type: 'PEP', Event: 'Received', Detail: r.type });
-                    }
+                    if (isInRange(r.date)) prevRows.push({ Date: r.date, HN: p.hn, Type: 'PEP', Event: 'Received', Detail: r.type });
                 });
             });
             if (prevRows.length > 0) {
                 XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(prevRows), "Prevention_Records");
             }
 
-            // =========================================
-            // Sheet 6: Pregnancy Records
-            // =========================================
+            // Pregnancy Records
             const pregRows: any[] = [];
             patients.forEach(p => {
                 p.pregnancies?.forEach(r => {
@@ -263,33 +270,50 @@ export const Settings: React.FC = () => {
             }
 
             // Write File
-            const fileName = `ID_Clinic_Export_${startDate || 'All'}_to_${endDate || 'All'}.xlsx`;
+            const exportLabel = type === 'ALL' ? 'All_Data' : type;
+            const fileName = `ID_Clinic_Export_${exportLabel}_${startDate || 'All'}_to_${endDate || 'All'}.xlsx`;
             XLSX.writeFile(wb, fileName);
 
         } catch (error) {
             console.error(error);
             alert('เกิดข้อผิดพลาดในการ Export ข้อมูล (Export Failed)');
         } finally {
-            setIsLoading(false);
+            setLoadingType(null);
         }
     };
+
+    const ExportButton = ({ label, type, colorClass }: { label: string; type: string; colorClass: string }) => (
+        <button 
+            onClick={() => handleExport(type)}
+            disabled={!!loadingType}
+            className={`flex items-center justify-center px-4 py-3 text-sm font-medium text-white rounded-lg shadow-sm transition-all ${colorClass} ${loadingType ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-md hover:scale-[1.02] active:scale-95'}`}
+        >
+            {loadingType === type ? (
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+            ) : <DownloadIcon className="mr-2 h-5 w-5" />}
+            {label}
+        </button>
+    );
 
     return (
         <div className="p-6 md:p-8">
             <h1 className="text-2xl font-bold text-gray-800 mb-6">การตั้งค่า (Settings)</h1>
             
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 max-w-2xl">
+            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
                 <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
                     <DownloadIcon className="text-emerald-600" />
                     ส่งออกข้อมูล (Export Data)
                 </h2>
                 <p className="text-sm text-gray-500 mb-6">
-                    ดาวน์โหลดข้อมูลผู้ป่วยและประวัติการรักษาอย่างละเอียดเป็นไฟล์ Excel (.xlsx)
+                    ดาวน์โหลดข้อมูลผู้ป่วยและประวัติการรักษาเป็นไฟล์ Excel (.xlsx) ตามหมวดหมู่ที่ต้องการ
                     <br/>
-                    <span className="text-xs text-gray-400">* ข้อมูลผู้ป่วย (Demographics) จะถูกส่งออกทั้งหมดพร้อมสรุปประวัติการรักษาแต่ละด้าน ส่วนข้อมูลดิบรายครั้งจะถูกกรองตามช่วงเวลาที่เลือก</span>
+                    <span className="text-xs text-gray-400">* ข้อมูลจะถูกกรองตามวันที่ที่กำหนด (ถ้ามี)</span>
                 </p>
                 
-                <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="grid grid-cols-2 gap-4 mb-6 max-w-2xl">
                     <div className="col-span-1">
                         <label className="block text-sm font-medium text-gray-700 mb-1">ตั้งแต่วันที่ (Start)</label>
                         <input 
@@ -310,7 +334,7 @@ export const Settings: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="flex justify-end gap-4 items-center">
+                <div className="flex justify-start gap-4 items-center mb-6">
                     {(startDate || endDate) && (
                         <button 
                             onClick={() => { setStartDate(''); setEndDate(''); }}
@@ -319,21 +343,17 @@ export const Settings: React.FC = () => {
                             ล้างวันที่ (Clear Dates)
                         </button>
                     )}
-                    <button 
-                        onClick={handleExport} 
-                        disabled={isLoading}
-                        className={`flex items-center justify-center px-6 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white ${isLoading ? 'bg-emerald-400 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700'} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500`}
-                    >
-                        {isLoading ? (
-                            <>
-                                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                                กำลังประมวลผล...
-                            </>
-                        ) : 'ดาวน์โหลด Excel'}
-                    </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-6 pt-6 border-t">
+                    <ExportButton label="ข้อมูลทั้งหมด (All)" type="ALL" colorClass="bg-gray-800 hover:bg-gray-900" />
+                    <ExportButton label="เฉพาะผู้ป่วย HIV" type="HIV" colorClass="bg-blue-600 hover:bg-blue-700" />
+                    <ExportButton label="เฉพาะผู้ป่วย HBV" type="HBV" colorClass="bg-emerald-600 hover:bg-emerald-700" />
+                    <ExportButton label="เฉพาะผู้ป่วย HCV" type="HCV" colorClass="bg-orange-500 hover:bg-orange-600" />
+                    <ExportButton label="เฉพาะผู้ป่วย TPT" type="TPT" colorClass="bg-amber-500 hover:bg-amber-600" />
+                    <ExportButton label="เฉพาะผู้ป่วย STD" type="STD" colorClass="bg-rose-500 hover:bg-rose-600" />
+                    <ExportButton label="เฉพาะผู้ป่วย PrEP" type="PrEP" colorClass="bg-indigo-600 hover:bg-indigo-700" />
+                    <ExportButton label="เฉพาะผู้ป่วย PEP" type="PEP" colorClass="bg-purple-600 hover:bg-purple-700" />
                 </div>
             </div>
         </div>

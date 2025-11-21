@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Patient, PepRecord } from '../../types';
 import { PlusIcon, TrashIcon, EditIcon } from '../icons';
-import { formatThaiDateBE, inputClass, labelClass } from '../utils';
+import { formatThaiDateBE, inputClass, labelClass, toLocalISOString } from '../utils';
 
 interface PepTabProps {
     patient: Patient;
@@ -84,7 +84,7 @@ const EditPepModal: React.FC<{
 };
 
 export const PepTab: React.FC<PepTabProps> = ({ patient, onUpdatePatient }) => {
-    const [newDate, setNewDate] = useState(new Date().toISOString().split('T')[0]);
+    const [newDate, setNewDate] = useState(toLocalISOString(new Date()));
     const [newType, setNewType] = useState<PepType>('nPEP');
     const [editingRecord, setEditingRecord] = useState<PepRecord | null>(null);
 
@@ -99,7 +99,7 @@ export const PepTab: React.FC<PepTabProps> = ({ patient, onUpdatePatient }) => {
         
         const updatedRecords = [...(patient.pepInfo?.records || []), newRecord];
         onUpdatePatient({ ...patient, pepInfo: { records: updatedRecords } });
-        setNewDate(new Date().toISOString().split('T')[0]);
+        setNewDate(toLocalISOString(new Date()));
         setNewType('nPEP'); // Reset to default
     };
 

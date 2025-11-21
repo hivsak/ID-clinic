@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Patient, HcvInfo, HcvTest, HbvInfo } from '../../types';
 import { EditIcon, PlusIcon, TrashIcon } from '../icons';
-import { inputClass, formatThaiDateBE, determineHbvStatus, determineHcvStatus, determineHcvDiagnosticStatus } from '../utils';
+import { inputClass, formatThaiDateBE, determineHbvStatus, determineHcvStatus, determineHcvDiagnosticStatus, toLocalISOString } from '../utils';
 import { TestHistoryCard } from '../TestHistoryCard';
 
 interface HbvHcvTabProps {
@@ -19,7 +19,7 @@ const HcvTestHistoryCard: React.FC<{
 }> = ({ records, onAdd, onDelete, onEdit }) => {
     const [isAdding, setIsAdding] = useState(false);
     const [newTest, setNewTest] = useState<{date: string; type: 'Anti-HCV' | 'HCV-Ab'; result: 'Positive' | 'Negative' | 'Inconclusive'}>({
-        date: new Date().toISOString().split('T')[0],
+        date: toLocalISOString(new Date()),
         type: 'Anti-HCV',
         result: 'Negative',
     });
@@ -28,7 +28,7 @@ const HcvTestHistoryCard: React.FC<{
     const handleAddClick = () => {
         if (!newTest.date) return;
         onAdd({ ...newTest, id: `hcv-test-${Date.now()}` });
-        setNewTest({ date: new Date().toISOString().split('T')[0], type: 'Anti-HCV', result: 'Negative' });
+        setNewTest({ date: toLocalISOString(new Date()), type: 'Anti-HCV', result: 'Negative' });
         setIsAdding(false);
     };
     

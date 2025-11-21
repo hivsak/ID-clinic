@@ -2,6 +2,18 @@
 import React from 'react';
 import { Patient, PatientStatus, HcvTest, HcvInfo } from '../types';
 
+// Helper to format date as YYYY-MM-DD using local time to prevent timezone shifts
+export const toLocalISOString = (date?: Date | string): string => {
+    if (!date) return '';
+    const d = typeof date === 'string' ? new Date(date) : date;
+    if (isNaN(d.getTime())) return '';
+    
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
 export const calculateAge = (dob?: string) => {
   if (!dob) return '-';
   const birthDate = new Date(dob);
@@ -99,22 +111,16 @@ export const formatThaiDateBE = (isoDate: string) => {
     if (!isoDate) return '-';
     const date = new Date(isoDate);
     if (isNaN(date.getTime())) return '-';
-    return new Intl.DateTimeFormat('th-TH-u-ca-buddhist', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric'
-    }).format(date);
+    
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear() + 543;
+    
+    return `${day}/${month}/${year}`;
 };
 
 export const formatThaiDateShort = (isoDate: string) => {
-    if (!isoDate) return '-';
-    const date = new Date(isoDate);
-    if (isNaN(date.getTime())) return '-';
-    return new Intl.DateTimeFormat('th-TH', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-    }).format(date);
+    return formatThaiDateBE(isoDate);
 };
 
 export const inputClass = "mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm";
@@ -159,9 +165,6 @@ export const determineHbvStatus = (patient: Patient): { text: string; color: str
 
 export const determineHcvDiagnosticStatus = (tests: HcvTest[]): 'POSITIVE' | 'INCONCLUSIVE' | 'NEGATIVE' | 'UNKNOWN' => {
     if (!tests || tests.length === 0) return 'UNKNOWN';
-    // Logic: if any positive -> positive, else if any inconclusive -> inconclusive, else negative
-    // Real world might be more complex (latest result), but this mimics current logic
-    // Better logic: Check LATEST result
     const sortedTests = [...tests].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     const latest = sortedTests[0];
     
@@ -209,7 +212,6 @@ export const determineHcvStatus = (patient: Patient): { text: string; color: str
 
     if (hcvDiagnosticStatus === 'POSITIVE' || hcvDiagnosticStatus === 'INCONCLUSIVE') {
         // Rule 5: Has post-treatment data
-        // Logic: Treated (preVL > 15) AND has postVL
         if (preVlValue !== null && preVlValue > 15 && latestTreatment && postVlValue !== null) {
             if (postVlValue < 15) {
                 return { text: 'เคยเป็น HCV รักษาหายแล้ว', color: 'bg-emerald-100 text-emerald-800' };
@@ -228,7 +230,6 @@ export const determineHcvStatus = (patient: Patient): { text: string; color: str
             if (preVlValue < 15) {
                 return { text: 'เคยเป็น HCV หายเอง', color: 'bg-emerald-100 text-emerald-800' };
             } else {
-                // High VL, but no treatment yet
                 return { text: 'เป็น HCV', color: 'bg-red-100 text-red-800' };
             }
         }

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { PlusIcon, TrashIcon, EditIcon } from './icons';
-import { inputClass, formatThaiDateBE } from './utils';
+import { inputClass, formatThaiDateBE, toLocalISOString } from './utils';
 
 interface TestHistoryCardProps<T extends {id: string; date: string} & Record<K, any>, K extends string> {
     title: string;
@@ -85,7 +85,7 @@ export const TestHistoryCard = <T extends {id: string; date: string} & Record<K,
 }: TestHistoryCardProps<T, K>) => {
 
     const [isAdding, setIsAdding] = useState(false);
-    const [newDate, setNewDate] = useState(new Date().toISOString().split('T')[0]);
+    const [newDate, setNewDate] = useState(toLocalISOString(new Date()));
     const [newResult, setNewResult] = useState(resultInputType === 'select' ? (resultOptions[0] || '') : '');
     
     const [editingRecord, setEditingRecord] = useState<T | null>(null);
@@ -96,7 +96,7 @@ export const TestHistoryCard = <T extends {id: string; date: string} & Record<K,
         const newRecord = { date: newDate, ...recordPart };
         onAdd(newRecord);
         // Reset form and close it
-        setNewDate(new Date().toISOString().split('T')[0]);
+        setNewDate(toLocalISOString(new Date()));
         setNewResult(resultInputType === 'select' ? (resultOptions[0] || '') : '');
         setIsAdding(false);
     };

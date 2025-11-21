@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Patient, PatientStatus } from '../types';
 import { calculateAgeBreakdown, calculateDobFromAge, calculatePatientStatus, inputClass, labelClass } from './utils';
+import { ThaiAddressSelector } from './ThaiAddressSelector';
 
 export type NewPatientData = Omit<Patient, 'id' | 'medicalHistory' | 'registrationDate'>;
 
@@ -67,6 +68,10 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
         } else {
             setFormData(prev => ({ ...prev, [name]: value }));
         }
+    };
+
+    const handleAddressSelectorChange = (key: 'subdistrict' | 'district' | 'province', value: string) => {
+        setFormData(prev => ({ ...prev, [key]: value }));
     };
 
     const handleDeceasedChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -245,42 +250,40 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
 
                 <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
                     <h3 className="text-lg font-semibold text-gray-800 mb-6">ข้อมูลการติดต่อและสิทธิ์ (Contact & Eligibility)</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div>
-                            <label htmlFor="province" className={labelClass}>จังหวัด</label>
-                            <input type="text" name="province" id="province" value={formData.province} onChange={handleChange} className={inputClass} />
-                        </div>
-                         <div>
-                            <label htmlFor="district" className={labelClass}>อำเภอ</label>
-                            <input type="text" name="district" id="district" value={formData.district} onChange={handleChange} className={inputClass} />
-                        </div>
-                        <div>
-                            <label htmlFor="subdistrict" className={labelClass}>ตำบล</label>
-                            <input type="text" name="subdistrict" id="subdistrict" value={formData.subdistrict} onChange={handleChange} className={inputClass} />
-                        </div>
-                        <div className="md:col-span-3">
-                            <label htmlFor="address" className={labelClass}>ที่อยู่ (รายละเอียด)</label>
-                            <input type="text" name="address" id="address" value={formData.address} onChange={handleChange} className={inputClass} />
-                        </div>
-                        <div>
-                            <label htmlFor="phone" className={labelClass}>เบอร์โทรศัพท์</label>
-                            <input type="tel" name="phone" id="phone" value={formData.phone} onChange={handleChange} className={inputClass} />
-                        </div>
-                        <div>
-                            <label htmlFor="healthcareScheme" className={labelClass}>สิทธิการรักษา</label>
-                             <select name="healthcareScheme" id="healthcareScheme" value={formData.healthcareScheme} onChange={handleChange} className={inputClass}>
-                                <option>บัตรทอง นอกเขต</option>
-                                <option>บัตรทอง ในเขต</option>
-                                <option>ประกันสังคม นอกเขต</option>
-                                <option>ประกันสังคม ในเขต</option>
-                                <option>จ่ายตรง กรมบัญชีกลาง</option>
-                                <option>จ่ายตรง ท้องถิ่น</option>
-                                <option>ชำระเงินเอง</option>
-                            </select>
-                        </div>
-                         <div>
-                            <label htmlFor="nextAppointmentDate" className={labelClass}>วันนัดหมายครั้งถัดไป</label>
-                            <input type="date" name="nextAppointmentDate" id="nextAppointmentDate" value={formData.nextAppointmentDate} onChange={handleChange} className={inputClass} />
+                    <div className="grid grid-cols-1 gap-6">
+                        {/* Thai Address Selector (Spans 3 columns in its own grid) */}
+                        <ThaiAddressSelector 
+                            province={formData.province || ''}
+                            district={formData.district || ''}
+                            subdistrict={formData.subdistrict || ''}
+                            onChange={handleAddressSelectorChange}
+                        />
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                             <div className="md:col-span-3">
+                                <label htmlFor="address" className={labelClass}>ที่อยู่ (รายละเอียด)</label>
+                                <input type="text" name="address" id="address" value={formData.address} onChange={handleChange} className={inputClass} placeholder="บ้านเลขที่ หมู่ ถนน ซอย..." />
+                            </div>
+                            <div>
+                                <label htmlFor="phone" className={labelClass}>เบอร์โทรศัพท์</label>
+                                <input type="tel" name="phone" id="phone" value={formData.phone} onChange={handleChange} className={inputClass} />
+                            </div>
+                            <div>
+                                <label htmlFor="healthcareScheme" className={labelClass}>สิทธิการรักษา</label>
+                                 <select name="healthcareScheme" id="healthcareScheme" value={formData.healthcareScheme} onChange={handleChange} className={inputClass}>
+                                    <option>บัตรทอง นอกเขต</option>
+                                    <option>บัตรทอง ในเขต</option>
+                                    <option>ประกันสังคม นอกเขต</option>
+                                    <option>ประกันสังคม ในเขต</option>
+                                    <option>จ่ายตรง กรมบัญชีกลาง</option>
+                                    <option>จ่ายตรง ท้องถิ่น</option>
+                                    <option>ชำระเงินเอง</option>
+                                </select>
+                            </div>
+                             <div>
+                                <label htmlFor="nextAppointmentDate" className={labelClass}>วันนัดหมายครั้งถัดไป</label>
+                                <input type="date" name="nextAppointmentDate" id="nextAppointmentDate" value={formData.nextAppointmentDate} onChange={handleChange} className={inputClass} />
+                            </div>
                         </div>
                     </div>
                 </div>

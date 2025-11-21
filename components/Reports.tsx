@@ -429,6 +429,8 @@ const STD_COLORS = [
 const StdLineChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
     const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
     const [hoveredMonth, setHoveredMonth] = useState<number | null>(null);
+    // Use a hidden set so default is "Show All"
+    const [hiddenDiseases, setHiddenDiseases] = useState<Set<string>>(new Set());
 
     // 1. Process Data
     const { years, dataByYear } = useMemo(() => {
@@ -478,32 +480,53 @@ const StdLineChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
         }
     }, [years, selectedYear]);
 
+    // Reset filter when year changes
+    React.useEffect(() => {
+        setHiddenDiseases(new Set());
+    }, [selectedYear]);
+
     // 2. Prepare Data for Selected Year
-    const { monthlyData, activeDiseases, maxCount } = useMemo(() => {
+    const { monthlyData, activeDiseases } = useMemo(() => {
         const currentYearData = dataByYear[selectedYear] || {};
         const diseasesSet = new Set<string>();
-        let max = 0;
 
-        // Initialize 12 months
+        // Initialize 12 months and collect all diseases
         const mData = Array.from({ length: 12 }, (_, i) => {
             const monthRecs = currentYearData[i] || {};
-            const diseaseCounts = Object.entries(monthRecs);
-            
-            // Track max for Y-axis scaling
-            diseaseCounts.forEach(([d, c]) => {
-                diseasesSet.add(d);
-                if (c > max) max = c;
-            });
-
+            Object.keys(monthRecs).forEach(d => diseasesSet.add(d));
             return { monthIndex: i, details: monthRecs };
         });
 
         return { 
             monthlyData: mData, 
-            activeDiseases: Array.from(diseasesSet).sort(),
-            maxCount: Math.max(max, 4) // Minimum Y-axis of 4
+            activeDiseases: Array.from(diseasesSet).sort()
         };
     }, [selectedYear, dataByYear]);
+
+    // Filter visible
+    const visibleDiseases = activeDiseases.filter(d => !hiddenDiseases.has(d));
+
+    // Calculate dynamic max based on visible diseases
+    const maxCount = useMemo(() => {
+        let max = 0;
+        monthlyData.forEach(m => {
+             visibleDiseases.forEach(d => {
+                 const count = m.details[d] || 0;
+                 if (count > max) max = count;
+             });
+        });
+        return Math.max(max, 4);
+    }, [monthlyData, visibleDiseases]);
+
+    // Toggle visibility
+    const toggleDisease = (d: string) => {
+        setHiddenDiseases(prev => {
+            const next = new Set(prev);
+            if (next.has(d)) next.delete(d);
+            else next.add(d);
+            return next;
+        });
+    };
 
     // 3. SVG Dimensions & Scales
     const svgHeight = 320;
@@ -530,7 +553,7 @@ const StdLineChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
 
     return (
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
                 <h3 className="text-lg font-bold text-gray-800">สถิติโรคติดต่อทางเพศสัมพันธ์ (STD)</h3>
                 
                 {years.length > 0 && (
@@ -548,6 +571,36 @@ const StdLineChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
                     </div>
                 )}
             </div>
+
+            {/* Filter Controls */}
+            {activeDiseases.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-6">
+                    {activeDiseases.map(disease => {
+                         const originalIndex = activeDiseases.indexOf(disease);
+                         const color = STD_COLORS[originalIndex % STD_COLORS.length];
+                         const isActive = !hiddenDiseases.has(disease);
+
+                         return (
+                            <button
+                                key={disease}
+                                onClick={() => toggleDisease(disease)}
+                                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border shadow-sm flex items-center gap-2 ${
+                                    isActive 
+                                    ? `text-white border-transparent` 
+                                    : 'bg-white text-gray-400 border-gray-200 hover:bg-gray-50'
+                                }`}
+                                style={{ 
+                                    backgroundColor: isActive ? color : undefined,
+                                    borderColor: isActive ? color : undefined
+                                }}
+                            >
+                                 <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-white' : 'bg-gray-300'}`}></span>
+                                {disease}
+                            </button>
+                         );
+                    })}
+                </div>
+            )}
 
             {years.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-64 text-gray-400 bg-gray-50 rounded-lg border border-dashed border-gray-200">
@@ -567,24 +620,25 @@ const StdLineChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
                                 }}
                              >
                                  <p className="font-bold text-gray-800 mb-2 border-b pb-1">{THAI_MONTHS[hoveredMonth]} {selectedYear}</p>
-                                 {Object.entries(monthlyData[hoveredMonth].details).length > 0 ? (
-                                     <ul className="space-y-1">
-                                         {Object.entries(monthlyData[hoveredMonth].details).map(([dis, count]) => {
-                                             const colorIndex = activeDiseases.indexOf(dis) % STD_COLORS.length;
-                                             return (
-                                                 <li key={dis} className="flex justify-between items-center">
-                                                     <div className="flex items-center">
-                                                         <span className="w-2 h-2 rounded-full mr-1.5" style={{ backgroundColor: STD_COLORS[colorIndex] }}></span>
-                                                         <span className="text-gray-600">{dis}</span>
-                                                     </div>
-                                                     <span className="font-bold text-gray-900 ml-2">{count}</span>
-                                                 </li>
-                                             );
-                                         })}
-                                     </ul>
-                                 ) : (
-                                     <p className="text-gray-400">ไม่มีรายการ</p>
-                                 )}
+                                 <ul className="space-y-1">
+                                     {visibleDiseases.map(dis => {
+                                         const originalIndex = activeDiseases.indexOf(dis);
+                                         const count = monthlyData[hoveredMonth].details[dis] || 0;
+                                         const color = STD_COLORS[originalIndex % STD_COLORS.length];
+                                         return (
+                                             <li key={dis} className="flex justify-between items-center">
+                                                 <div className="flex items-center">
+                                                     <span className="w-2 h-2 rounded-full mr-1.5" style={{ backgroundColor: color }}></span>
+                                                     <span className="text-gray-600">{dis}</span>
+                                                 </div>
+                                                 <span className="font-bold text-gray-900 ml-2">{count}</span>
+                                             </li>
+                                         );
+                                     })}
+                                     {visibleDiseases.length === 0 && (
+                                          <li className="text-gray-400 italic">ไม่ได้เลือกกราฟ</li>
+                                     )}
+                                 </ul>
                              </div>
                          )}
 
@@ -610,39 +664,47 @@ const StdLineChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
                             })}
 
                             {/* Data Lines */}
-                            {activeDiseases.map((disease, idx) => (
-                                <path
-                                    key={disease}
-                                    d={getPath(disease)}
-                                    fill="none"
-                                    stroke={STD_COLORS[idx % STD_COLORS.length]}
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    className="transition-all duration-300 ease-in-out"
-                                />
-                            ))}
+                            {visibleDiseases.map((disease) => {
+                                const originalIndex = activeDiseases.indexOf(disease);
+                                const color = STD_COLORS[originalIndex % STD_COLORS.length];
+                                return (
+                                    <path
+                                        key={disease}
+                                        d={getPath(disease)}
+                                        fill="none"
+                                        stroke={color}
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        className="transition-all duration-300 ease-in-out"
+                                    />
+                                );
+                            })}
 
                             {/* Data Points (Dots) */}
-                            {activeDiseases.map((disease, idx) => (
-                                <g key={`dots-${disease}`}>
-                                    {monthlyData.map((d, i) => {
-                                        const count = d.details[disease];
-                                        if (count === undefined || count === 0) return null;
-                                        return (
-                                            <circle 
-                                                key={i} 
-                                                cx={getX(i)} 
-                                                cy={getY(count)} 
-                                                r="3" 
-                                                fill={STD_COLORS[idx % STD_COLORS.length]} 
-                                                stroke="white" 
-                                                strokeWidth="1"
-                                            />
-                                        );
-                                    })}
-                                </g>
-                            ))}
+                            {visibleDiseases.map((disease) => {
+                                const originalIndex = activeDiseases.indexOf(disease);
+                                const color = STD_COLORS[originalIndex % STD_COLORS.length];
+                                return (
+                                    <g key={`dots-${disease}`}>
+                                        {monthlyData.map((d, i) => {
+                                            const count = d.details[disease];
+                                            if (count === undefined || count === 0) return null;
+                                            return (
+                                                <circle 
+                                                    key={i} 
+                                                    cx={getX(i)} 
+                                                    cy={getY(count)} 
+                                                    r="3" 
+                                                    fill={color} 
+                                                    stroke="white" 
+                                                    strokeWidth="1"
+                                                />
+                                            );
+                                        })}
+                                    </g>
+                                );
+                            })}
 
                             {/* Interactive Overlay Columns */}
                             {monthlyData.map((_, i) => (
@@ -659,22 +721,6 @@ const StdLineChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
                                 />
                             ))}
                         </svg>
-                    </div>
-
-                    {/* Legend */}
-                    <div className="mt-6 flex flex-wrap gap-3 justify-center">
-                        {activeDiseases.map((disease, idx) => (
-                            <div key={disease} className="flex items-center text-xs sm:text-sm bg-gray-50 px-2 py-1 rounded-md border border-gray-100">
-                                <span 
-                                    className="w-3 h-3 rounded-full mr-2" 
-                                    style={{ backgroundColor: STD_COLORS[idx % STD_COLORS.length] }}
-                                ></span>
-                                <span className="text-gray-700 font-medium">{disease}</span>
-                            </div>
-                        ))}
-                        {activeDiseases.length === 0 && (
-                            <p className="text-sm text-gray-400">ไม่มีการวินิจฉัยโรคในปีนี้</p>
-                        )}
                     </div>
                 </>
             )}

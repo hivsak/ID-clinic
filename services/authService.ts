@@ -57,10 +57,10 @@ export const register = async (username: string, password: string, displayName: 
             throw new Error('USERNAME_EXISTS');
         }
 
-        // Insert new user with default role 'user'
+        // Insert new user with default role 'admin' (changed from 'user' to allow immediate access for this app)
         await pool.query(
             'INSERT INTO public.users (username, password, display_name, role) VALUES ($1, $2, $3, $4)',
-            [username, password, displayName, 'user']
+            [username, password, displayName, 'admin']
         );
     } catch (error: any) {
         console.error("Register error:", error);

@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
 import { Patient, PrepRecord } from '../../types';
 import { PlusIcon, TrashIcon, EditIcon } from '../icons';
-import { formatThaiDateBE, inputClass, labelClass } from '../utils';
+import { formatThaiDateBE, inputClass, labelClass, toLocalISOString } from '../utils';
 
 interface PrepTabProps {
     patient: Patient;
@@ -58,8 +59,8 @@ const EditPrepModal: React.FC<{
 };
 
 export const PrepTab: React.FC<PrepTabProps> = ({ patient, onUpdatePatient }) => {
-    const [newStartDate, setNewStartDate] = useState(new Date().toISOString().split('T')[0]);
-    const [stopDateForLatest, setStopDateForLatest] = useState(new Date().toISOString().split('T')[0]);
+    const [newStartDate, setNewStartDate] = useState(toLocalISOString(new Date()));
+    const [stopDateForLatest, setStopDateForLatest] = useState(toLocalISOString(new Date()));
     const [editingRecord, setEditingRecord] = useState<PrepRecord | null>(null);
 
     const sortedRecords = [...(patient.prepInfo?.records || [])].sort((a, b) => new Date(a.dateStart).getTime() - new Date(b.dateStart).getTime());
@@ -77,7 +78,7 @@ export const PrepTab: React.FC<PrepTabProps> = ({ patient, onUpdatePatient }) =>
         
         const updatedRecords = [...(patient.prepInfo?.records || []), newRecord];
         onUpdatePatient({ ...patient, prepInfo: { records: updatedRecords } });
-        setNewStartDate(new Date().toISOString().split('T')[0]);
+        setNewStartDate(toLocalISOString(new Date()));
     };
     
     const handleStopPrep = () => {

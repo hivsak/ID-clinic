@@ -1,13 +1,14 @@
 
 import React, { useState, useMemo } from 'react';
 import { Patient, PatientStatus, MedicalEventType } from '../types';
-import { PlusIcon, SearchIcon, ChevronLeftIcon, ChevronRightIcon } from './icons';
+import { PlusIcon, SearchIcon, ChevronLeftIcon, ChevronRightIcon, TrashIcon } from './icons';
 import { calculateAge, calculatePatientStatus, determineHbvStatus, determineHcvStatus, formatThaiDateShort } from './utils';
 
 interface PatientListProps {
   patients: Patient[];
   onSelectPatient: (id: number) => void;
   onAddNew: () => void;
+  onDeletePatient: (id: number) => void;
 }
 
 const getStatusBadge = (status: PatientStatus | null) => {
@@ -42,7 +43,7 @@ const HCV_STATUS_OPTIONS = [
     'เป็น HCV', 'กำลังรักษา HCV', 'เคยเป็น HCV รักษาหายแล้ว', 'เป็น HCV รักษาแล้วไม่หาย'
 ];
 
-export const PatientList: React.FC<PatientListProps> = ({ patients, onSelectPatient, onAddNew }) => {
+export const PatientList: React.FC<PatientListProps> = ({ patients, onSelectPatient, onAddNew, onDeletePatient }) => {
   // --- Filter States ---
   const [searchText, setSearchText] = useState('');
   
@@ -319,9 +320,23 @@ export const PatientList: React.FC<PatientListProps> = ({ patients, onSelectPati
                         <td className="px-6 py-4">{formatThaiDateShort(patient.nextAppointmentDate || '')}</td>
                         <td className="px-6 py-4">{getStatusBadge(calculatedStatus)}</td>
                         <td className="px-6 py-4">
-                            <button onClick={() => onSelectPatient(patient.id)} className="font-medium text-emerald-600 hover:underline">
-                            ดูรายละเอียด
-                            </button>
+                            <div className="flex items-center justify-between w-full min-w-[100px]">
+                                <button onClick={() => onSelectPatient(patient.id)} className="font-medium text-emerald-600 hover:underline">
+                                    ดูรายละเอียด
+                                </button>
+                                <button 
+                                    type="button"
+                                    onClick={(e) => { 
+                                        e.preventDefault();
+                                        e.stopPropagation(); 
+                                        onDeletePatient(patient.id); 
+                                    }} 
+                                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
+                                    title="ลบผู้ป่วย"
+                                >
+                                    <TrashIcon className="h-5 w-5 pointer-events-none" />
+                                </button>
+                            </div>
                         </td>
                     </tr>
                 );

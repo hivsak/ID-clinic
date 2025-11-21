@@ -168,4 +168,5 @@ export interface Patient {
   referOutDate?: string; // ISO date string
   referOutLocation?: string;
   deathDate?: string; // ISO date string
+  causeOfDeath?: 'HIV-related' | 'Non-HIV-related';
 }

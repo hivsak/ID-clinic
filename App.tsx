@@ -10,7 +10,7 @@ import { Settings } from './components/Settings';
 import { LoginPage } from './components/LoginPage';
 import { Patient, PatientStatus } from './types';
 import { BellIcon } from './components/icons';
-import { getPatients, createPatient, updatePatient, getPatientById } from './services/patientService';
+import { getPatients, createPatient, updatePatient, getPatientById, deletePatient } from './services/patientService';
 import { login } from './services/authService';
 
 type View = 'dashboard' | 'list' | 'detail' | 'form' | 'reports' | 'settings';
@@ -49,16 +49,8 @@ const App: React.FC = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    // Check for existing session
-    const storedLogin = localStorage.getItem('idClinic_isLoggedIn');
-    if (storedLogin === 'true') {
-        setIsLoggedIn(true);
-        fetchPatients();
-    }
-  }, []);
-
-  const fetchPatients = async () => {
+  // Define fetchPatients with useCallback to avoid stale closures
+  const fetchPatients = useCallback(async () => {
       setIsLoading(true);
       try {
           const data = await getPatients();
@@ -88,7 +80,16 @@ const App: React.FC = () => {
       } finally {
           setIsLoading(false);
       }
-  };
+  }, []);
+
+  useEffect(() => {
+    // Check for existing session
+    const storedLogin = localStorage.getItem('idClinic_isLoggedIn');
+    if (storedLogin === 'true') {
+        setIsLoggedIn(true);
+        fetchPatients();
+    }
+  }, [fetchPatients]);
 
   useEffect(() => {
     if (!isLoggedIn) return;
@@ -167,13 +168,13 @@ const App: React.FC = () => {
     setView(newView);
     setSelectedPatient(null);
     fetchPatients(); // Refresh data on main navigation changes
-  }, []);
+  }, [fetchPatients]);
 
   const handleBackToList = useCallback(() => {
     setSelectedPatient(null);
     setView('list');
     fetchPatients(); // Refresh list on back
-  }, []);
+  }, [fetchPatients]);
 
   const handleAddNew = useCallback(() => {
       setView('form');
@@ -196,7 +197,7 @@ const App: React.FC = () => {
     } finally {
         setIsLoading(false);
     }
-  }, []);
+  }, [fetchPatients]);
   
   const handleUpdatePatient = useCallback(async (updatedPatient: Patient) => {
     // Optimistic UI update (optional, but keeping it makes UI snappy)
@@ -217,6 +218,23 @@ const App: React.FC = () => {
         alert(`บันทึกการเปลี่ยนแปลงล้มเหลว\nสาเหตุ: ${errorMsg}`);
     }
   }, []);
+
+  const handleDeletePatient = useCallback(async (id: number) => {
+    if (!window.confirm('คุณแน่ใจหรือไม่ว่าต้องการลบผู้ป่วยรายนี้? ข้อมูลทั้งหมดที่เกี่ยวข้องจะถูกลบถาวร')) {
+        return;
+    }
+    setIsLoading(true);
+    try {
+        await deletePatient(id);
+        await fetchPatients();
+    } catch (err: any) {
+        console.error("Error deleting patient", err);
+        const errorMsg = err instanceof Error ? err.message : (err.isTrusted ? 'Network Connection Failed' : JSON.stringify(err));
+        alert(`ลบข้อมูลไม่สำเร็จ: ${errorMsg}`);
+    } finally {
+        setIsLoading(false);
+    }
+  }, [fetchPatients]);
 
 
   const renderContent = () => {
@@ -239,7 +257,7 @@ const App: React.FC = () => {
     if (view === 'settings') {
         return <Settings />;
     }
-    return <PatientList patients={patients} onSelectPatient={handleSelectPatient} onAddNew={handleAddNew} />;
+    return <PatientList patients={patients} onSelectPatient={handleSelectPatient} onAddNew={handleAddNew} onDeletePatient={handleDeletePatient} />;
   };
 
   if (!isLoggedIn) {

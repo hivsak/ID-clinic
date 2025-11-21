@@ -1,5 +1,4 @@
 
-
 import { pool } from './db';
 import { Patient, PatientStatus, MedicalEvent, MedicalEventType, PregnancyRecord, HcvInfo, HbvInfo, StdInfo, PrepInfo, PepInfo } from '../types';
 
@@ -10,6 +9,9 @@ const groupBy = (arr: any[], key: string) => {
         return acc;
     }, {} as Record<string, any[]>);
 };
+
+// Helper to convert empty string to null for dates
+const dateOrNull = (d: any) => d && d !== '' ? d : null;
 
 // --- Mappers (Row -> Object) ---
 
@@ -266,9 +268,6 @@ export const getPatientById = async (id: number): Promise<Patient | null> => {
     }
 };
 
-// Helper to convert empty string to null for dates
-const dateOrNull = (d: any) => d && d !== '' ? d : null;
-
 // Create a new patient
 export const createPatient = async (data: any): Promise<number> => {
     try {
@@ -298,28 +297,84 @@ export const createPatient = async (data: any): Promise<number> => {
     }
 };
 
-// Import patients in bulk
+// Import patients in bulk using optimized batch insert
 export const importPatientsBulk = async (patientsData: any[]): Promise<{success: number, failed: number, errors: string[]}> => {
     let success = 0;
     let failed = 0;
     const errors: string[] = [];
 
-    for (const data of patientsData) {
-        try {
-            // Validation
-            if (!data.hn) {
-                throw new Error("HN is missing");
+    if (patientsData.length === 0) return { success, failed, errors };
+
+    // Try to do a bulk insert for the whole batch
+    try {
+        // Build huge parameterized query
+        // INSERT INTO patients (...) VALUES ($1, $2...), ($x, $y...)
+        const keys = [
+            'hn', 'napId', 'title', 'firstName', 'lastName', 'dob', 'sex', 'riskBehavior',
+            'status', 'registrationDate', 'healthcareScheme',
+            'address', 'province', 'district', 'subdistrict', 'phone'
+        ];
+        
+        const values: any[] = [];
+        const placeholders: string[] = [];
+        let paramIndex = 1;
+
+        const now = new Date();
+
+        patientsData.forEach(p => {
+            values.push(
+                p.hn, 
+                p.napId || null, 
+                p.title || '', 
+                p.firstName || '', 
+                p.lastName || '', 
+                dateOrNull(p.dob), 
+                p.sex || 'ชาย', 
+                p.riskBehavior || 'Heterosexual',
+                p.status || 'Active',
+                now,
+                p.healthcareScheme || 'บัตรทอง ในเขต',
+                p.address || '',
+                p.province || '',
+                p.district || '',
+                p.subdistrict || '',
+                p.phone || ''
+            );
+            
+            const rowPlaceholders = [];
+            for(let k=0; k<keys.length; k++) {
+                rowPlaceholders.push(`$${paramIndex++}`);
             }
-            // Use existing createPatient logic to handle insertions
-            await createPatient(data);
-            success++;
-        } catch (e: any) {
-            failed++;
-            const errorMsg = `Failed to import HN: ${data.hn || 'Unknown'} - ${e.message}`;
-            console.error(errorMsg);
-            errors.push(errorMsg);
+            placeholders.push(`(${rowPlaceholders.join(', ')})`);
+        });
+
+        const query = `
+            INSERT INTO public.patients 
+            (hn, nap_id, title, first_name, last_name, dob, sex, risk_behavior, status, registration_date, healthcare_scheme, address, province, district, subdistrict, phone)
+            VALUES ${placeholders.join(', ')}
+        `;
+
+        await pool.query(query, values);
+        success += patientsData.length;
+
+    } catch (error: any) {
+        // Fallback Strategy: If the bulk batch fails (e.g. 1 duplicate HN), 
+        // try inserting one by one to save the valid ones.
+        console.warn("Bulk insert failed, falling back to individual inserts.", error.message);
+        
+        for (const data of patientsData) {
+            try {
+                if (!data.hn) throw new Error("HN is missing");
+                await createPatient(data);
+                success++;
+            } catch (e: any) {
+                failed++;
+                const errorMsg = `HN: ${data.hn || 'Unknown'} - ${e.message}`;
+                errors.push(errorMsg);
+            }
         }
     }
+
     return { success, failed, errors };
 };
 

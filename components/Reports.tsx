@@ -486,13 +486,13 @@ const StdLineChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
 
         // Initialize 12 months
         const mData = Array.from({ length: 12 }, (_, i) => {
-            const monthRecs = currentYearData[i] || {};
+            const monthRecs = (currentYearData[i] || {}) as Record<string, number>;
             const diseaseCounts = Object.entries(monthRecs);
             
             // Track max for Y-axis scaling
             diseaseCounts.forEach(([d, c]) => {
                 diseasesSet.add(d);
-                if (c > max) max = c;
+                if ((c as number) > max) max = (c as number);
             });
 
             return { monthIndex: i, details: monthRecs };

@@ -1,5 +1,4 @@
 
-
 import React, { useState } from 'react';
 import * as XLSX from 'xlsx';
 import { getPatients, importPatientsBulk } from '../services/patientService';
@@ -15,6 +14,7 @@ export const Settings: React.FC = () => {
 
     // Import States
     const [isImportLoading, setIsImportLoading] = useState(false);
+    const [importProgress, setImportProgress] = useState<{current: number, total: number} | null>(null);
     const [importResult, setImportResult] = useState<{success: number, failed: number} | null>(null);
 
     // --- Export Logic ---
@@ -286,8 +286,30 @@ export const Settings: React.FC = () => {
     const downloadTemplate = () => {
         const wb = XLSX.utils.book_new();
         const headers = [
-            { hn: "HN12345", nap_id: "N-112233", title: "นาย", first_name: "สมชาย", last_name: "ใจดี" },
-            { hn: "HN67890", nap_id: "", title: "นาง", first_name: "สมหญิง", last_name: "จริงใจ" }
+            { 
+                hn: "HN12345", 
+                nap_id: "N-112233", 
+                title: "นาย", 
+                first_name: "สมชาย", 
+                last_name: "ใจดี",
+                address: "123 หมู่ 1",
+                province: "มหาสารคาม",
+                district: "เมือง",
+                subdistrict: "ตลาด",
+                phone: "0812345678"
+            },
+            { 
+                hn: "HN67890", 
+                nap_id: "", 
+                title: "นาง", 
+                first_name: "สมหญิง", 
+                last_name: "จริงใจ",
+                address: "456 ถนนสุขุมวิท",
+                province: "กรุงเทพ",
+                district: "วัฒนา",
+                subdistrict: "คลองตันเหนือ",
+                phone: "0898765432"
+            }
         ];
         const ws = XLSX.utils.json_to_sheet(headers);
         XLSX.utils.book_append_sheet(wb, ws, "Template");
@@ -300,6 +322,7 @@ export const Settings: React.FC = () => {
 
         setIsImportLoading(true);
         setImportResult(null);
+        setImportProgress(null);
 
         const reader = new FileReader();
         reader.onload = async (event) => {
@@ -317,9 +340,7 @@ export const Settings: React.FC = () => {
                 }
 
                 // Map excel columns to patient object structure
-                // Expecting keys: hn, nap_id, title, first_name, last_name (case insensitive handled loosely)
                 const patientsToImport = jsonData.map((row: any) => {
-                    // Try to find keys regardless of case
                     const getVal = (key: string) => row[key] || row[key.toUpperCase()] || row[key.toLowerCase()] || '';
 
                     return {
@@ -328,13 +349,17 @@ export const Settings: React.FC = () => {
                         title: String(getVal('title')).trim(),
                         firstName: String(getVal('first_name')).trim(),
                         lastName: String(getVal('last_name')).trim(),
-                        // Default values for required internal fields
                         status: 'Active',
-                        sex: 'ชาย', // Default fallback
-                        riskBehavior: 'Heterosexual', // Default fallback
-                        healthcareScheme: 'บัตรทอง ในเขต' // Default fallback
+                        sex: 'ชาย',
+                        riskBehavior: 'Heterosexual',
+                        healthcareScheme: 'บัตรทอง ในเขต',
+                        address: String(getVal('address')).trim(),
+                        province: String(getVal('province')).trim(),
+                        district: String(getVal('district')).trim(),
+                        subdistrict: String(getVal('subdistrict')).trim(),
+                        phone: String(getVal('phone')).trim(),
                     };
-                }).filter(p => p.hn); // Filter out rows without HN
+                }).filter(p => p.hn);
 
                 if (patientsToImport.length === 0) {
                     alert('ไม่พบข้อมูล HN ในไฟล์ที่อัปโหลด');
@@ -343,25 +368,49 @@ export const Settings: React.FC = () => {
                 }
 
                 if (window.confirm(`พบข้อมูล ${patientsToImport.length} รายการ คุณต้องการนำเข้าหรือไม่?`)) {
-                    const result = await importPatientsBulk(patientsToImport);
-                    setImportResult({ success: result.success, failed: result.failed });
-                    if (result.errors.length > 0) {
-                        alert(`นำเข้าสำเร็จ: ${result.success}\nล้มเหลว: ${result.failed}\n\nข้อผิดพลาด:\n${result.errors.slice(0, 5).join('\n')}${result.errors.length > 5 ? '\n...' : ''}`);
+                    // Client-side Chunking for UI responsiveness
+                    const CHUNK_SIZE = 50; // Send 50 at a time to the service
+                    let totalSuccess = 0;
+                    let totalFailed = 0;
+                    const allErrors: string[] = [];
+                    const total = patientsToImport.length;
+
+                    setImportProgress({ current: 0, total: total });
+
+                    for (let i = 0; i < total; i += CHUNK_SIZE) {
+                        const chunk = patientsToImport.slice(i, i + CHUNK_SIZE);
+                        
+                        // Call the optimized batch insert service
+                        const result = await importPatientsBulk(chunk);
+                        
+                        totalSuccess += result.success;
+                        totalFailed += result.failed;
+                        allErrors.push(...result.errors);
+
+                        // Update Progress
+                        setImportProgress({ current: Math.min(i + CHUNK_SIZE, total), total: total });
+                    }
+
+                    setImportResult({ success: totalSuccess, failed: totalFailed });
+                    
+                    if (allErrors.length > 0) {
+                        alert(`นำเข้าสำเร็จ: ${totalSuccess}\nล้มเหลว: ${totalFailed}\n\nข้อผิดพลาดบางส่วน:\n${allErrors.slice(0, 5).join('\n')}${allErrors.length > 5 ? '\n...' : ''}`);
                     } else {
-                        alert(`นำเข้าข้อมูลสำเร็จทั้งหมด ${result.success} รายการ`);
+                        alert(`นำเข้าข้อมูลสำเร็จทั้งหมด ${totalSuccess} รายการ`);
                     }
                 }
             } catch (error) {
                 console.error("Import Error", error);
-                alert("เกิดข้อผิดพลาดในการอ่านไฟล์");
+                alert("เกิดข้อผิดพลาดในการอ่านไฟล์ หรือการเชื่อมต่อฐานข้อมูล");
             } finally {
                 setIsImportLoading(false);
-                // Reset input
                 e.target.value = ''; 
             }
         };
         reader.readAsBinaryString(file);
     };
+
+    const percentComplete = importProgress ? Math.round((importProgress.current / importProgress.total) * 100) : 0;
 
     return (
         <div className="p-6 md:p-8 space-y-8">
@@ -426,7 +475,7 @@ export const Settings: React.FC = () => {
                     </h2>
                     <p className="text-sm text-gray-500 mb-4">
                         นำเข้าข้อมูลผู้ป่วยรายใหม่จากไฟล์ Excel (.xlsx) <br/>
-                        <span className="text-xs text-gray-400">คอลัมน์ที่รองรับ: hn, nap_id, title, first_name, last_name</span>
+                        <span className="text-xs text-gray-400">คอลัมน์ที่รองรับ: hn, nap_id, title, first_name, last_name, address, province, district, subdistrict, phone</span>
                     </p>
 
                     <div className="mb-6">
@@ -458,10 +507,18 @@ export const Settings: React.FC = () => {
                         </div>
                         
                         {isImportLoading && (
-                            <p className="text-center text-sm text-blue-600 font-medium">กำลังนำเข้าข้อมูล...</p>
+                            <div className="space-y-2">
+                                <div className="flex justify-between text-xs text-blue-600 font-medium">
+                                    <span>กำลังนำเข้าข้อมูล...</span>
+                                    <span>{percentComplete}% ({importProgress?.current}/{importProgress?.total})</span>
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                                    <div className="bg-blue-600 h-2.5 rounded-full transition-all duration-300" style={{ width: `${percentComplete}%` }}></div>
+                                </div>
+                            </div>
                         )}
 
-                        {importResult && (
+                        {importResult && !isImportLoading && (
                              <div className={`mt-4 p-3 rounded-md text-sm ${importResult.failed > 0 ? 'bg-amber-50 text-amber-800' : 'bg-emerald-50 text-emerald-800'}`}>
                                 <p className="font-bold">ผลการนำเข้า:</p>
                                 <p>สำเร็จ: {importResult.success}</p>

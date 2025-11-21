@@ -42,6 +42,7 @@ const mapRowToPatient = (row: any): Patient => ({
     referOutLocation: row.refer_out_location || '',
     deathDate: row.death_date ? toLocalISOString(row.death_date) : undefined,
     causeOfDeath: row.cause_of_death,
+    updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : undefined,
     
     // Arrays will be populated by fetch detail logic
     medicalHistory: [],

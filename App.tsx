@@ -154,6 +154,12 @@ const App: React.FC = () => {
         if (patient) {
             setSelectedPatient(patient);
             setView('detail');
+
+            // Update local updatedAt timestamp to trigger "Viewed" sorting logic in PatientList
+            // This ensures the patient jumps to the top of the list when going back
+            setPatients(prev => prev.map(p => 
+                p.id === id ? { ...p, updatedAt: new Date().toISOString() } : p
+            ));
         }
     } catch (err: any) {
         console.error("Error fetching patient details", err);
@@ -173,8 +179,10 @@ const App: React.FC = () => {
   const handleBackToList = useCallback(() => {
     setSelectedPatient(null);
     setView('list');
-    fetchPatients(); // Refresh list on back
-  }, [fetchPatients]);
+    // Do NOT refresh fetchPatients() here immediately if we want to preserve the 
+    // local "viewed" sorting we just applied in handleSelectPatient. 
+    // The list is already in memory.
+  }, []);
 
   const handleAddNew = useCallback(() => {
       setView('form');

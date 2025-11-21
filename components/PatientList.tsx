@@ -145,6 +145,11 @@ export const PatientList: React.FC<PatientListProps> = ({ patients, onSelectPati
         }
 
         return true;
+    }).sort((a, b) => {
+        // Sort by updatedAt descending (newest first)
+        const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+        const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+        return dateB - dateA;
     });
   }, [patients, searchText, statusFilter, apptStartDate, apptEndDate, hbvFilter, hcvFilter, stdFilter, tptFilter, prepFilter, pepFilter]);
 

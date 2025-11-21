@@ -30,15 +30,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
     setIsLoading(true);
 
     try {
-      // Trim inputs to avoid accidental whitespace issues
-      await onLogin(username.trim(), password.trim());
+      await onLogin(username, password);
     } catch (err: any) {
       console.error("Login page caught error:", err);
       
       const msg = err.message || '';
 
       if (msg === 'INVALID_CREDENTIALS') {
-          setError('ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง (หากยังไม่มีบัญชี โปรดลงทะเบียน)');
+          setError('ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง');
       } else if (msg === 'WAITING_FOR_APPROVAL') {
           setError('บัญชีของคุณรอการอนุมัติจากผู้ดูแลระบบ (Role: User)');
       } else if (msg === 'DB_NOT_CONFIGURED') {
@@ -72,12 +71,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
     setIsLoading(true);
 
     try {
-        await register(regUsername.trim(), regPassword.trim(), regDisplayName.trim());
-        setSuccessMsg('สมัครสมาชิกสำเร็จ! คุณสามารถเข้าสู่ระบบได้ทันที');
+        await register(regUsername, regPassword, regDisplayName);
+        setSuccessMsg('สมัครสมาชิกสำเร็จ! กรุณารอการอนุมัติจาก Admin ก่อนเข้าใช้งาน');
         setIsRegistering(false);
-        // Auto-fill login form
-        setUsername(regUsername.trim());
-        setPassword(''); // Let user type password to confirm memory
         // Clear register form
         setRegUsername('');
         setRegPassword('');
@@ -262,7 +258,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
         )}
         
         <div className="text-center mt-4">
-             <p className="text-xs text-gray-400">© 2025 ID CLINIC MANAGER | Version 1.1.7</p>
+             <p className="text-xs text-gray-400">© 2025 ID CLINIC MANAGER | Version 1.1.3</p>
         </div>
       </div>
     </div>

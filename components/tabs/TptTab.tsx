@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { Patient, MedicalEvent, MedicalEventType } from '../../types';
 import { DiagnosisIcon, ArtStartIcon, ProphylaxisIcon, MissedMedsIcon, ArtChangeIcon, InfectionIcon, LabResultIcon, OtherIcon, EditIcon, TrashIcon } from '../icons';
-import { DisplayField, formatThaiDateBE, inputClass, labelClass, textareaClass, toLocalISOString } from '../utils';
+import { DisplayField, formatThaiDateBE, inputClass, labelClass, textareaClass } from '../utils';
 
 // These definitions are copied from HivTreatmentTab as they are needed for the Add/Edit forms
 const eventTypes = [
@@ -48,7 +47,7 @@ const EditEventModal: React.FC<{isOpen: boolean; event: MedicalEvent | null; onC
 
     useEffect(() => {
         if (event) {
-            setFormData({ ...event, date: toLocalISOString(event.date) });
+            setFormData({ ...event, date: event.date.split('T')[0] });
         }
     }, [event]);
 
@@ -85,7 +84,7 @@ const EditEventModal: React.FC<{isOpen: boolean; event: MedicalEvent | null; onC
 };
 
 const AddEventForm: React.FC<{onSave: (event: Omit<MedicalEvent, 'id'>) => void; forceEventType: MedicalEventType; formTitle: string;}> = ({ onSave, forceEventType, formTitle }) => {
-    const [date, setDate] = useState(toLocalISOString(new Date()));
+    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [details, setDetails] = useState<Record<string, any>>({ TPT: true });
 
     const handleDetailChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -100,7 +99,7 @@ const AddEventForm: React.FC<{onSave: (event: Omit<MedicalEvent, 'id'>) => void;
         const newEvent = { date, type: forceEventType, title: eventTypeInfo?.label || 'Event', details };
         onSave(newEvent);
         setDetails({ TPT: true });
-        setDate(toLocalISOString(new Date()));
+        setDate(new Date().toISOString().split('T')[0]);
     };
 
     return (

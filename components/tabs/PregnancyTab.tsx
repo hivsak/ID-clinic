@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { Patient, PregnancyRecord } from '../../types';
 import { PlusIcon, TrashIcon, EditIcon } from '../icons';
-import { formatThaiDateBE, inputClass, labelClass, textareaClass, toLocalISOString } from '../utils';
+import { formatThaiDateBE, inputClass, labelClass, textareaClass } from '../utils';
 
 const calculateVlTestDate = (ga: string, gaDateStr: string): Date | null => {
     if (!ga || !gaDateStr || !/^\d+\+\d+$/.test(ga)) {
@@ -153,7 +152,7 @@ interface PregnancyTabProps {
 export const PregnancyTab: React.FC<PregnancyTabProps> = ({ patient, onUpdatePatient }) => {
     const [gaWeeks, setGaWeeks] = useState('');
     const [gaDays, setGaDays] = useState('');
-    const [gaDate, setGaDate] = useState(toLocalISOString(new Date()));
+    const [gaDate, setGaDate] = useState(new Date().toISOString().split('T')[0]);
     const [isEnding, setIsEnding] = useState<PregnancyRecord | null>(null);
     const [endReason, setEndReason] = useState('');
     const [editingRecord, setEditingRecord] = useState<PregnancyRecord | null>(null);
@@ -193,7 +192,7 @@ export const PregnancyTab: React.FC<PregnancyTabProps> = ({ patient, onUpdatePat
         
         setGaWeeks('');
         setGaDays('');
-        setGaDate(toLocalISOString(new Date()));
+        setGaDate(new Date().toISOString().split('T')[0]);
     };
 
     const handleUpdatePregnancy = (updatedRecord: PregnancyRecord) => {
@@ -216,7 +215,7 @@ export const PregnancyTab: React.FC<PregnancyTabProps> = ({ patient, onUpdatePat
         }
         const updatedPregnancies = (patient.pregnancies || []).map(p => 
             p.id === isEnding.id 
-            ? { ...p, endDate: toLocalISOString(new Date()), endReason: endReason.trim() }
+            ? { ...p, endDate: new Date().toISOString().split('T')[0], endReason: endReason.trim() }
             : p
         );
         onUpdatePatient({ ...patient, pregnancies: updatedPregnancies });

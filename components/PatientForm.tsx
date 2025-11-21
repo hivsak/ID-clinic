@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { Patient, PatientStatus } from '../types';
 import { calculateAgeBreakdown, calculateDobFromAge, calculatePatientStatus, inputClass, labelClass } from './utils';
-import { ThaiAddressSelector } from './ThaiAddressSelector';
 
 export type NewPatientData = Omit<Patient, 'id' | 'medicalHistory' | 'registrationDate'>;
 
@@ -38,7 +37,6 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
         referOutDate: '',
         referOutLocation: '',
         deathDate: '',
-        causeOfDeath: undefined,
     });
 
     const [age, setAge] = useState({ years: '', months: '', days: '' });
@@ -70,15 +68,11 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
         }
     };
 
-    const handleAddressSelectorChange = (key: 'subdistrict' | 'district' | 'province', value: string) => {
-        setFormData(prev => ({ ...prev, [key]: value }));
-    };
-
     const handleDeceasedChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const checked = e.target.checked;
         setIsDeceased(checked);
         if (!checked) {
-            setFormData(prev => ({ ...prev, deathDate: '', causeOfDeath: undefined }));
+            setFormData(prev => ({ ...prev, deathDate: '' }));
         }
     };
 
@@ -250,40 +244,42 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
 
                 <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
                     <h3 className="text-lg font-semibold text-gray-800 mb-6">ข้อมูลการติดต่อและสิทธิ์ (Contact & Eligibility)</h3>
-                    <div className="grid grid-cols-1 gap-6">
-                        {/* Thai Address Selector (Spans 3 columns in its own grid) */}
-                        <ThaiAddressSelector 
-                            province={formData.province || ''}
-                            district={formData.district || ''}
-                            subdistrict={formData.subdistrict || ''}
-                            onChange={handleAddressSelectorChange}
-                        />
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                             <div className="md:col-span-3">
-                                <label htmlFor="address" className={labelClass}>ที่อยู่ (รายละเอียด)</label>
-                                <input type="text" name="address" id="address" value={formData.address} onChange={handleChange} className={inputClass} placeholder="บ้านเลขที่ หมู่ ถนน ซอย..." />
-                            </div>
-                            <div>
-                                <label htmlFor="phone" className={labelClass}>เบอร์โทรศัพท์</label>
-                                <input type="tel" name="phone" id="phone" value={formData.phone} onChange={handleChange} className={inputClass} />
-                            </div>
-                            <div>
-                                <label htmlFor="healthcareScheme" className={labelClass}>สิทธิการรักษา</label>
-                                 <select name="healthcareScheme" id="healthcareScheme" value={formData.healthcareScheme} onChange={handleChange} className={inputClass}>
-                                    <option>บัตรทอง นอกเขต</option>
-                                    <option>บัตรทอง ในเขต</option>
-                                    <option>ประกันสังคม นอกเขต</option>
-                                    <option>ประกันสังคม ในเขต</option>
-                                    <option>จ่ายตรง กรมบัญชีกลาง</option>
-                                    <option>จ่ายตรง ท้องถิ่น</option>
-                                    <option>ชำระเงินเอง</option>
-                                </select>
-                            </div>
-                             <div>
-                                <label htmlFor="nextAppointmentDate" className={labelClass}>วันนัดหมายครั้งถัดไป</label>
-                                <input type="date" name="nextAppointmentDate" id="nextAppointmentDate" value={formData.nextAppointmentDate} onChange={handleChange} className={inputClass} />
-                            </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                            <label htmlFor="province" className={labelClass}>จังหวัด</label>
+                            <input type="text" name="province" id="province" value={formData.province} onChange={handleChange} className={inputClass} />
+                        </div>
+                         <div>
+                            <label htmlFor="district" className={labelClass}>อำเภอ</label>
+                            <input type="text" name="district" id="district" value={formData.district} onChange={handleChange} className={inputClass} />
+                        </div>
+                        <div>
+                            <label htmlFor="subdistrict" className={labelClass}>ตำบล</label>
+                            <input type="text" name="subdistrict" id="subdistrict" value={formData.subdistrict} onChange={handleChange} className={inputClass} />
+                        </div>
+                        <div className="md:col-span-3">
+                            <label htmlFor="address" className={labelClass}>ที่อยู่ (รายละเอียด)</label>
+                            <input type="text" name="address" id="address" value={formData.address} onChange={handleChange} className={inputClass} />
+                        </div>
+                        <div>
+                            <label htmlFor="phone" className={labelClass}>เบอร์โทรศัพท์</label>
+                            <input type="tel" name="phone" id="phone" value={formData.phone} onChange={handleChange} className={inputClass} />
+                        </div>
+                        <div>
+                            <label htmlFor="healthcareScheme" className={labelClass}>สิทธิการรักษา</label>
+                             <select name="healthcareScheme" id="healthcareScheme" value={formData.healthcareScheme} onChange={handleChange} className={inputClass}>
+                                <option>บัตรทอง นอกเขต</option>
+                                <option>บัตรทอง ในเขต</option>
+                                <option>ประกันสังคม นอกเขต</option>
+                                <option>ประกันสังคม ในเขต</option>
+                                <option>จ่ายตรง กรมบัญชีกลาง</option>
+                                <option>จ่ายตรง ท้องถิ่น</option>
+                                <option>ชำระเงินเอง</option>
+                            </select>
+                        </div>
+                         <div>
+                            <label htmlFor="nextAppointmentDate" className={labelClass}>วันนัดหมายครั้งถัดไป</label>
+                            <input type="date" name="nextAppointmentDate" id="nextAppointmentDate" value={formData.nextAppointmentDate} onChange={handleChange} className={inputClass} />
                         </div>
                     </div>
                 </div>
@@ -368,38 +364,9 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
                              <label htmlFor="isDeceasedCheck" className="ml-2 text-sm font-semibold text-gray-800">เสียชีวิต (Deceased)</label>
                         </div>
                         {isDeceased && (
-                           <div className="mt-4 pl-6 space-y-4">
-                               <div>
-                                   <label htmlFor="deathDate" className={labelClass}>วันที่เสียชีวิต</label>
-                                   <input type="date" name="deathDate" id="deathDate" value={formData.deathDate} onChange={handleChange} className={inputClass} style={{ maxWidth: '200px' }} />
-                               </div>
-                               <div>
-                                   <label className={labelClass}>สาเหตุการเสียชีวิต</label>
-                                   <div className="flex items-center space-x-4 mt-2">
-                                        <label className="inline-flex items-center">
-                                            <input 
-                                                type="radio" 
-                                                name="causeOfDeath" 
-                                                value="HIV-related" 
-                                                checked={formData.causeOfDeath === 'HIV-related'} 
-                                                onChange={handleChange} 
-                                                className="h-4 w-4 border-gray-300 text-emerald-600 focus:ring-emerald-500" 
-                                            />
-                                            <span className="ml-2 text-sm text-gray-700">HIV related death</span>
-                                        </label>
-                                        <label className="inline-flex items-center">
-                                            <input 
-                                                type="radio" 
-                                                name="causeOfDeath" 
-                                                value="Non-HIV-related" 
-                                                checked={formData.causeOfDeath === 'Non-HIV-related'} 
-                                                onChange={handleChange} 
-                                                className="h-4 w-4 border-gray-300 text-emerald-600 focus:ring-emerald-500" 
-                                            />
-                                            <span className="ml-2 text-sm text-gray-700">Non-HIV related death</span>
-                                        </label>
-                                   </div>
-                               </div>
+                           <div className="mt-4 pl-6">
+                               <label htmlFor="deathDate" className={labelClass}>วันที่เสียชีวิต</label>
+                               <input type="date" name="deathDate" id="deathDate" value={formData.deathDate} onChange={handleChange} className={inputClass} style={{ maxWidth: '200px' }} />
                            </div>
                         )}
                      </div>

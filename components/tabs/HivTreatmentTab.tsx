@@ -5,7 +5,7 @@ import {
     ArtChangeIcon, MissedMedsIcon, InfectionIcon, ArtStartIcon, DiagnosisIcon, 
     ProphylaxisIcon, LabResultIcon, OtherIcon, PlusIcon, EditIcon, TrashIcon
 } from '../icons';
-import { inputClass, labelClass, textareaClass, formatThaiDateBE, toLocalISOString } from '../utils';
+import { inputClass, labelClass, textareaClass, formatThaiDateBE } from '../utils';
 
 // --- ARV Constants & Helper Components ---
 
@@ -323,9 +323,9 @@ const EditEventModal: React.FC<EditEventModalProps> = ({ isOpen, event, onClose,
              // Data migration for old infection events
             if (event.type === MedicalEventType.OPPORTUNISTIC_INFECTION && event.details.โรค && !event.details.infections) {
                 const migratedEvent = { ...event, details: { ...event.details, infections: [event.details.โรค] } };
-                setFormData({ ...migratedEvent, date: toLocalISOString(migratedEvent.date) });
+                setFormData({ ...migratedEvent, date: migratedEvent.date.split('T')[0] });
             } else {
-                setFormData({ ...event, date: toLocalISOString(event.date) });
+                setFormData({ ...event, date: event.date.split('T')[0] });
             }
         }
     }, [event]);
@@ -416,7 +416,7 @@ interface AddEventFormProps {
 }
 
 const AddEventForm: React.FC<AddEventFormProps> = ({ onSave, patientHistory, onEditDiagnosis, forceEventType, formTitle, onCancel }) => {
-    const [date, setDate] = useState(toLocalISOString(new Date()));
+    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [eventType, setEventType] = useState<MedicalEventType | null>(null);
     const [details, setDetails] = useState<Record<string, any>>({});
 
@@ -429,7 +429,7 @@ const AddEventForm: React.FC<AddEventFormProps> = ({ onSave, patientHistory, onE
     const existingDiagnosis = patientHistory.find(e => e.type === MedicalEventType.DIAGNOSIS);
     
     const resetForm = () => {
-        setDate(toLocalISOString(new Date()));
+        setDate(new Date().toISOString().split('T')[0]);
         setEventType(forceEventType || null);
         setDetails({});
         if (onCancel) {
@@ -443,7 +443,7 @@ const AddEventForm: React.FC<AddEventFormProps> = ({ onSave, patientHistory, onE
             return;
         }
         
-        setDate(toLocalISOString(new Date()));
+        setDate(new Date().toISOString().split('T')[0]);
         setEventType(type);
 
         let newDetails: Record<string, any> = {};

@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { Patient, StdRecord } from '../../types';
 import { EditIcon, StdIcon, TrashIcon } from '../icons';
-import { formatThaiDateBE, inputClass, labelClass, toLocalISOString } from '../utils';
+import { formatThaiDateBE, inputClass, labelClass } from '../utils';
 
 interface StdTabProps {
     patient: Patient;
@@ -129,7 +128,7 @@ const EditStdModal: React.FC<{
 };
 
 export const StdTab: React.FC<StdTabProps> = ({ patient, onUpdatePatient }) => {
-    const [date, setDate] = useState(toLocalISOString(new Date()));
+    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [selectedDiseases, setSelectedDiseases] = useState<Set<string>>(new Set());
     const [isOtherChecked, setIsOtherChecked] = useState(false);
     const [otherDiseaseText, setOtherDiseaseText] = useState('');
@@ -137,7 +136,7 @@ export const StdTab: React.FC<StdTabProps> = ({ patient, onUpdatePatient }) => {
     const [editingRecord, setEditingRecord] = useState<StdRecord | null>(null);
 
     const resetForm = () => {
-        setDate(toLocalISOString(new Date()));
+        setDate(new Date().toISOString().split('T')[0]);
         setSelectedDiseases(new Set());
         setIsOtherChecked(false);
         setOtherDiseaseText('');

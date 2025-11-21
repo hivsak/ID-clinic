@@ -320,7 +320,7 @@ export const PatientList: React.FC<PatientListProps> = ({ patients, onSelectPati
                         <td className="px-6 py-4">{formatThaiDateShort(patient.nextAppointmentDate || '')}</td>
                         <td className="px-6 py-4">{getStatusBadge(calculatedStatus)}</td>
                         <td className="px-6 py-4">
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center justify-between w-full min-w-[100px]">
                                 <button onClick={() => onSelectPatient(patient.id)} className="font-medium text-emerald-600 hover:underline">
                                     ดูรายละเอียด
                                 </button>

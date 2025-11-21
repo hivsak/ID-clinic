@@ -2,6 +2,7 @@
 import React, { useMemo } from 'react';
 import { Patient, PatientStatus } from '../types';
 import { PatientsIcon } from './icons';
+import { calculatePatientStatus } from './utils';
 
 interface DashboardProps {
     patients: Patient[];
@@ -35,11 +36,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ patients, onNavigateToPati
         };
 
         patients.forEach(p => {
-            if (p.status === PatientStatus.ACTIVE) s.active++;
-            else if (p.status === PatientStatus.LTFU) s.ltfu++;
-            else if (p.status === PatientStatus.TRANSFERRED) s.transferred++;
-            else if (p.status === PatientStatus.EXPIRED) s.expired++;
-            else if (p.status === PatientStatus.RESTART) s.restart++;
+            // Use calculated status to ensure real-time accuracy (e.g. if appointment missed today)
+            const status = calculatePatientStatus(p) || p.status;
+
+            if (status === PatientStatus.ACTIVE) s.active++;
+            else if (status === PatientStatus.LTFU) s.ltfu++;
+            else if (status === PatientStatus.TRANSFERRED) s.transferred++;
+            else if (status === PatientStatus.EXPIRED) s.expired++;
+            else if (status === PatientStatus.RESTART) s.restart++;
 
             if (p.sex === 'ชาย') s.male++;
             else if (p.sex === 'หญิง') s.female++;

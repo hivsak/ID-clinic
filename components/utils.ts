@@ -109,6 +109,14 @@ export const calculatePatientStatus = (patient: Partial<Patient>): PatientStatus
 
 export const formatThaiDateBE = (isoDate: string) => {
     if (!isoDate) return '-';
+    
+    // Handle YYYY-MM-DD strictly to prevent timezone shift issues
+    if (typeof isoDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(isoDate)) {
+        const [y, m, d] = isoDate.split('-').map(Number);
+        const thaiYear = y + 543;
+        return `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${thaiYear}`;
+    }
+
     const date = new Date(isoDate);
     if (isNaN(date.getTime())) return '-';
     

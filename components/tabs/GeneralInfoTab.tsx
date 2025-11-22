@@ -1,9 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { Patient, PatientStatus } from '../../types';
-import { DisplayField, calculateAgeBreakdown, calculateDobFromAge, calculatePatientStatus, inputClass, labelClass } from '../utils';
+import { DisplayField, calculateAgeBreakdown, calculateDobFromAge, calculatePatientStatus, formatThaiDateBE, inputClass, labelClass } from '../utils';
 import { EditIcon } from '../icons';
 import { ThaiAddressSelector } from '../ThaiAddressSelector';
+import { ThaiDateInput } from '../ThaiDateInput';
 
 interface GeneralInfoTabProps {
   patient: Patient;
@@ -43,7 +44,7 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, onUpdat
         }
     }, [formData.deathDate, formData.referOutDate, formData.nextAppointmentDate, editSection]);
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement> | { target: { name: string; value: string } }) => {
         const { name, value } = e.target;
         if (name === 'referralType' && value === 'มหาสารคาม') {
             setFormData(prev => ({
@@ -61,7 +62,7 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, onUpdat
         setFormData(prev => ({ ...prev, [key]: value }));
     };
 
-    const handleDobChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleDobChange = (e: { target: { name: string; value: string } }) => {
         const val = e.target.value;
         setFormData(prev => ({ ...prev, dob: val }));
         setAge(calculateAgeBreakdown(val));
@@ -184,7 +185,7 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, onUpdat
                             </div>
                              <div>
                                 <label htmlFor="dob" className={labelClass}>วันเกิด</label>
-                                <input type="date" name="dob" id="dob" value={formData.dob} onChange={handleDobChange} className={inputClass} required />
+                                <ThaiDateInput name="dob" id="dob" value={formData.dob} onChange={handleDobChange} required />
                             </div>
                             <div>
                                 <label className={labelClass}>อายุ (คำนวณอัตโนมัติ)</label>
@@ -245,7 +246,7 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, onUpdat
                         <DisplayField label="คำนำหน้า" value={patient.title} />
                         <DisplayField label="ชื่อ" value={patient.firstName} />
                         <DisplayField label="นามสกุล" value={patient.lastName} />
-                        <DisplayField label="วันเกิด" value={new Date(patient.dob).toLocaleDateString('th-TH')} />
+                        <DisplayField label="วันเกิด" value={formatThaiDateBE(patient.dob || '')} />
                         <DisplayField label="เพศ" value={patient.sex} />
                         <DisplayField label="อาชีพ/สถานศึกษา" value={patient.occupation} />
                     </div>
@@ -336,7 +337,7 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, onUpdat
                                 </div>
                                  <div>
                                     <label htmlFor="nextAppointmentDate" className={labelClass}>วันนัดหมายครั้งถัดไป</label>
-                                    <input type="date" name="nextAppointmentDate" id="nextAppointmentDate" value={formData.nextAppointmentDate || ''} onChange={handleChange} className={inputClass} />
+                                    <ThaiDateInput name="nextAppointmentDate" id="nextAppointmentDate" value={formData.nextAppointmentDate || ''} onChange={handleChange} />
                                 </div>
                             </div>
                         </div>
@@ -352,7 +353,7 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, onUpdat
                         </div>
                         <DisplayField label="เบอร์โทรศัพท์" value={patient.phone} />
                         <DisplayField label="สิทธิการรักษา" value={patient.healthcareScheme} />
-                        <DisplayField label="วันนัดหมายครั้งถัดไป" value={patient.nextAppointmentDate ? new Date(patient.nextAppointmentDate).toLocaleDateString('th-TH') : '-'} />
+                        <DisplayField label="วันนัดหมายครั้งถัดไป" value={formatThaiDateBE(patient.nextAppointmentDate || '')} />
                     </div>
                 )}
             </div>
@@ -401,7 +402,7 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, onUpdat
                                 <>
                                     <div>
                                         <label htmlFor="referralDate" className={labelClass}>วันที่ส่งตัว</label>
-                                        <input type="date" name="referralDate" id="referralDate" value={formData.referralDate || ''} onChange={handleChange} className={inputClass} />
+                                        <ThaiDateInput name="referralDate" id="referralDate" value={formData.referralDate || ''} onChange={handleChange} />
                                     </div>
                                     <div>
                                         <label htmlFor="referredFrom" className={labelClass}>ส่งตัวมาจาก</label>
@@ -418,7 +419,7 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, onUpdat
                             </div>
                             <div>
                                 <label htmlFor="referOutDate" className={labelClass}>วันที่ส่งตัวออก</label>
-                                <input type="date" name="referOutDate" id="referOutDate" value={formData.referOutDate || ''} onChange={handleChange} className={inputClass} />
+                                <ThaiDateInput name="referOutDate" id="referOutDate" value={formData.referOutDate || ''} onChange={handleChange} />
                             </div>
                              <div>
                                 <label htmlFor="referOutLocation" className={labelClass}>ส่งตัวไปที่</label>
@@ -442,7 +443,7 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, onUpdat
                                <div className="mt-4 pl-6 space-y-4">
                                    <div>
                                        <label htmlFor="deathDate" className={labelClass}>วันที่เสียชีวิต</label>
-                                       <input type="date" name="deathDate" id="deathDate" value={formData.deathDate || ''} onChange={handleChange} className={inputClass} style={{ maxWidth: '200px' }} />
+                                       <ThaiDateInput name="deathDate" id="deathDate" value={formData.deathDate || ''} onChange={handleChange} style={{ maxWidth: '200px' }} />
                                    </div>
                                    <div>
                                         <label className={labelClass}>สาเหตุการเสียชีวิต</label>
@@ -488,7 +489,7 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, onUpdat
                                         <>
                                             <div className="flex flex-col">
                                                 <span className="text-xs text-gray-500">วันที่ส่งตัว</span>
-                                                <span className="text-sm font-medium">{patient.referralDate ? new Date(patient.referralDate).toLocaleDateString('th-TH') : '-'}</span>
+                                                <span className="text-sm font-medium">{formatThaiDateBE(patient.referralDate || '')}</span>
                                             </div>
                                             <div className="flex flex-col">
                                                 <span className="text-xs text-gray-500">ประเภท</span>
@@ -514,7 +515,7 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, onUpdat
                                 <div className="flex flex-wrap gap-x-4 gap-y-2">
                                     <div className="flex flex-col">
                                         <span className="text-xs text-gray-500">วันที่ส่งตัวออก</span>
-                                        <span className="text-sm font-medium">{patient.referOutDate ? new Date(patient.referOutDate).toLocaleDateString('th-TH') : '-'}</span>
+                                        <span className="text-sm font-medium">{formatThaiDateBE(patient.referOutDate || '')}</span>
                                     </div>
                                     <div className="flex flex-col">
                                         <span className="text-xs text-gray-500">ส่งตัวไปที่</span>
@@ -529,7 +530,7 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, onUpdat
                                  <DisplayField label="สถานะ" value={patient.deathDate ? 'เสียชีวิต' : 'มีชีวิตอยู่'} />
                                  {patient.deathDate && (
                                      <>
-                                        <DisplayField label="วันที่เสียชีวิต" value={new Date(patient.deathDate).toLocaleDateString('th-TH')} />
+                                        <DisplayField label="วันที่เสียชีวิต" value={formatThaiDateBE(patient.deathDate)} />
                                         <DisplayField label="สาเหตุการเสียชีวิต" value={patient.causeOfDeath === 'HIV-related' ? 'HIV related death' : (patient.causeOfDeath === 'Non-HIV-related' ? 'Non-HIV related death' : '-')} />
                                      </>
                                  )}

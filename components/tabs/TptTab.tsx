@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Patient, MedicalEvent, MedicalEventType } from '../../types';
 import { DiagnosisIcon, ArtStartIcon, ProphylaxisIcon, MissedMedsIcon, ArtChangeIcon, InfectionIcon, LabResultIcon, OtherIcon, EditIcon, TrashIcon } from '../icons';
 import { DisplayField, formatThaiDateBE, inputClass, labelClass, textareaClass, toLocalISOString } from '../utils';
+import { ThaiDateInput } from '../ThaiDateInput';
 
 // These definitions are copied from HivTreatmentTab as they are needed for the Add/Edit forms
 const eventTypes = [
@@ -73,7 +74,7 @@ const EditEventModal: React.FC<{isOpen: boolean; event: MedicalEvent | null; onC
                     <div className="p-6 space-y-4">
                         <div>
                             <label htmlFor="eventDateEdit" className={labelClass}>Date</label>
-                            <input type="date" id="eventDateEdit" value={formData.date} onChange={(e) => setFormData(prev => prev ? { ...prev, date: e.target.value } : null)} className={inputClass} />
+                            <ThaiDateInput id="eventDateEdit" value={formData.date} onChange={(e) => setFormData(prev => prev ? { ...prev, date: e.target.value } : null)} className={inputClass} />
                         </div>
                         {renderEventDetailForm(MedicalEventType.PROPHYLAXIS, formData.details, handleDetailChange)}
                     </div>
@@ -107,7 +108,7 @@ const AddEventForm: React.FC<{onSave: (event: Omit<MedicalEvent, 'id'>) => void;
         <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-sm border border-emerald-200">
             <h3 className="text-xl font-semibold text-gray-800 mb-6">{formTitle}</h3>
             <div className="space-y-6">
-                <div><label htmlFor="eventDate" className={labelClass}>Date</label><input type="date" id="eventDate" value={date} onChange={(e) => setDate(e.target.value)} className={inputClass} style={{ maxWidth: '200px' }} /></div>
+                <div><label htmlFor="eventDate" className={labelClass}>Date</label><ThaiDateInput id="eventDate" value={date} onChange={(e) => setDate(e.target.value)} className={inputClass} style={{ maxWidth: '200px' }} /></div>
                 <div>{renderEventDetailForm(forceEventType, details, handleDetailChange)}</div>
                 <div className="flex justify-end pt-4"><button type="submit" className="px-6 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700">Save Event</button></div>
             </div>
@@ -152,62 +153,4 @@ export const TPTTab: React.FC<TPTTabProps> = ({ patient, onSaveEvent, onDeleteEv
             </div>
             <div className="space-y-6">
                  <div className="bg-white p-6 rounded-lg shadow-sm border">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4">ประวัติการให้ TPT</h3>
-                    {tptHistory.length > 0 ? (
-                        <div className="space-y-3 max-h-60 overflow-y-auto pr-2">
-                            {tptHistory.map(event => (
-                                <div key={event.id} className="p-3 bg-gray-50 rounded-md group flex justify-between items-center relative">
-                                    <div>
-                                        <p className="font-semibold text-gray-800">{event.details['สูตร TPT'] || 'N/A'}</p>
-                                        <p className="text-sm text-gray-500">วันที่เริ่ม: {formatThaiDateBE(event.date)}</p>
-                                    </div>
-                                    <div className="flex items-center">
-                                        <button 
-                                            type="button"
-                                            onClick={() => setEventToEdit(event)} 
-                                            className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-full transition-colors" 
-                                            aria-label="Edit TPT event"
-                                        >
-                                            <EditIcon />
-                                        </button>
-                                        <button 
-                                            type="button"
-                                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDeleteEvent(event.id); }} 
-                                            className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors ml-1 relative z-20" 
-                                            aria-label="Delete TPT event"
-                                            title="ลบข้อมูล"
-                                        >
-                                            <TrashIcon className="h-4 w-4 pointer-events-none" />
-                                        </button>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <p className="text-gray-500">ยังไม่มีประวัติการให้ TPT</p>
-                    )}
-                </div>
-                <div className="bg-white p-6 rounded-lg shadow-sm border">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4">ประวัติการป่วยเป็นวัณโรค (TB)</h3>
-                    {tbHistory.length > 0 ? (
-                        <ul className="space-y-2">
-                            {tbHistory.map(event => (
-                                <li key={event.id} className="p-2 bg-gray-50 rounded-md">
-                                    วินิจฉัยเมื่อวันที่: {formatThaiDateBE(event.date)}
-                                </li>
-                            ))}
-                        </ul>
-                    ) : (
-                        <p className="text-gray-500">ไม่มีประวัติการป่วยเป็นวัณโรค</p>
-                    )}
-                </div>
-            </div>
-             <EditEventModal
-                isOpen={!!eventToEdit}
-                event={eventToEdit}
-                onClose={() => setEventToEdit(null)}
-                onSave={handleSaveModal}
-            />
-        </div>
-    );
-};
+                    <h3 className="text-lg

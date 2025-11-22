@@ -1,8 +1,9 @@
 
 import React, { useMemo, useState } from 'react';
 import { Patient, MedicalEventType } from '../types';
-import { determineHbvStatus, determineHcvStatus } from './utils';
+import { determineHbvStatus, determineHcvStatus, formatThaiDateBE } from './utils';
 import { SearchIcon, ChevronDownIcon } from './icons';
+import { ThaiDateInput } from './ThaiDateInput';
 
 interface ReportsProps {
     patients: Patient[];
@@ -259,7 +260,7 @@ const GeneralTrendChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
                             onChange={(e) => setSelectedYear(Number(e.target.value))}
                             className="appearance-none bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-full p-2.5 pr-8"
                         >
-                            {years.map(y => <option key={y} value={y}>{y}</option>)}
+                            {years.map(y => <option key={y} value={y}>{y + 543}</option>)}
                         </select>
                         <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
                             <ChevronDownIcon />
@@ -310,7 +311,7 @@ const GeneralTrendChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
                                 transform: hoveredMonth > 8 ? 'translateX(-100%)' : 'translateX(0)' 
                             }}
                          >
-                             <p className="font-bold text-gray-800 mb-2 border-b pb-1">{THAI_MONTHS[hoveredMonth]} {selectedYear}</p>
+                             <p className="font-bold text-gray-800 mb-2 border-b pb-1">{THAI_MONTHS[hoveredMonth]} {selectedYear + 543}</p>
                              <ul className="space-y-1">
                                  {GENERAL_LABELS.filter(c => visibleCategories.has(c)).map(cat => (
                                      <li key={cat} className="flex justify-between items-center">
@@ -563,7 +564,7 @@ const StdLineChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
                             onChange={(e) => setSelectedYear(Number(e.target.value))}
                             className="appearance-none bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-full p-2.5 pr-8"
                         >
-                            {years.map(y => <option key={y} value={y}>{y}</option>)}
+                            {years.map(y => <option key={y} value={y}>{y + 543}</option>)}
                         </select>
                         <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
                             <ChevronDownIcon />
@@ -619,7 +620,7 @@ const StdLineChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
                                     transform: hoveredMonth > 8 ? 'translateX(-100%)' : 'translateX(0)' 
                                 }}
                              >
-                                 <p className="font-bold text-gray-800 mb-2 border-b pb-1">{THAI_MONTHS[hoveredMonth]} {selectedYear}</p>
+                                 <p className="font-bold text-gray-800 mb-2 border-b pb-1">{THAI_MONTHS[hoveredMonth]} {selectedYear + 543}</p>
                                  <ul className="space-y-1">
                                      {visibleDiseases.map(dis => {
                                          const originalIndex = activeDiseases.indexOf(dis);
@@ -851,20 +852,20 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
                     <h1 className="text-2xl font-bold text-gray-800">รายงานสรุป (Clinic Reports)</h1>
                     <p className="text-gray-500">
                         {startDate || endDate 
-                            ? `แสดงข้อมูลระหว่างวันที่ ${startDate || '...'} ถึง ${endDate || '...'}` 
+                            ? `แสดงข้อมูลระหว่างวันที่ ${startDate ? formatThaiDateBE(startDate) : '...'} ถึง ${endDate ? formatThaiDateBE(endDate) : '...'}` 
                             : 'แสดงข้อมูลทั้งหมด (Cumulative)'}
                     </p>
                 </div>
                 
                 <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200 w-full md:w-auto">
                      <div className="flex flex-row gap-2 items-end">
-                        <div className="flex-1 min-w-0">
+                        <div className="flex-1 min-w-[140px]">
                             <label className="block text-xs font-medium text-gray-500 mb-1 truncate">ตั้งแต่วันที่</label>
-                            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="block w-full px-2 py-1.5 text-sm bg-gray-50 border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500 min-w-0" />
+                            <ThaiDateInput value={startDate} onChange={(e) => setStartDate(e.target.value)} className="block w-full px-2 py-1.5 text-sm bg-gray-50 border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500 min-w-0" />
                         </div>
-                        <div className="flex-1 min-w-0">
+                        <div className="flex-1 min-w-[140px]">
                             <label className="block text-xs font-medium text-gray-500 mb-1 truncate">ถึงวันที่</label>
-                            <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="block w-full px-2 py-1.5 text-sm bg-gray-50 border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500 min-w-0" />
+                            <ThaiDateInput value={endDate} onChange={(e) => setEndDate(e.target.value)} className="block w-full px-2 py-1.5 text-sm bg-gray-50 border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500 min-w-0" />
                         </div>
                         {(startDate || endDate) && (
                              <div className="flex-none">

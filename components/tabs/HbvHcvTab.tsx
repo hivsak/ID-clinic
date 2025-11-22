@@ -4,6 +4,7 @@ import { Patient, HcvInfo, HcvTest, HbvInfo } from '../../types';
 import { EditIcon, PlusIcon, TrashIcon } from '../icons';
 import { inputClass, formatThaiDateBE, determineHbvStatus, determineHcvStatus, determineHcvDiagnosticStatus, toLocalISOString } from '../utils';
 import { TestHistoryCard } from '../TestHistoryCard';
+import { ThaiDateInput } from '../ThaiDateInput';
 
 interface HbvHcvTabProps {
     patient: Patient;
@@ -83,7 +84,7 @@ const HcvTestHistoryCard: React.FC<{
             {isAdding && (
                 <div className="mt-4 pt-4 border-t space-y-3">
                     <div className="grid grid-cols-3 gap-x-2">
-                        <div><label className="text-xs text-gray-500">Date</label><input type="date" value={newTest.date} onChange={e => setNewTest(p => ({...p, date: e.target.value}))} className={inputClass + " py-1.5 text-sm"} /></div>
+                        <div><label className="text-xs text-gray-500">Date</label><ThaiDateInput value={newTest.date} onChange={e => setNewTest(p => ({...p, date: e.target.value}))} className={inputClass + " py-1.5 text-sm"} /></div>
                         <div><label className="text-xs text-gray-500">Type</label><select value={newTest.type} onChange={e => setNewTest(p => ({...p, type: e.target.value as any}))} className={inputClass + " py-1.5 text-sm"}><option>Anti-HCV</option><option>HCV-Ab</option></select></div>
                         <div><label className="text-xs text-gray-500">Result</label><select value={newTest.result} onChange={e => setNewTest(p => ({...p, result: e.target.value as any}))} className={inputClass + " py-1.5 text-sm"}><option>Negative</option><option>Positive</option><option>Inconclusive</option></select></div>
                     </div>
@@ -104,7 +105,7 @@ const HcvTestHistoryCard: React.FC<{
                         <div className="p-4 space-y-4">
                              <div>
                                 <label className="block text-sm font-medium text-gray-700">วันที่</label>
-                                <input type="date" value={editingRecord.date} onChange={e => setEditingRecord({...editingRecord, date: e.target.value})} className={inputClass} />
+                                <ThaiDateInput value={editingRecord.date} onChange={e => setEditingRecord({...editingRecord, date: e.target.value})} className={inputClass} />
                             </div>
                              <div>
                                 <label className="block text-sm font-medium text-gray-700">ประเภทการตรวจ</label>

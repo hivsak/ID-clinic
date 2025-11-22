@@ -14,6 +14,40 @@ export const toLocalISOString = (date?: Date | string): string => {
     return `${year}-${month}-${day}`;
 };
 
+// Convert ISO (YYYY-MM-DD) to Thai Date String (DD/MM/YYYY BE) for Input Display
+export const isoToThaiDateString = (isoDate?: string): string => {
+    if (!isoDate) return '';
+    const parts = isoDate.split('-');
+    if (parts.length !== 3) return '';
+    
+    const year = parseInt(parts[0]);
+    const month = parts[1];
+    const day = parts[2];
+    
+    if (isNaN(year)) return '';
+    
+    const thaiYear = year + 543;
+    return `${day}/${month}/${thaiYear}`;
+};
+
+// Convert Thai Date String (DD/MM/YYYY BE) to ISO (YYYY-MM-DD) for State/DB
+export const thaiDateStringToIso = (thaiDateStr: string): string => {
+    // Expected format: DD/MM/YYYY
+    if (!thaiDateStr || thaiDateStr.length !== 10) return '';
+    
+    const parts = thaiDateStr.split('/');
+    if (parts.length !== 3) return '';
+    
+    const day = parts[0];
+    const month = parts[1];
+    const yearBE = parseInt(parts[2]);
+    
+    if (isNaN(yearBE)) return '';
+    
+    const yearAD = yearBE - 543;
+    return `${yearAD}-${month}-${day}`;
+};
+
 export const calculateAge = (dob?: string) => {
   if (!dob) return '-';
   const birthDate = new Date(dob);

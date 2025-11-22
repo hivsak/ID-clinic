@@ -6,6 +6,7 @@ import {
     ProphylaxisIcon, LabResultIcon, OtherIcon, PlusIcon, EditIcon, TrashIcon
 } from '../icons';
 import { inputClass, labelClass, textareaClass, formatThaiDateBE, toLocalISOString } from '../utils';
+import { ThaiDateInput } from '../ThaiDateInput';
 
 // --- ARV Constants & Helper Components ---
 
@@ -360,7 +361,7 @@ const EditEventModal: React.FC<EditEventModalProps> = ({ isOpen, event, onClose,
         setFormData(prev => prev ? { ...prev, details: newDetails } : null);
     };
 
-    const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleDateChange = (e: { target: { name: string; value: string } }) => {
         setFormData(prev => prev ? { ...prev, date: e.target.value } : null);
     };
 
@@ -388,7 +389,7 @@ const EditEventModal: React.FC<EditEventModalProps> = ({ isOpen, event, onClose,
                     <div className="p-6 space-y-4">
                         <div>
                             <label htmlFor="eventDateEdit" className={labelClass}>ลงวันที่</label>
-                            <input type="date" id="eventDateEdit" value={formData.date} onChange={handleDateChange} className={inputClass} style={{ maxWidth: '200px' }}/>
+                            <ThaiDateInput id="eventDateEdit" value={formData.date} onChange={handleDateChange} style={{ maxWidth: '200px' }}/>
                         </div>
                         {renderEventDetailForm(event.type, formData.details, handleDetailChange, handleArvChange)}
                     </div>
@@ -516,7 +517,7 @@ const AddEventForm: React.FC<AddEventFormProps> = ({ onSave, patientHistory, onE
             <div className="space-y-6">
                 <div>
                     <label htmlFor="eventDate" className={labelClass}>ลงวันที่</label>
-                    <input type="date" id="eventDate" value={date} onChange={(e) => setDate(e.target.value)} className={inputClass} style={{ maxWidth: '200px' }} />
+                    <ThaiDateInput id="eventDate" value={date} onChange={(e) => setDate(e.target.value)} style={{ maxWidth: '200px' }} />
                 </div>
 
                 {!forceEventType && (

@@ -4,6 +4,7 @@ import { Patient, PatientStatus } from '../../types';
 import { DisplayField, calculateAgeBreakdown, calculateDobFromAge, calculatePatientStatus, formatThaiDateBE, inputClass, labelClass } from '../utils';
 import { EditIcon } from '../icons';
 import { ThaiAddressSelector } from '../ThaiAddressSelector';
+import { DateInput } from '../DateInput';
 
 interface GeneralInfoTabProps {
   patient: Patient;
@@ -43,12 +44,12 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, onUpdat
         }
     }, [formData.deathDate, formData.referOutDate, formData.nextAppointmentDate, editSection]);
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement> | { target: { name: string; value: string } }) => {
         const { name, value } = e.target;
         if (name === 'referralType' && value === 'มหาสารคาม') {
             setFormData(prev => ({
                 ...prev,
-                referralType: value,
+                referralType: value as any,
                 referredFrom: '',
                 referralDate: ''
             }));
@@ -61,7 +62,7 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, onUpdat
         setFormData(prev => ({ ...prev, [key]: value }));
     };
 
-    const handleDobChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleDobChange = (e: { target: { value: string } }) => {
         const val = e.target.value;
         setFormData(prev => ({ ...prev, dob: val }));
         setAge(calculateAgeBreakdown(val));
@@ -184,7 +185,7 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, onUpdat
                             </div>
                              <div>
                                 <label htmlFor="dob" className={labelClass}>วันเกิด</label>
-                                <input type="date" name="dob" id="dob" value={formData.dob} onChange={handleDobChange} className={inputClass} required />
+                                <DateInput name="dob" id="dob" value={formData.dob} onChange={handleDobChange} />
                             </div>
                             <div>
                                 <label className={labelClass}>อายุ (คำนวณอัตโนมัติ)</label>
@@ -336,7 +337,7 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, onUpdat
                                 </div>
                                  <div>
                                     <label htmlFor="nextAppointmentDate" className={labelClass}>วันนัดหมายครั้งถัดไป</label>
-                                    <input type="date" name="nextAppointmentDate" id="nextAppointmentDate" value={formData.nextAppointmentDate || ''} onChange={handleChange} className={inputClass} />
+                                    <DateInput name="nextAppointmentDate" id="nextAppointmentDate" value={formData.nextAppointmentDate || ''} onChange={handleChange} />
                                 </div>
                             </div>
                         </div>
@@ -401,7 +402,7 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, onUpdat
                                 <>
                                     <div>
                                         <label htmlFor="referralDate" className={labelClass}>วันที่ส่งตัว</label>
-                                        <input type="date" name="referralDate" id="referralDate" value={formData.referralDate || ''} onChange={handleChange} className={inputClass} />
+                                        <DateInput name="referralDate" id="referralDate" value={formData.referralDate || ''} onChange={handleChange} />
                                     </div>
                                     <div>
                                         <label htmlFor="referredFrom" className={labelClass}>ส่งตัวมาจาก</label>
@@ -418,7 +419,7 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, onUpdat
                             </div>
                             <div>
                                 <label htmlFor="referOutDate" className={labelClass}>วันที่ส่งตัวออก</label>
-                                <input type="date" name="referOutDate" id="referOutDate" value={formData.referOutDate || ''} onChange={handleChange} className={inputClass} />
+                                <DateInput name="referOutDate" id="referOutDate" value={formData.referOutDate || ''} onChange={handleChange} />
                             </div>
                              <div>
                                 <label htmlFor="referOutLocation" className={labelClass}>ส่งตัวไปที่</label>
@@ -442,7 +443,7 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, onUpdat
                                <div className="mt-4 pl-6 space-y-4">
                                    <div>
                                        <label htmlFor="deathDate" className={labelClass}>วันที่เสียชีวิต</label>
-                                       <input type="date" name="deathDate" id="deathDate" value={formData.deathDate || ''} onChange={handleChange} className={inputClass} style={{ maxWidth: '200px' }} />
+                                       <DateInput name="deathDate" id="deathDate" value={formData.deathDate || ''} onChange={handleChange} />
                                    </div>
                                    <div>
                                         <label className={labelClass}>สาเหตุการเสียชีวิต</label>

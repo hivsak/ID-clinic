@@ -4,6 +4,7 @@ import { Patient, HcvInfo, HcvTest, HbvInfo } from '../../types';
 import { EditIcon, PlusIcon, TrashIcon } from '../icons';
 import { inputClass, formatThaiDateBE, determineHbvStatus, determineHcvStatus, determineHcvDiagnosticStatus, toLocalISOString } from '../utils';
 import { TestHistoryCard } from '../TestHistoryCard';
+import { DateInput } from '../DateInput';
 
 interface HbvHcvTabProps {
     patient: Patient;
@@ -82,10 +83,12 @@ const HcvTestHistoryCard: React.FC<{
             </div>
             {isAdding && (
                 <div className="mt-4 pt-4 border-t space-y-3">
-                    <div className="grid grid-cols-3 gap-x-2">
-                        <div><label className="text-xs text-gray-500">Date</label><input type="date" value={newTest.date} onChange={e => setNewTest(p => ({...p, date: e.target.value}))} className={inputClass + " py-1.5 text-sm"} /></div>
-                        <div><label className="text-xs text-gray-500">Type</label><select value={newTest.type} onChange={e => setNewTest(p => ({...p, type: e.target.value as any}))} className={inputClass + " py-1.5 text-sm"}><option>Anti-HCV</option><option>HCV-Ab</option></select></div>
-                        <div><label className="text-xs text-gray-500">Result</label><select value={newTest.result} onChange={e => setNewTest(p => ({...p, result: e.target.value as any}))} className={inputClass + " py-1.5 text-sm"}><option>Negative</option><option>Positive</option><option>Inconclusive</option></select></div>
+                    <div className="flex flex-col gap-2">
+                        <div><label className="text-xs text-gray-500">Date</label><DateInput value={newTest.date} onChange={e => setNewTest(p => ({...p, date: e.target.value}))} className="py-1.5 text-sm" /></div>
+                        <div className="grid grid-cols-2 gap-x-2">
+                            <div><label className="text-xs text-gray-500">Type</label><select value={newTest.type} onChange={e => setNewTest(p => ({...p, type: e.target.value as any}))} className={inputClass + " py-1.5 text-sm"}><option>Anti-HCV</option><option>HCV-Ab</option></select></div>
+                            <div><label className="text-xs text-gray-500">Result</label><select value={newTest.result} onChange={e => setNewTest(p => ({...p, result: e.target.value as any}))} className={inputClass + " py-1.5 text-sm"}><option>Negative</option><option>Positive</option><option>Inconclusive</option></select></div>
+                        </div>
                     </div>
                     <button type="button" onClick={handleAddClick} className="w-full flex items-center justify-center gap-x-2 px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700">
                         <PlusIcon className="h-4 w-4" /> บันทึกผล
@@ -104,7 +107,7 @@ const HcvTestHistoryCard: React.FC<{
                         <div className="p-4 space-y-4">
                              <div>
                                 <label className="block text-sm font-medium text-gray-700">วันที่</label>
-                                <input type="date" value={editingRecord.date} onChange={e => setEditingRecord({...editingRecord, date: e.target.value})} className={inputClass} />
+                                <DateInput value={editingRecord.date} onChange={e => setEditingRecord({...editingRecord, date: e.target.value})} />
                             </div>
                              <div>
                                 <label className="block text-sm font-medium text-gray-700">ประเภทการตรวจ</label>

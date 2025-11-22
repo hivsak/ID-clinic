@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Patient, StdRecord } from '../../types';
 import { EditIcon, StdIcon, TrashIcon } from '../icons';
 import { formatThaiDateBE, inputClass, labelClass, toLocalISOString } from '../utils';
+import { DateInput } from '../DateInput';
 
 interface StdTabProps {
     patient: Patient;
@@ -83,7 +84,7 @@ const EditStdModal: React.FC<{
                 <form onSubmit={handleSubmit} className="p-6 space-y-6">
                      <div>
                         <label htmlFor="stdDateEdit" className={labelClass}>วันที่</label>
-                        <input type="date" id="stdDateEdit" value={date} onChange={(e) => setDate(e.target.value)} className={inputClass} style={{ maxWidth: '200px' }} />
+                        <DateInput id="stdDateEdit" value={date} onChange={(e) => setDate(e.target.value)} />
                     </div>
                     <div>
                         <label className={labelClass}>โรค (เลือกได้หลายข้อ)</label>
@@ -201,7 +202,7 @@ export const StdTab: React.FC<StdTabProps> = ({ patient, onUpdatePatient }) => {
                 <div className="space-y-6">
                     <div>
                         <label htmlFor="stdDate" className={labelClass}>วันที่</label>
-                        <input type="date" id="stdDate" value={date} onChange={(e) => setDate(e.target.value)} className={inputClass} style={{ maxWidth: '200px' }} />
+                        <DateInput id="stdDate" value={date} onChange={(e) => setDate(e.target.value)} />
                     </div>
                     <div>
                         <label className={labelClass}>โรค (เลือกได้หลายข้อ)</label>

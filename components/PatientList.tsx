@@ -3,6 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { Patient, PatientStatus, MedicalEventType } from '../types';
 import { PlusIcon, SearchIcon, ChevronLeftIcon, ChevronRightIcon, TrashIcon } from './icons';
 import { calculateAge, calculatePatientStatus, determineHbvStatus, determineHcvStatus, formatThaiDateShort } from './utils';
+import { DateInput } from './DateInput';
 
 interface PatientListProps {
   patients: Patient[];
@@ -209,21 +210,18 @@ export const PatientList: React.FC<PatientListProps> = ({ patients, onSelectPati
                     />
                 </div>
                 <div className="md:col-span-8 flex flex-col md:flex-row items-start md:items-center gap-2">
-                    <div className="flex items-center gap-2 w-full md:w-auto">
-                         <span className="text-sm text-gray-500 whitespace-nowrap flex-shrink-0">วันนัด:</span>
-                         <div className="flex flex-1 gap-2 items-center">
-                             <input 
-                                type="date" 
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full">
+                         <span className="text-sm text-gray-500 whitespace-nowrap flex-shrink-0 pt-2 sm:pt-0">วันนัด:</span>
+                         <div className="flex flex-col sm:flex-row gap-2 w-full">
+                             <DateInput 
                                 value={apptStartDate} 
                                 onChange={(e) => setApptStartDate(e.target.value)} 
-                                className="flex-1 w-full md:w-auto min-w-0 px-2 py-2 border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500 text-sm" 
                             />
-                            <span className="text-sm text-gray-500 flex-shrink-0">-</span>
-                            <input 
-                                type="date" 
+                            <span className="text-sm text-gray-500 flex-shrink-0 self-center hidden sm:block">-</span>
+                            <span className="text-sm text-gray-500 flex-shrink-0 sm:hidden">ถึง</span>
+                            <DateInput 
                                 value={apptEndDate} 
                                 onChange={(e) => setApptEndDate(e.target.value)} 
-                                className="flex-1 w-full md:w-auto min-w-0 px-2 py-2 border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500 text-sm" 
                             />
                          </div>
                     </div>

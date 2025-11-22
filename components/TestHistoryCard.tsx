@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { PlusIcon, TrashIcon, EditIcon } from './icons';
 import { inputClass, formatThaiDateBE, toLocalISOString } from './utils';
+import { DateInput } from './DateInput';
 
 interface TestHistoryCardProps<T extends {id: string; date: string} & Record<K, any>, K extends string> {
     title: string;
@@ -58,7 +59,7 @@ const EditModal: React.FC<EditModalProps> = ({
                 <form onSubmit={handleSubmit} className="p-4 space-y-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700">วันที่</label>
-                        <input type="date" value={date} onChange={e => setDate(e.target.value)} className={inputClass} />
+                        <DateInput value={date} onChange={e => setDate(e.target.value)} />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700">{resultLabel}</label>
@@ -153,7 +154,7 @@ export const TestHistoryCard = <T extends {id: string; date: string} & Record<K,
                     <div className="flex items-center gap-x-2">
                         <div className="flex-1">
                             <label className="text-xs text-gray-500">Date</label>
-                            <input type="date" value={newDate} onChange={e => setNewDate(e.target.value)} className={inputClass + " py-1.5 text-sm"} />
+                            <DateInput value={newDate} onChange={e => setNewDate(e.target.value)} className="py-1.5 text-sm" />
                         </div>
                         <div className="flex-1">
                              <label className="text-xs text-gray-500">{resultLabel}</label>

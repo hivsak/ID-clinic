@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Patient, PrepRecord } from '../../types';
 import { PlusIcon, TrashIcon, EditIcon } from '../icons';
 import { formatThaiDateBE, inputClass, labelClass, toLocalISOString } from '../utils';
+import { DateInput } from '../DateInput';
 
 interface PrepTabProps {
     patient: Patient;
@@ -37,11 +38,11 @@ const EditPrepModal: React.FC<{
                 <div className="p-4 space-y-4">
                     <div>
                         <label className={labelClass}>วันที่เริ่มรับ PrEP</label>
-                        <input type="date" value={dateStart} onChange={e => setDateStart(e.target.value)} className={inputClass} />
+                        <DateInput value={dateStart} onChange={e => setDateStart(e.target.value)} />
                     </div>
                     <div>
                         <label className={labelClass}>วันที่หยุดรับ PrEP (ถ้ามี)</label>
-                        <input type="date" value={dateStop} onChange={e => setDateStop(e.target.value)} className={inputClass} />
+                        <DateInput value={dateStop} onChange={e => setDateStop(e.target.value)} />
                     </div>
                     <div className="flex justify-end gap-2 pt-2">
                         <button onClick={onClose} className="px-4 py-2 text-sm text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">ยกเลิก</button>
@@ -119,7 +120,7 @@ export const PrepTab: React.FC<PrepTabProps> = ({ patient, onUpdatePatient }) =>
                             </div>
                             <div>
                                 <label htmlFor="stopDate" className={labelClass}>วันที่หยุดรับ PrEP</label>
-                                <input type="date" id="stopDate" value={stopDateForLatest} onChange={e => setStopDateForLatest(e.target.value)} className={inputClass} />
+                                <DateInput id="stopDate" value={stopDateForLatest} onChange={e => setStopDateForLatest(e.target.value)} />
                             </div>
                             <button onClick={handleStopPrep} className="w-full flex items-center justify-center gap-x-2 px-4 py-2 text-sm font-medium text-white bg-rose-600 rounded-lg hover:bg-rose-700">
                                 บันทึกวันที่หยุด
@@ -130,7 +131,7 @@ export const PrepTab: React.FC<PrepTabProps> = ({ patient, onUpdatePatient }) =>
                             <p className="font-semibold">เริ่มรับ PrEP รอบใหม่</p>
                             <div>
                                 <label htmlFor="startDate" className={labelClass}>วันที่เริ่มรับ PrEP</label>
-                                <input type="date" id="startDate" value={newStartDate} onChange={e => setNewStartDate(e.target.value)} className={inputClass} />
+                                <DateInput id="startDate" value={newStartDate} onChange={e => setNewStartDate(e.target.value)} />
                             </div>
                             <button onClick={handleStartPrep} className="w-full flex items-center justify-center gap-x-2 px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700">
                                 <PlusIcon className="h-4 w-4" /> บันทึกวันที่เริ่ม

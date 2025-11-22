@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Patient, PepRecord } from '../../types';
 import { PlusIcon, TrashIcon, EditIcon } from '../icons';
 import { formatThaiDateBE, inputClass, labelClass, toLocalISOString } from '../utils';
+import { DateInput } from '../DateInput';
 
 interface PepTabProps {
     patient: Patient;
@@ -39,7 +40,7 @@ const EditPepModal: React.FC<{
                 <div className="p-4 space-y-4">
                     <div>
                         <label className={labelClass}>วันที่มาตรวจ</label>
-                        <input type="date" value={date} onChange={e => setDate(e.target.value)} className={inputClass} />
+                        <DateInput value={date} onChange={e => setDate(e.target.value)} />
                     </div>
                     <div>
                         <label className={labelClass}>ประเภท PEP</label>
@@ -125,7 +126,7 @@ export const PepTab: React.FC<PepTabProps> = ({ patient, onUpdatePatient }) => {
                 <div className="space-y-4">
                     <div>
                         <label htmlFor="pepDate" className={labelClass}>วันที่มาตรวจ</label>
-                        <input type="date" id="pepDate" value={newDate} onChange={e => setNewDate(e.target.value)} className={inputClass} />
+                        <DateInput id="pepDate" value={newDate} onChange={e => setNewDate(e.target.value)} />
                     </div>
                     <div>
                         <label className={labelClass}>ประเภท PEP</label>

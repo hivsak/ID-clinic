@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Patient, MedicalEvent, MedicalEventType } from '../../types';
 import { DiagnosisIcon, ArtStartIcon, ProphylaxisIcon, MissedMedsIcon, ArtChangeIcon, InfectionIcon, LabResultIcon, OtherIcon, EditIcon, TrashIcon } from '../icons';
 import { DisplayField, formatThaiDateBE, inputClass, labelClass, textareaClass, toLocalISOString } from '../utils';
+import { DateInput } from '../DateInput';
 
 // These definitions are copied from HivTreatmentTab as they are needed for the Add/Edit forms
 const eventTypes = [
@@ -73,7 +74,7 @@ const EditEventModal: React.FC<{isOpen: boolean; event: MedicalEvent | null; onC
                     <div className="p-6 space-y-4">
                         <div>
                             <label htmlFor="eventDateEdit" className={labelClass}>Date</label>
-                            <input type="date" id="eventDateEdit" value={formData.date} onChange={(e) => setFormData(prev => prev ? { ...prev, date: e.target.value } : null)} className={inputClass} />
+                            <DateInput id="eventDateEdit" value={formData.date} onChange={(e) => setFormData(prev => prev ? { ...prev, date: e.target.value } : null)} />
                         </div>
                         {renderEventDetailForm(MedicalEventType.PROPHYLAXIS, formData.details, handleDetailChange)}
                     </div>
@@ -107,7 +108,7 @@ const AddEventForm: React.FC<{onSave: (event: Omit<MedicalEvent, 'id'>) => void;
         <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-sm border border-emerald-200">
             <h3 className="text-xl font-semibold text-gray-800 mb-6">{formTitle}</h3>
             <div className="space-y-6">
-                <div><label htmlFor="eventDate" className={labelClass}>Date</label><input type="date" id="eventDate" value={date} onChange={(e) => setDate(e.target.value)} className={inputClass} style={{ maxWidth: '200px' }} /></div>
+                <div><label htmlFor="eventDate" className={labelClass}>Date</label><DateInput id="eventDate" value={date} onChange={(e) => setDate(e.target.value)} /></div>
                 <div>{renderEventDetailForm(forceEventType, details, handleDetailChange)}</div>
                 <div className="flex justify-end pt-4"><button type="submit" className="px-6 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700">Save Event</button></div>
             </div>

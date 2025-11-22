@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Patient, PregnancyRecord } from '../../types';
 import { PlusIcon, TrashIcon, EditIcon } from '../icons';
 import { formatThaiDateBE, inputClass, labelClass, textareaClass, toLocalISOString } from '../utils';
+import { DateInput } from '../DateInput';
 
 const calculateVlTestDate = (ga: string, gaDateStr: string): Date | null => {
     if (!ga || !gaDateStr || !/^\d+\+\d+$/.test(ga)) {
@@ -106,7 +107,7 @@ const EditPregnancyModal: React.FC<{
                 <form onSubmit={handleSubmit} className="p-4 space-y-4">
                      <div>
                         <label className={labelClass}>วันที่มาตรวจ</label>
-                        <input type="date" value={gaDate} onChange={e => setGaDate(e.target.value)} className={inputClass} />
+                        <DateInput value={gaDate} onChange={e => setGaDate(e.target.value)} />
                     </div>
                     <div>
                         <label className={labelClass}>อายุครรภ์ (GA)</label>
@@ -127,7 +128,7 @@ const EditPregnancyModal: React.FC<{
                         <div className="space-y-2">
                             <div>
                                 <label className={labelClass}>วันที่สิ้นสุด</label>
-                                <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className={inputClass} />
+                                <DateInput value={endDate} onChange={e => setEndDate(e.target.value)} />
                             </div>
                              <div>
                                 <label className={labelClass}>เหตุผล</label>
@@ -289,7 +290,7 @@ export const PregnancyTab: React.FC<PregnancyTabProps> = ({ patient, onUpdatePat
                 <form onSubmit={handleAddPregnancy} className="space-y-4 p-4 border rounded-lg bg-gray-50">
                     <div>
                         <label htmlFor="gaDate" className={labelClass}>วันที่มาตรวจ</label>
-                        <input type="date" name="gaDate" id="gaDate" value={gaDate} onChange={(e) => setGaDate(e.target.value)} className={inputClass} />
+                        <DateInput id="gaDate" value={gaDate} onChange={(e) => setGaDate(e.target.value)} />
                     </div>
                     <div>
                         <label className={labelClass}>

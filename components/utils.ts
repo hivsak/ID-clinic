@@ -2,6 +2,11 @@
 import React from 'react';
 import { Patient, PatientStatus, HcvTest, HcvInfo } from '../types';
 
+export const THAI_MONTHS = [
+  'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
+  'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'
+];
+
 // Helper to format date as YYYY-MM-DD using local time to prevent timezone shifts
 export const toLocalISOString = (date?: Date | string): string => {
     if (!date) return '';

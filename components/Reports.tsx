@@ -165,7 +165,7 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
     const schemeData = Object.entries(stats.scheme)
         .map(([label, count], idx) => ({
             label, 
-            count, 
+            count: Number(count), 
             color: ['#10b981', '#f59e0b', '#6366f1', '#8b5cf6', '#ec4899'][idx % 5]
         }))
         .sort((a, b) => b.count - a.count); // sort by count desc

@@ -46,16 +46,32 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, onUpdat
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement> | { target: { name: string; value: string } }) => {
         const { name, value } = e.target;
-        if (name === 'referralType' && value === 'มหาสารคาม') {
-            setFormData(prev => ({
-                ...prev,
-                referralType: value as any,
-                referredFrom: '',
-                referralDate: ''
-            }));
-        } else {
-            setFormData(prev => ({ ...prev, [name]: value }));
+        
+        let updates: Partial<Patient> = { [name]: value };
+
+        // Auto-link Title and Sex
+        if (name === 'title') {
+            if (value === 'นาย') {
+                updates.sex = 'ชาย';
+            } else if (value === 'นาง' || value === 'นางสาว') {
+                updates.sex = 'หญิง';
+            }
+        } else if (name === 'sex') {
+            if (value === 'ชาย') {
+                updates.title = 'นาย';
+            } else if (value === 'หญิง') {
+                // If current title is Male, switch to Miss default. 
+                // If already Mrs/Miss/Other, keep it.
+                if (formData.title === 'นาย') {
+                    updates.title = 'นางสาว';
+                }
+            }
+        } else if (name === 'referralType' && value === 'มหาสารคาม') {
+            updates.referredFrom = '';
+            updates.referralDate = '';
         }
+
+        setFormData(prev => ({ ...prev, ...updates }));
     };
 
     const handleAddressSelectorChange = (key: 'subdistrict' | 'district' | 'province', value: string) => {

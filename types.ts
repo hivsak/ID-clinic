@@ -151,6 +151,7 @@ export interface Patient {
   stdInfo?: StdInfo;
   prepInfo?: PrepInfo;
   pepInfo?: PepInfo;
+  underlyingDiseases?: string[]; // New field for comorbidities
   // Detailed General Information
   occupation?: string;
   partnerStatus?: string;

@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Patient, MedicalEvent } from '../types';
-import { ChevronLeftIcon, PrepPepIcon } from './icons';
+import { ChevronLeftIcon, PrepPepIcon, ActivityIcon } from './icons';
 import { calculateAge } from './utils';
 
 // Import tab components
@@ -13,6 +13,7 @@ import { StdTab } from './tabs/StdTab';
 import { PregnancyTab } from './tabs/PregnancyTab';
 import { PrepTab } from './tabs/PrepTab';
 import { PepTab } from './tabs/PepTab';
+import { UnderlyingDiseasesTab } from './tabs/UnderlyingDiseasesTab';
 
 
 interface PatientDetailProps {
@@ -21,7 +22,7 @@ interface PatientDetailProps {
   onUpdate: (patient: Patient) => void;
 }
 
-type Tab = 'GENERAL' | 'HIV' | 'HBV_HCV' | 'TPT' | 'STD' | 'PREGNANCY' | 'PREP' | 'PEP';
+type Tab = 'GENERAL' | 'HIV' | 'HBV_HCV' | 'TPT' | 'STD' | 'PREGNANCY' | 'PREP' | 'PEP' | 'DISEASES';
 
 export const PatientDetail: React.FC<PatientDetailProps> = ({ patient, onBack, onUpdate }) => {
   const [activeTab, setActiveTab] = useState<Tab>('GENERAL');
@@ -117,6 +118,7 @@ export const PatientDetail: React.FC<PatientDetailProps> = ({ patient, onBack, o
     { id: 'PREGNANCY', label: 'Pregnancy', show: patient.sex === 'หญิง' },
     { id: 'PREP', label: 'PrEP' },
     { id: 'PEP', label: 'PEP', icon: <PrepPepIcon /> },
+    { id: 'DISEASES', label: 'โรคประจำตัว', icon: <ActivityIcon /> },
   ].filter(tab => tab.show !== false);
 
   const renderTabContent = () => {
@@ -137,6 +139,8 @@ export const PatientDetail: React.FC<PatientDetailProps> = ({ patient, onBack, o
         return <PrepTab patient={patient} onUpdatePatient={handleUpdatePatient} />;
       case 'PEP':
         return <PepTab patient={patient} onUpdatePatient={handleUpdatePatient} />;
+      case 'DISEASES':
+        return <UnderlyingDiseasesTab patient={patient} onUpdatePatient={handleUpdatePatient} />;
       default:
         return null;
     }

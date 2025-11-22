@@ -3,7 +3,6 @@ import React, { useState, useMemo } from 'react';
 import { Patient, PatientStatus, MedicalEventType } from '../types';
 import { PlusIcon, SearchIcon, ChevronLeftIcon, ChevronRightIcon, TrashIcon } from './icons';
 import { calculateAge, calculatePatientStatus, determineHbvStatus, determineHcvStatus, formatThaiDateShort } from './utils';
-import { ThaiDateInput } from './ThaiDateInput';
 
 interface PatientListProps {
   patients: Patient[];
@@ -213,21 +212,19 @@ export const PatientList: React.FC<PatientListProps> = ({ patients, onSelectPati
                     <div className="flex items-center gap-2 w-full md:w-auto">
                          <span className="text-sm text-gray-500 whitespace-nowrap flex-shrink-0">วันนัด:</span>
                          <div className="flex flex-1 gap-2 items-center">
-                             <div className="flex-1 min-w-[140px]">
-                                <ThaiDateInput 
-                                    value={apptStartDate} 
-                                    onChange={(e) => setApptStartDate(e.target.value)}
-                                    className="block w-full px-2 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm" 
-                                />
-                             </div>
+                             <input 
+                                type="date" 
+                                value={apptStartDate} 
+                                onChange={(e) => setApptStartDate(e.target.value)} 
+                                className="flex-1 w-full md:w-auto min-w-0 px-2 py-2 border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500 text-sm" 
+                            />
                             <span className="text-sm text-gray-500 flex-shrink-0">-</span>
-                            <div className="flex-1 min-w-[140px]">
-                                <ThaiDateInput 
-                                    value={apptEndDate} 
-                                    onChange={(e) => setApptEndDate(e.target.value)} 
-                                    className="block w-full px-2 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm" 
-                                />
-                            </div>
+                            <input 
+                                type="date" 
+                                value={apptEndDate} 
+                                onChange={(e) => setApptEndDate(e.target.value)} 
+                                className="flex-1 w-full md:w-auto min-w-0 px-2 py-2 border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500 text-sm" 
+                            />
                          </div>
                     </div>
                 </div>

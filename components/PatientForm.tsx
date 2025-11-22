@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { Patient, PatientStatus } from '../types';
 import { calculateAgeBreakdown, calculateDobFromAge, calculatePatientStatus, inputClass, labelClass } from './utils';
 import { ThaiAddressSelector } from './ThaiAddressSelector';
-import { ThaiDateInput } from './ThaiDateInput';
 
 export type NewPatientData = Omit<Patient, 'id' | 'medicalHistory' | 'registrationDate'>;
 
@@ -57,7 +56,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
     }, [formData.deathDate, formData.referOutDate, formData.nextAppointmentDate]);
 
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement> | { target: { name: string; value: string } }) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         if (name === 'referralType' && value === 'มหาสารคาม') {
             setFormData(prev => ({
@@ -83,7 +82,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
         }
     };
 
-    const handleDobChange = (e: { target: { name: string; value: string } }) => {
+    const handleDobChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value;
         setFormData(prev => ({ ...prev, dob: val }));
         const breakdown = calculateAgeBreakdown(val);
@@ -158,7 +157,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
                         </div>
                          <div>
                             <label htmlFor="dob" className={labelClass}>วันเกิด</label>
-                            <ThaiDateInput name="dob" id="dob" value={formData.dob} onChange={handleDobChange} />
+                            <input type="date" name="dob" id="dob" value={formData.dob} onChange={handleDobChange} className={inputClass} />
                         </div>
                         <div>
                             <label className={labelClass}>อายุ (คำนวณอัตโนมัติ)</label>
@@ -283,7 +282,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
                             </div>
                              <div>
                                 <label htmlFor="nextAppointmentDate" className={labelClass}>วันนัดหมายครั้งถัดไป</label>
-                                <ThaiDateInput name="nextAppointmentDate" id="nextAppointmentDate" value={formData.nextAppointmentDate} onChange={handleChange} />
+                                <input type="date" name="nextAppointmentDate" id="nextAppointmentDate" value={formData.nextAppointmentDate} onChange={handleChange} className={inputClass} />
                             </div>
                         </div>
                     </div>
@@ -331,7 +330,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
                             <>
                                 <div>
                                     <label htmlFor="referralDate" className={labelClass}>วันที่ส่งตัว</label>
-                                    <ThaiDateInput name="referralDate" id="referralDate" value={formData.referralDate} onChange={handleChange} />
+                                    <input type="date" name="referralDate" id="referralDate" value={formData.referralDate} onChange={handleChange} className={inputClass} />
                                 </div>
                                 <div>
                                     <label htmlFor="referredFrom" className={labelClass}>ส่งตัวมาจาก</label>
@@ -348,7 +347,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
                         </div>
                         <div>
                             <label htmlFor="referOutDate" className={labelClass}>วันที่ส่งตัวออก</label>
-                            <ThaiDateInput name="referOutDate" id="referOutDate" value={formData.referOutDate} onChange={handleChange} />
+                            <input type="date" name="referOutDate" id="referOutDate" value={formData.referOutDate} onChange={handleChange} className={inputClass} />
                         </div>
                          <div>
                             <label htmlFor="referOutLocation" className={labelClass}>ส่งตัวไปที่</label>
@@ -372,7 +371,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
                            <div className="mt-4 pl-6 space-y-4">
                                <div>
                                    <label htmlFor="deathDate" className={labelClass}>วันที่เสียชีวิต</label>
-                                   <ThaiDateInput name="deathDate" id="deathDate" value={formData.deathDate} onChange={handleChange} style={{ maxWidth: '200px' }} />
+                                   <input type="date" name="deathDate" id="deathDate" value={formData.deathDate} onChange={handleChange} className={inputClass} style={{ maxWidth: '200px' }} />
                                </div>
                                <div>
                                    <label className={labelClass}>สาเหตุการเสียชีวิต</label>

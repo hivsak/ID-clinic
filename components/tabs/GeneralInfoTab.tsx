@@ -185,6 +185,7 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, onUpdat
                              <div>
                                 <label htmlFor="title" className={labelClass}>คำนำหน้า</label>
                                 <select name="title" id="title" value={formData.title} onChange={handleChange} className={inputClass}>
+                                    <option value="">-- เลือก --</option>
                                     <option>นาย</option>
                                     <option>นาง</option>
                                     <option>นางสาว</option>
@@ -246,6 +247,7 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, onUpdat
                             <div>
                                 <label htmlFor="sex" className={labelClass}>เพศ</label>
                                 <select name="sex" id="sex" value={formData.sex} onChange={handleChange} className={inputClass}>
+                                    <option value="">-- เลือก --</option>
                                     <option>ชาย</option>
                                     <option>หญิง</option>
                                 </select>
@@ -342,6 +344,7 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, onUpdat
                                 <div>
                                     <label htmlFor="healthcareScheme" className={labelClass}>สิทธิการรักษา</label>
                                      <select name="healthcareScheme" id="healthcareScheme" value={formData.healthcareScheme} onChange={handleChange} className={inputClass}>
+                                        <option value="">-- เลือก --</option>
                                         <option>บัตรทอง นอกเขต</option>
                                         <option>บัตรทอง ในเขต</option>
                                         <option>ประกันสังคม นอกเขต</option>

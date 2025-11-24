@@ -16,11 +16,11 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
     const [formData, setFormData] = useState<NewPatientData>({
         hn: '',
         napId: '',
-        title: 'นาย',
+        title: '',
         firstName: '',
         lastName: '',
         dob: '',
-        sex: 'ชาย',
+        sex: '',
         riskBehavior: 'Heterosexual',
         status: PatientStatus.ACTIVE, // Default initial
         occupation: '',
@@ -31,7 +31,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
         district: '',
         province: '',
         phone: '',
-        healthcareScheme: 'บัตรทอง ในเขต',
+        healthcareScheme: '',
         referralType: 'มหาสารคาม',
         referredFrom: '',
         referralDate: '',
@@ -158,6 +158,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
                          <div>
                             <label htmlFor="title" className={labelClass}>คำนำหน้า</label>
                             <select name="title" id="title" value={formData.title} onChange={handleChange} className={inputClass}>
+                                <option value="">-- เลือก --</option>
                                 <option>นาย</option>
                                 <option>นาง</option>
                                 <option>นางสาว</option>
@@ -219,6 +220,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
                         <div>
                             <label htmlFor="sex" className={labelClass}>เพศ</label>
                             <select name="sex" id="sex" value={formData.sex} onChange={handleChange} className={inputClass}>
+                                <option value="">-- เลือก --</option>
                                 <option>ชาย</option>
                                 <option>หญิง</option>
                             </select>
@@ -288,6 +290,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
                             <div>
                                 <label htmlFor="healthcareScheme" className={labelClass}>สิทธิการรักษา</label>
                                  <select name="healthcareScheme" id="healthcareScheme" value={formData.healthcareScheme} onChange={handleChange} className={inputClass}>
+                                    <option value="">-- เลือก --</option>
                                     <option>บัตรทอง นอกเขต</option>
                                     <option>บัตรทอง ในเขต</option>
                                     <option>ประกันสังคม นอกเขต</option>

@@ -25,6 +25,7 @@ export const login = async (username: string, password: string): Promise<User | 
             const row = res.rows[0];
             
             // Check Role Constraint
+            // Only 'admin' can login. 'user' role implies waiting for approval.
             if (row.role !== 'admin') {
                 throw new Error('WAITING_FOR_APPROVAL');
             }
@@ -57,10 +58,10 @@ export const register = async (username: string, password: string, displayName: 
             throw new Error('USERNAME_EXISTS');
         }
 
-        // Insert new user with default role 'admin' (changed from 'user' to allow immediate access for this app)
+        // Insert new user with default role 'user'. They need approval (role update to 'admin') to login.
         await pool.query(
             'INSERT INTO public.users (username, password, display_name, role) VALUES ($1, $2, $3, $4)',
-            [username, password, displayName, 'admin']
+            [username, password, displayName, 'user']
         );
     } catch (error: any) {
         console.error("Register error:", error);

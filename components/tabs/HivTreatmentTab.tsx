@@ -444,7 +444,7 @@ const AddEventForm: React.FC<AddEventFormProps> = ({ onSave, patientHistory, onE
             return;
         }
         
-        setDate(toLocalISOString(new Date()));
+        // Removed setDate(toLocalISOString(new Date())) to keep user selection
         setEventType(type);
 
         let newDetails: Record<string, any> = {};

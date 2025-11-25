@@ -25,15 +25,29 @@ export const DateInput: React.FC<DateInputProps> = ({ value, onChange, name = ''
     // Sync display text from ISO prop
     useEffect(() => {
         if (value) {
-            const date = new Date(value);
-            if (!isNaN(date.getTime())) {
-                const d = String(date.getDate()).padStart(2, '0');
-                const m = String(date.getMonth() + 1).padStart(2, '0');
-                const y = date.getFullYear() + 543; // Convert to BE
-                setDisplayText(`${d}/${m}/${y}`);
-                setViewDate(date);
+            // Fix: Parse YYYY-MM-DD explicitly as local date to prevent timezone shift
+            if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+                const [y, m, d] = value.split('-').map(Number);
+                // Create local date at 00:00:00
+                const date = new Date(y, m - 1, d);
+                 if (!isNaN(date.getTime())) {
+                    const dStr = String(date.getDate()).padStart(2, '0');
+                    const mStr = String(date.getMonth() + 1).padStart(2, '0');
+                    const yStr = date.getFullYear() + 543; // Convert to BE
+                    setDisplayText(`${dStr}/${mStr}/${yStr}`);
+                    setViewDate(date);
+                }
             } else {
-                setDisplayText('');
+                const date = new Date(value);
+                if (!isNaN(date.getTime())) {
+                    const d = String(date.getDate()).padStart(2, '0');
+                    const m = String(date.getMonth() + 1).padStart(2, '0');
+                    const y = date.getFullYear() + 543; // Convert to BE
+                    setDisplayText(`${d}/${m}/${y}`);
+                    setViewDate(date);
+                } else {
+                    setDisplayText('');
+                }
             }
         } else {
             setDisplayText('');

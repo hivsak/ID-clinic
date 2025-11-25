@@ -61,7 +61,7 @@ const mapRowToPatient = (row: any): Patient => ({
 const mapMedicalEvent = (row: any): MedicalEvent => ({
     id: row.id,
     type: row.type as MedicalEventType,
-    date: row.date ? new Date(row.date).toISOString() : '', // Timestamps are usually kept as full ISO for events ordering, but display will use formatters
+    date: row.date ? toLocalISOString(row.date) : '', // Fix: use toLocalISOString to prevent UTC shift
     title: row.title,
     details: row.details || {}
 });
@@ -297,7 +297,7 @@ export const createPatient = async (data: any): Promise<number> => {
             data.address, data.district, data.subdistrict, data.province, data.phone, data.healthcareScheme,
             data.referralType, data.referredFrom, dateOrNull(data.referralDate),
             dateOrNull(data.referOutDate), data.referOutLocation, dateOrNull(data.deathDate), data.causeOfDeath,
-            JSON.stringify(data.underlyingDiseases || []), data.cid
+            JSON.stringify(data.underlyingDiseases || []), data.cid || null
         ]);
         return res.rows[0].id;
     } catch (error: any) {
@@ -340,7 +340,7 @@ export const updatePatient = async (patient: Patient): Promise<void> => {
             patient.referralType, patient.referredFrom, dateOrNull(patient.referralDate),
             patient.hbvInfo?.manualSummary, patient.hcvInfo?.hcvVlNotTested || false,
             dateOrNull(patient.referOutDate), patient.referOutLocation, dateOrNull(patient.deathDate), patient.causeOfDeath,
-            JSON.stringify(patient.underlyingDiseases || []), patient.cid,
+            JSON.stringify(patient.underlyingDiseases || []), patient.cid || null,
             patient.id
         ]);
 

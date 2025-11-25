@@ -73,12 +73,13 @@ export const PatientList: React.FC<PatientListProps> = ({ patients, onSelectPati
         // Use strictly calculated status. If no date, this is null.
         const calculatedStatus = calculatePatientStatus(p);
 
-        // 1. Text Search (HN, Name, Phone)
+        // 1. Text Search (HN, Name, Phone, CID)
         if (searchText) {
             const searchLower = searchText.toLowerCase();
             const fullName = `${p.firstName} ${p.lastName}`.toLowerCase();
             const matches = 
                 p.hn.toLowerCase().includes(searchLower) ||
+                (p.cid && p.cid.includes(searchLower)) ||
                 fullName.includes(searchLower) ||
                 (p.phone && p.phone.includes(searchLower));
             if (!matches) return false;
@@ -203,7 +204,7 @@ export const PatientList: React.FC<PatientListProps> = ({ patients, onSelectPati
                     </div>
                     <input
                         type="text"
-                        placeholder="ค้นหา HN, ชื่อ, เบอร์โทร..."
+                        placeholder="ค้นหา HN, เลขบัตรปชช, ชื่อ, เบอร์โทร..."
                         value={searchText}
                         onChange={(e) => setSearchText(e.target.value)}
                         className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500 text-sm"

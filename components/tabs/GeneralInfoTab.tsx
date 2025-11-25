@@ -280,6 +280,7 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, onUpdat
                             <div>
                                 <label htmlFor="partnerStatus" className={labelClass}>สถานะคู่นอน</label>
                                 <select name="partnerStatus" id="partnerStatus" value={formData.partnerStatus} onChange={handleChange} className={inputClass}>
+                                    <option value="">-- เลือก --</option>
                                     <option>ไม่มี</option>
                                     <option>มีคู่นอน</option>
                                 </select>
@@ -287,6 +288,7 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, onUpdat
                             <div>
                                 <label htmlFor="partnerHivStatus" className={labelClass}>ผลเลือดของคู่นอน</label>
                                 <select name="partnerHivStatus" id="partnerHivStatus" value={formData.partnerHivStatus} onChange={handleChange} className={inputClass}>
+                                    <option value="">-- เลือก --</option>
                                     <option>ไม่ทราบ</option>
                                     <option>บวก (Positive)</option>
                                     <option>ลบ (Negative)</option>
@@ -295,6 +297,7 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, onUpdat
                             <div>
                                 <label htmlFor="riskBehavior" className={labelClass}>พฤติกรรมเสี่ยง</label>
                                 <select name="riskBehavior" id="riskBehavior" value={formData.riskBehavior} onChange={handleChange} className={inputClass}>
+                                    <option value="">-- เลือก --</option>
                                     <option value="MSM insertive">MSM insertive</option>
                                     <option value="MSM receptive">MSM receptive</option>
                                     <option value="MSM both">MSM both</option>

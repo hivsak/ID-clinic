@@ -21,11 +21,11 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
         lastName: '',
         dob: '',
         sex: '',
-        riskBehavior: 'Heterosexual',
+        riskBehavior: '', // Changed to empty default
         status: PatientStatus.ACTIVE, // Default initial
         occupation: '',
-        partnerStatus: 'ไม่มี',
-        partnerHivStatus: 'ไม่ทราบ',
+        partnerStatus: '', // Changed to empty default
+        partnerHivStatus: '', // Changed to empty default
         address: '',
         subdistrict: '',
         district: '',
@@ -238,6 +238,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
                         <div>
                             <label htmlFor="partnerStatus" className={labelClass}>สถานะคู่นอน</label>
                             <select name="partnerStatus" id="partnerStatus" value={formData.partnerStatus} onChange={handleChange} className={inputClass}>
+                                <option value="">-- เลือก --</option>
                                 <option>ไม่มี</option>
                                 <option>มีคู่นอน</option>
                             </select>
@@ -245,6 +246,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
                         <div>
                             <label htmlFor="partnerHivStatus" className={labelClass}>ผลเลือดของคู่นอน</label>
                             <select name="partnerHivStatus" id="partnerHivStatus" value={formData.partnerHivStatus} onChange={handleChange} className={inputClass}>
+                                <option value="">-- เลือก --</option>
                                 <option>ไม่ทราบ</option>
                                 <option>บวก (Positive)</option>
                                 <option>ลบ (Negative)</option>
@@ -253,6 +255,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
                         <div>
                             <label htmlFor="riskBehavior" className={labelClass}>พฤติกรรมเสี่ยง</label>
                             <select name="riskBehavior" id="riskBehavior" value={formData.riskBehavior} onChange={handleChange} className={inputClass}>
+                                <option value="">-- เลือก --</option>
                                 <option value="MSM insertive">MSM insertive</option>
                                 <option value="MSM receptive">MSM receptive</option>
                                 <option value="MSM both">MSM both</option>

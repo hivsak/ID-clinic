@@ -49,6 +49,12 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, onUpdat
         
         let updates: Partial<Patient> = { [name]: value };
 
+        // National ID input masking (digits only, max 13)
+        if (name === 'cid') {
+            const numericValue = value.replace(/\D/g, '').slice(0, 13);
+            updates.cid = numericValue;
+        }
+
         // Auto-link Title and Sex
         if (name === 'title') {
             if (value === 'นาย') {
@@ -101,6 +107,13 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, onUpdat
 
     const handleSave = (e: React.FormEvent) => {
         e.preventDefault();
+        
+        // Validation for CID length if provided
+        if (formData.cid && formData.cid.length !== 13) {
+            alert("เลขบัตรประชาชนต้องมี 13 หลัก");
+            return;
+        }
+
         onUpdate(formData);
         setEditSection(null);
     };
@@ -146,10 +159,23 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, onUpdat
                 <SectionHeader title="ข้อมูลระบุตัวตนผู้ป่วย (Patient Identification)" section="ID" />
                 {editSection === 'ID' ? (
                     <form>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                             <div>
                                 <label htmlFor="hn" className={labelClass}>HN (Hospital Number)</label>
                                 <input type="text" name="hn" id="hn" value={formData.hn} onChange={handleChange} className={inputClass} required />
+                            </div>
+                            <div>
+                                <label htmlFor="cid" className={labelClass}>เลขบัตรประชาชน</label>
+                                <input 
+                                    type="text" 
+                                    name="cid" 
+                                    id="cid" 
+                                    value={formData.cid || ''} 
+                                    onChange={handleChange} 
+                                    className={inputClass} 
+                                    placeholder="13 หลัก"
+                                    maxLength={13}
+                                />
                             </div>
                             <div>
                                 <label htmlFor="napId" className={labelClass}>NAP ID</label>
@@ -168,8 +194,9 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, onUpdat
                         <ActionButtons />
                     </form>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                         <DisplayField label="HN (Hospital Number)" value={patient.hn} />
+                        <DisplayField label="เลขบัตรประชาชน" value={patient.cid} />
                         <DisplayField label="NAP ID" value={patient.napId} />
                         <DisplayField label="สถานะ (ปัจจุบัน)" value={displayStatus} />
                     </div>

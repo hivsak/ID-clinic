@@ -15,6 +15,7 @@ interface PatientFormProps {
 export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) => {
     const [formData, setFormData] = useState<NewPatientData>({
         hn: '',
+        cid: '', // Initialize cid
         napId: '',
         title: '',
         firstName: '',
@@ -61,6 +62,12 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
         const { name, value } = e.target;
         
         let updates: Partial<NewPatientData> = { [name]: value };
+
+        // National ID input masking (digits only, max 13)
+        if (name === 'cid') {
+            const numericValue = value.replace(/\D/g, '').slice(0, 13);
+            updates.cid = numericValue;
+        }
 
         // Auto-link Title and Sex
         if (name === 'title') {
@@ -115,6 +122,13 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        
+        // Validation for CID length if provided
+        if (formData.cid && formData.cid.length !== 13) {
+            alert("เลขบัตรประชาชนต้องมี 13 หลัก");
+            return;
+        }
+
         onSave(formData);
     };
 
@@ -131,10 +145,23 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
             <form onSubmit={handleSubmit}>
                 <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
                     <h3 className="text-lg font-semibold text-gray-800 mb-6">ข้อมูลระบุตัวตนผู้ป่วย (Patient Identification)</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                         <div>
                             <label htmlFor="hn" className={labelClass}>HN (Hospital Number)</label>
                             <input type="text" name="hn" id="hn" value={formData.hn} onChange={handleChange} className={inputClass} required />
+                        </div>
+                        <div>
+                             <label htmlFor="cid" className={labelClass}>เลขบัตรประชาชน (National ID)</label>
+                             <input 
+                                type="text" 
+                                name="cid" 
+                                id="cid" 
+                                value={formData.cid} 
+                                onChange={handleChange} 
+                                className={inputClass} 
+                                placeholder="13 หลัก"
+                                maxLength={13}
+                            />
                         </div>
                         <div>
                             <label htmlFor="napId" className={labelClass}>NAP ID</label>

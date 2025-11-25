@@ -16,6 +16,7 @@ const groupBy = (arr: any[], key: string) => {
 const mapRowToPatient = (row: any): Patient => ({
     id: row.id,
     hn: row.hn,
+    cid: row.cid || '', // Map CID
     napId: row.nap_id || '',
     title: row.title || '',
     firstName: row.first_name || '',
@@ -282,13 +283,13 @@ export const createPatient = async (data: any): Promise<number> => {
                 status, registration_date, next_appointment_date, occupation, partner_status, partner_hiv_status,
                 address, district, subdistrict, province, phone, healthcare_scheme,
                 referral_type, referred_from, referral_date, refer_out_date, refer_out_location, death_date, cause_of_death,
-                underlying_diseases
+                underlying_diseases, cid
             ) VALUES (
                 $1, $2, $3, $4, $5, $6, $7, $8,
                 $9, $10, $11, $12, $13, $14,
                 $15, $16, $17, $18, $19, $20,
                 $21, $22, $23, $24, $25, $26, $27,
-                $28
+                $28, $29
             ) RETURNING id
         `, [
             data.hn, data.napId, data.title, data.firstName, data.lastName, dateOrNull(data.dob), data.sex, data.riskBehavior,
@@ -296,11 +297,20 @@ export const createPatient = async (data: any): Promise<number> => {
             data.address, data.district, data.subdistrict, data.province, data.phone, data.healthcareScheme,
             data.referralType, data.referredFrom, dateOrNull(data.referralDate),
             dateOrNull(data.referOutDate), data.referOutLocation, dateOrNull(data.deathDate), data.causeOfDeath,
-            JSON.stringify(data.underlyingDiseases || [])
+            JSON.stringify(data.underlyingDiseases || []), data.cid
         ]);
         return res.rows[0].id;
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error creating patient:', error);
+        // Handle Unique Constraint Violation (Postgres Code 23505)
+        if (error.code === '23505') {
+            if (error.detail && error.detail.includes('cid')) {
+                 throw new Error('เลขบัตรประชาชนนี้มีอยู่ในระบบแล้ว (Duplicate National ID)');
+            }
+             if (error.detail && error.detail.includes('hn')) {
+                 throw new Error('HN นี้มีอยู่ในระบบแล้ว (Duplicate HN)');
+            }
+        }
         throw error;
     }
 };
@@ -320,9 +330,9 @@ export const updatePatient = async (patient: Patient): Promise<void> => {
                 referral_type=$20, referred_from=$21, referral_date=$22,
                 hbv_manual_summary=$23, hcv_vl_not_tested=$24,
                 refer_out_date=$25, refer_out_location=$26, death_date=$27, cause_of_death=$28,
-                underlying_diseases=$29,
+                underlying_diseases=$29, cid=$30,
                 updated_at=CURRENT_TIMESTAMP
-            WHERE id=$30
+            WHERE id=$31
         `, [
             patient.hn, patient.napId, patient.title, patient.firstName, patient.lastName, dateOrNull(patient.dob), patient.sex, patient.riskBehavior,
             patient.status, dateOrNull(patient.nextAppointmentDate), patient.occupation, patient.partnerStatus, patient.partnerHivStatus,
@@ -330,7 +340,7 @@ export const updatePatient = async (patient: Patient): Promise<void> => {
             patient.referralType, patient.referredFrom, dateOrNull(patient.referralDate),
             patient.hbvInfo?.manualSummary, patient.hcvInfo?.hcvVlNotTested || false,
             dateOrNull(patient.referOutDate), patient.referOutLocation, dateOrNull(patient.deathDate), patient.causeOfDeath,
-            JSON.stringify(patient.underlyingDiseases || []),
+            JSON.stringify(patient.underlyingDiseases || []), patient.cid,
             patient.id
         ]);
 
@@ -408,9 +418,18 @@ export const updatePatient = async (patient: Patient): Promise<void> => {
         }
 
         await client.query('COMMIT');
-    } catch (error) {
+    } catch (error: any) {
         await client.query('ROLLBACK');
         console.error('Error updating patient:', error);
+         // Handle Unique Constraint Violation (Postgres Code 23505)
+        if (error.code === '23505') {
+            if (error.detail && error.detail.includes('cid')) {
+                 throw new Error('เลขบัตรประชาชนนี้มีอยู่ในระบบแล้ว (Duplicate National ID)');
+            }
+             if (error.detail && error.detail.includes('hn')) {
+                 throw new Error('HN นี้มีอยู่ในระบบแล้ว (Duplicate HN)');
+            }
+        }
         throw error;
     } finally {
         client.release();

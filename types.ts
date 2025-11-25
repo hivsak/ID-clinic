@@ -134,6 +134,7 @@ export interface PepInfo {
 export interface Patient {
   id: number;
   hn: string;
+  cid?: string; // National ID / Citizen ID
   napId?: string;
   title?: string;
   firstName?: string;

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Patient, StdRecord } from '../../types';
-import { EditIcon, StdIcon, TrashIcon, ChevronDownIcon } from '../icons';
+import { EditIcon, StdIcon, TrashIcon } from '../icons';
 import { formatThaiDateBE, inputClass, labelClass, toLocalISOString } from '../utils';
 import { DateInput } from '../DateInput';
 
@@ -10,7 +10,7 @@ interface StdTabProps {
     onUpdatePatient: (patient: Patient) => void;
 }
 
-// 1. Standalone STDs (Single Checkbox)
+// 1. Standalone STDs
 const STD_STANDALONE = [
     'Gonorrhea', 
     'Non-Gonorrhea', 
@@ -23,7 +23,7 @@ const STD_STANDALONE = [
     'HPV'
 ];
 
-// 2. Syphilis Options (Dropdown/Radio under Syphilis)
+// 2. Syphilis Options (Multiple Choice)
 const SYPHILIS_OPTIONS = [
     'Primary Syphilis',
     'Secondary Syphilis',
@@ -32,10 +32,10 @@ const SYPHILIS_OPTIONS = [
     'Neuro Syphilis',
     'Cardiovascular Syphilis',
     'Congenital Syphilis',
-    'Syphilis (ไม่ทราบประเภท)'
+    'Syphilis (ไม่ทราบ)'
 ];
 
-// 3. Contact STD Options (Dropdown/Radio under Contact STD)
+// 3. Contact STD Options (Multiple Choice)
 const CONTACT_STD_OPTIONS = [
     'Contact GC',
     'Contact Non-Gonorrhea',
@@ -51,17 +51,12 @@ interface StdSelectionFormProps {
     selectedDiseases: Set<string>;
     onToggleDisease: (disease: string, isChecked: boolean) => void;
     
-    // Syphilis State
-    isSyphilisChecked: boolean;
-    syphilisType: string;
-    onToggleSyphilis: (isChecked: boolean) => void;
-    onSyphilisTypeChange: (val: string) => void;
-
-    // Contact STD State
-    isContactChecked: boolean;
-    contactType: string;
-    onToggleContact: (isChecked: boolean) => void;
-    onContactTypeChange: (val: string) => void;
+    // Group visibility states
+    isSyphilisGroupChecked: boolean;
+    onToggleSyphilisGroup: (isChecked: boolean) => void;
+    
+    isContactGroupChecked: boolean;
+    onToggleContactGroup: (isChecked: boolean) => void;
 
     // Other State
     isOtherChecked: boolean;
@@ -72,8 +67,8 @@ interface StdSelectionFormProps {
 
 const StdSelectionForm: React.FC<StdSelectionFormProps> = ({
     selectedDiseases, onToggleDisease,
-    isSyphilisChecked, syphilisType, onToggleSyphilis, onSyphilisTypeChange,
-    isContactChecked, contactType, onToggleContact, onContactTypeChange,
+    isSyphilisGroupChecked, onToggleSyphilisGroup,
+    isContactGroupChecked, onToggleContactGroup,
     isOtherChecked, otherText, onToggleOther, onOtherTextChange
 }) => {
     return (
@@ -98,58 +93,60 @@ const StdSelectionForm: React.FC<StdSelectionFormProps> = ({
 
             {/* Group 2: Syphilis Hierarchy */}
             <div className="bg-orange-50 p-3 rounded-md border border-orange-100">
-                <div className="flex items-center">
+                <div className="flex items-center mb-2">
                     <input
                         type="checkbox"
-                        id="std-syphilis-parent"
-                        checked={isSyphilisChecked}
-                        onChange={(e) => onToggleSyphilis(e.target.checked)}
-                        className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                        id="std-syphilis-group"
+                        checked={isSyphilisGroupChecked}
+                        onChange={(e) => onToggleSyphilisGroup(e.target.checked)}
+                        className="h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
                     />
-                    <label htmlFor="std-syphilis-parent" className="ml-2 text-sm font-semibold text-gray-800">Syphilis</label>
+                    <label htmlFor="std-syphilis-group" className="ml-2 text-sm font-bold text-orange-800">Syphilis</label>
                 </div>
-                {isSyphilisChecked && (
-                    <div className="mt-2 ml-6">
-                        <label className="block text-xs text-gray-500 mb-1">ระบุประเภท Syphilis</label>
-                        <select 
-                            value={syphilisType} 
-                            onChange={(e) => onSyphilisTypeChange(e.target.value)}
-                            className={inputClass + " py-1.5 text-sm"}
-                        >
-                            <option value="">-- กรุณาเลือก --</option>
-                            {SYPHILIS_OPTIONS.map(opt => (
-                                <option key={opt} value={opt}>{opt}</option>
-                            ))}
-                        </select>
+                {isSyphilisGroupChecked && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 pl-6">
+                        {SYPHILIS_OPTIONS.map(opt => (
+                            <div key={opt} className="flex items-center">
+                                <input
+                                    type="checkbox"
+                                    id={`syphilis-${opt}`}
+                                    checked={selectedDiseases.has(opt)}
+                                    onChange={(e) => onToggleDisease(opt, e.target.checked)}
+                                    className="h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+                                />
+                                <label htmlFor={`syphilis-${opt}`} className="ml-2 text-sm text-gray-700">{opt}</label>
+                            </div>
+                        ))}
                     </div>
                 )}
             </div>
 
             {/* Group 3: Contact STD Hierarchy */}
             <div className="bg-blue-50 p-3 rounded-md border border-blue-100">
-                <div className="flex items-center">
+                <div className="flex items-center mb-2">
                     <input
                         type="checkbox"
-                        id="std-contact-parent"
-                        checked={isContactChecked}
-                        onChange={(e) => onToggleContact(e.target.checked)}
-                        className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                        id="std-contact-group"
+                        checked={isContactGroupChecked}
+                        onChange={(e) => onToggleContactGroup(e.target.checked)}
+                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
-                    <label htmlFor="std-contact-parent" className="ml-2 text-sm font-semibold text-gray-800">Contact STD</label>
+                    <label htmlFor="std-contact-group" className="ml-2 text-sm font-bold text-blue-800">Contact STD</label>
                 </div>
-                {isContactChecked && (
-                    <div className="mt-2 ml-6">
-                        <label className="block text-xs text-gray-500 mb-1">ระบุประเภท Contact</label>
-                        <select 
-                            value={contactType} 
-                            onChange={(e) => onContactTypeChange(e.target.value)}
-                            className={inputClass + " py-1.5 text-sm"}
-                        >
-                            <option value="">-- กรุณาเลือก --</option>
-                            {CONTACT_STD_OPTIONS.map(opt => (
-                                <option key={opt} value={opt}>{opt}</option>
-                            ))}
-                        </select>
+                {isContactGroupChecked && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 pl-6">
+                        {CONTACT_STD_OPTIONS.map(opt => (
+                            <div key={opt} className="flex items-center">
+                                <input
+                                    type="checkbox"
+                                    id={`contact-${opt}`}
+                                    checked={selectedDiseases.has(opt)}
+                                    onChange={(e) => onToggleDisease(opt, e.target.checked)}
+                                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                />
+                                <label htmlFor={`contact-${opt}`} className="ml-2 text-sm text-gray-700">{opt}</label>
+                            </div>
+                        ))}
                     </div>
                 )}
             </div>
@@ -185,11 +182,8 @@ const EditStdModal: React.FC<{
     // Form States
     const [selectedDiseases, setSelectedDiseases] = useState<Set<string>>(new Set());
     
-    const [isSyphilisChecked, setIsSyphilisChecked] = useState(false);
-    const [syphilisType, setSyphilisType] = useState('');
-
-    const [isContactChecked, setIsContactChecked] = useState(false);
-    const [contactType, setContactType] = useState('');
+    const [isSyphilisGroupChecked, setIsSyphilisGroupChecked] = useState(false);
+    const [isContactGroupChecked, setIsContactGroupChecked] = useState(false);
 
     const [isOtherChecked, setIsOtherChecked] = useState(false);
     const [otherText, setOtherText] = useState('');
@@ -198,41 +192,39 @@ const EditStdModal: React.FC<{
         if (record) {
             setDate(record.date);
             const newSelected = new Set<string>();
-            let foundOther = false;
             let foundOtherText = '';
-            
-            let foundSyphilis = false;
-            let foundSyphilisType = '';
+            const otherDiseases: string[] = [];
 
-            let foundContact = false;
-            let foundContactType = '';
+            let foundSyphilisGroup = false;
+            let foundContactGroup = false;
 
             record.diseases.forEach(d => {
                 if (STD_STANDALONE.includes(d)) {
                     newSelected.add(d);
                 } else if (SYPHILIS_OPTIONS.includes(d)) {
-                    foundSyphilis = true;
-                    foundSyphilisType = d;
+                    foundSyphilisGroup = true;
+                    newSelected.add(d);
                 } else if (CONTACT_STD_OPTIONS.includes(d)) {
-                    foundContact = true;
-                    foundContactType = d;
+                    foundContactGroup = true;
+                    newSelected.add(d);
                 } else {
                     // Assuming anything else is 'Other'
-                    foundOther = true;
-                    foundOtherText = d;
+                    otherDiseases.push(d);
                 }
             });
 
             setSelectedDiseases(newSelected);
             
-            setIsSyphilisChecked(foundSyphilis);
-            setSyphilisType(foundSyphilisType);
+            setIsSyphilisGroupChecked(foundSyphilisGroup);
+            setIsContactGroupChecked(foundContactGroup);
 
-            setIsContactChecked(foundContact);
-            setContactType(foundContactType);
-
-            setIsOtherChecked(foundOther);
-            setOtherText(foundOtherText);
+            if (otherDiseases.length > 0) {
+                setIsOtherChecked(true);
+                setOtherText(otherDiseases.join(', '));
+            } else {
+                setIsOtherChecked(false);
+                setOtherText('');
+            }
         }
     }, [record]);
 
@@ -247,26 +239,50 @@ const EditStdModal: React.FC<{
         });
     };
 
+    const handleToggleSyphilisGroup = (checked: boolean) => {
+        setIsSyphilisGroupChecked(checked);
+        if (!checked) {
+            // Remove all Syphilis options from selection
+            setSelectedDiseases(prev => {
+                const next = new Set(prev);
+                SYPHILIS_OPTIONS.forEach(opt => next.delete(opt));
+                return next;
+            });
+        }
+    };
+
+    const handleToggleContactGroup = (checked: boolean) => {
+        setIsContactGroupChecked(checked);
+        if (!checked) {
+             // Remove all Contact options from selection
+            setSelectedDiseases(prev => {
+                const next = new Set(prev);
+                CONTACT_STD_OPTIONS.forEach(opt => next.delete(opt));
+                return next;
+            });
+        }
+    };
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         const finalDiseases = [...selectedDiseases];
 
-        // Add Syphilis
-        if (isSyphilisChecked) {
-            if (syphilisType) finalDiseases.push(syphilisType);
-            else {
-                alert('กรุณาระบุประเภทของ Syphilis');
-                return;
-            }
+        // Validation: If Group Checked, must have sub-selection?
+        // Let's enforce strictly to prevent empty groups
+        if (isSyphilisGroupChecked) {
+             const hasSyphilisSelection = SYPHILIS_OPTIONS.some(opt => selectedDiseases.has(opt));
+             if (!hasSyphilisSelection) {
+                 alert('กรุณาเลือกประเภทของ Syphilis อย่างน้อย 1 รายการ');
+                 return;
+             }
         }
 
-        // Add Contact
-        if (isContactChecked) {
-            if (contactType) finalDiseases.push(contactType);
-            else {
-                alert('กรุณาระบุประเภทของ Contact STD');
-                return;
-            }
+        if (isContactGroupChecked) {
+             const hasContactSelection = CONTACT_STD_OPTIONS.some(opt => selectedDiseases.has(opt));
+             if (!hasContactSelection) {
+                 alert('กรุณาเลือกประเภทของ Contact STD อย่างน้อย 1 รายการ');
+                 return;
+             }
         }
 
         // Add Other
@@ -298,14 +314,10 @@ const EditStdModal: React.FC<{
                     <StdSelectionForm 
                         selectedDiseases={selectedDiseases}
                         onToggleDisease={handleToggleDisease}
-                        isSyphilisChecked={isSyphilisChecked}
-                        syphilisType={syphilisType}
-                        onToggleSyphilis={setIsSyphilisChecked}
-                        onSyphilisTypeChange={setSyphilisType}
-                        isContactChecked={isContactChecked}
-                        contactType={contactType}
-                        onToggleContact={setIsContactChecked}
-                        onContactTypeChange={setContactType}
+                        isSyphilisGroupChecked={isSyphilisGroupChecked}
+                        onToggleSyphilisGroup={handleToggleSyphilisGroup}
+                        isContactGroupChecked={isContactGroupChecked}
+                        onToggleContactGroup={handleToggleContactGroup}
                         isOtherChecked={isOtherChecked}
                         otherText={otherText}
                         onToggleOther={setIsOtherChecked}
@@ -332,11 +344,8 @@ export const StdTab: React.FC<StdTabProps> = ({ patient, onUpdatePatient }) => {
     // Form States
     const [selectedDiseases, setSelectedDiseases] = useState<Set<string>>(new Set());
     
-    const [isSyphilisChecked, setIsSyphilisChecked] = useState(false);
-    const [syphilisType, setSyphilisType] = useState('');
-
-    const [isContactChecked, setIsContactChecked] = useState(false);
-    const [contactType, setContactType] = useState('');
+    const [isSyphilisGroupChecked, setIsSyphilisGroupChecked] = useState(false);
+    const [isContactGroupChecked, setIsContactGroupChecked] = useState(false);
 
     const [isOtherChecked, setIsOtherChecked] = useState(false);
     const [otherText, setOtherText] = useState('');
@@ -346,10 +355,8 @@ export const StdTab: React.FC<StdTabProps> = ({ patient, onUpdatePatient }) => {
     const resetForm = () => {
         setDate(toLocalISOString(new Date()));
         setSelectedDiseases(new Set());
-        setIsSyphilisChecked(false);
-        setSyphilisType('');
-        setIsContactChecked(false);
-        setContactType('');
+        setIsSyphilisGroupChecked(false);
+        setIsContactGroupChecked(false);
         setIsOtherChecked(false);
         setOtherText('');
     };
@@ -366,22 +373,21 @@ export const StdTab: React.FC<StdTabProps> = ({ patient, onUpdatePatient }) => {
         
         const finalDiseases = [...selectedDiseases];
 
-        // Add Syphilis
-        if (isSyphilisChecked) {
-            if (syphilisType) finalDiseases.push(syphilisType);
-            else {
-                alert('กรุณาระบุประเภทของ Syphilis');
-                return;
-            }
+         // Validation
+        if (isSyphilisGroupChecked) {
+             const hasSyphilisSelection = SYPHILIS_OPTIONS.some(opt => selectedDiseases.has(opt));
+             if (!hasSyphilisSelection) {
+                 alert('กรุณาเลือกประเภทของ Syphilis อย่างน้อย 1 รายการ');
+                 return;
+             }
         }
 
-        // Add Contact
-        if (isContactChecked) {
-            if (contactType) finalDiseases.push(contactType);
-            else {
-                alert('กรุณาระบุประเภทของ Contact STD');
-                return;
-            }
+        if (isContactGroupChecked) {
+             const hasContactSelection = CONTACT_STD_OPTIONS.some(opt => selectedDiseases.has(opt));
+             if (!hasContactSelection) {
+                 alert('กรุณาเลือกประเภทของ Contact STD อย่างน้อย 1 รายการ');
+                 return;
+             }
         }
 
         // Add Other
@@ -422,6 +428,28 @@ export const StdTab: React.FC<StdTabProps> = ({ patient, onUpdatePatient }) => {
         });
     };
 
+    const handleToggleSyphilisGroup = (checked: boolean) => {
+        setIsSyphilisGroupChecked(checked);
+        if (!checked) {
+            setSelectedDiseases(prev => {
+                const next = new Set(prev);
+                SYPHILIS_OPTIONS.forEach(opt => next.delete(opt));
+                return next;
+            });
+        }
+    };
+
+    const handleToggleContactGroup = (checked: boolean) => {
+        setIsContactGroupChecked(checked);
+        if (!checked) {
+            setSelectedDiseases(prev => {
+                const next = new Set(prev);
+                CONTACT_STD_OPTIONS.forEach(opt => next.delete(opt));
+                return next;
+            });
+        }
+    };
+
     const sortedRecords = [...(patient.stdInfo?.records || [])].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     return (
@@ -440,14 +468,10 @@ export const StdTab: React.FC<StdTabProps> = ({ patient, onUpdatePatient }) => {
                         <StdSelectionForm 
                             selectedDiseases={selectedDiseases}
                             onToggleDisease={handleToggleDisease}
-                            isSyphilisChecked={isSyphilisChecked}
-                            syphilisType={syphilisType}
-                            onToggleSyphilis={setIsSyphilisChecked}
-                            onSyphilisTypeChange={setSyphilisType}
-                            isContactChecked={isContactChecked}
-                            contactType={contactType}
-                            onToggleContact={setIsContactChecked}
-                            onContactTypeChange={setContactType}
+                            isSyphilisGroupChecked={isSyphilisGroupChecked}
+                            onToggleSyphilisGroup={handleToggleSyphilisGroup}
+                            isContactGroupChecked={isContactGroupChecked}
+                            onToggleContactGroup={handleToggleContactGroup}
                             isOtherChecked={isOtherChecked}
                             otherText={otherText}
                             onToggleOther={setIsOtherChecked}

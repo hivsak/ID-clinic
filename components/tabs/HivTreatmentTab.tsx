@@ -189,6 +189,26 @@ const infections = {
   "มะเร็ง (Cancers)": [ "Kaposi’s Sarcoma (KS)", "Non-Hodgkin’s Lymphoma (NHL)", "Invasive Cervical Cancer" ],
 };
 
+const TB_TYPES = [
+    "Disemminated TB",
+    "TB lung",
+    "TB larynx",
+    "TB lymphadinitis",
+    "TB pleuritis",
+    "TB pericarditis",
+    "TB peritonitis",
+    "Tb colitis",
+    "TB meningitis",
+    "Tuberculoma",
+    "TB spine",
+    "TB arthritis",
+    "TB endophthalmitis",
+    "TB Liver abscess",
+    "TB splenic abscess",
+    "TB muscle abscess",
+    "TB Nephritis"
+];
+
 
 const renderEventDetailForm = (type: MedicalEventType, details: Record<string, any>, handleDetailChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void, handleArvChange: (name: string, value: string) => void) => {
     switch (type) {
@@ -264,17 +284,38 @@ const renderEventDetailForm = (type: MedicalEventType, details: Record<string, a
                             <p className="font-semibold text-gray-800">{group}</p>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 mt-2 pl-4">
                                 {list.map(infection => (
-                                    <div key={infection} className="flex items-center">
-                                        <input
-                                            type="checkbox"
-                                            id={infection}
-                                            name={infection}
-                                            data-group="infections"
-                                            checked={(details.infections || []).includes(infection)}
-                                            onChange={handleDetailChange}
-                                            className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-                                        />
-                                        <label htmlFor={infection} className="ml-2 text-sm text-gray-700">{infection}</label>
+                                    <div key={infection} className="flex flex-col">
+                                        <div className="flex items-center">
+                                            <input
+                                                type="checkbox"
+                                                id={infection}
+                                                name={infection}
+                                                data-group="infections"
+                                                checked={(details.infections || []).includes(infection)}
+                                                onChange={handleDetailChange}
+                                                className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                                            />
+                                            <label htmlFor={infection} className="ml-2 text-sm text-gray-700">{infection}</label>
+                                        </div>
+                                        {/* TB Subtypes */}
+                                        {infection === 'Tuberculosis' && (details.infections || []).includes('Tuberculosis') && (
+                                            <div className="ml-6 mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 border-l-2 border-emerald-100 pl-3 bg-emerald-50/50 p-2 rounded-r-md">
+                                                {TB_TYPES.map(tbType => (
+                                                    <div key={tbType} className="flex items-start">
+                                                        <input
+                                                            type="checkbox"
+                                                            id={`tb-sub-${tbType}`}
+                                                            name={tbType}
+                                                            data-group="infections"
+                                                            checked={(details.infections || []).includes(tbType)}
+                                                            onChange={handleDetailChange}
+                                                            className="h-3.5 w-3.5 mt-0.5 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                                                        />
+                                                        <label htmlFor={`tb-sub-${tbType}`} className="ml-2 text-xs text-gray-700 leading-tight cursor-pointer">{tbType}</label>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                 ))}
                             </div>
@@ -340,9 +381,16 @@ const EditEventModal: React.FC<EditEventModalProps> = ({ isOpen, event, onClose,
         if (e.currentTarget.dataset.group === 'infections') {
             const { checked } = e.currentTarget as HTMLInputElement;
             const currentInfections = newDetails.infections || [];
-            newDetails.infections = checked
+            let newInfections = checked
                 ? [...currentInfections, name]
                 : currentInfections.filter(i => i !== name);
+            
+            // Clean up TB subtypes if parent Tuberculosis is unchecked
+            if (name === 'Tuberculosis' && !checked) {
+                newInfections = newInfections.filter(i => !TB_TYPES.includes(i));
+            }
+
+            newDetails.infections = newInfections;
         } else if (type === 'checkbox') {
             const { checked } = e.target as HTMLInputElement;
             newDetails[name] = checked;
@@ -468,9 +516,15 @@ const AddEventForm: React.FC<AddEventFormProps> = ({ onSave, patientHistory, onE
             const { checked } = e.currentTarget as HTMLInputElement;
             setDetails(prev => {
                 const currentInfections = prev.infections || [];
-                const newInfections = checked
+                let newInfections = checked
                     ? [...currentInfections, name]
                     : currentInfections.filter(i => i !== name);
+                
+                // Clean up TB subtypes if parent Tuberculosis is unchecked
+                if (name === 'Tuberculosis' && !checked) {
+                    newInfections = newInfections.filter(i => !TB_TYPES.includes(i));
+                }
+
                 return { ...prev, infections: newInfections };
             });
             return;

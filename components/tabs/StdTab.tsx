@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Patient, StdRecord } from '../../types';
-import { EditIcon, StdIcon, TrashIcon } from '../icons';
+import { EditIcon, StdIcon, TrashIcon, ChevronDownIcon } from '../icons';
 import { formatThaiDateBE, inputClass, labelClass, toLocalISOString } from '../utils';
 import { DateInput } from '../DateInput';
 
@@ -10,11 +10,169 @@ interface StdTabProps {
     onUpdatePatient: (patient: Patient) => void;
 }
 
-const stdDiseaseList = [
-    'Gonorrhea', 'Non-Gonorrhea', 'PID', 'Trichomoniasis', 'HSV', 'Chancroid',
-    'Primary Syphilis', 'Secondary Syphilis', 'Early Syphilis', 'Late latent syphilis',
-    'LGV', 'Donovanosis', 'HPV', 'Contact GC', 'Contact Non-Gonorrhea', 'Contact Syphilis'
+// 1. Standalone STDs (Single Checkbox)
+const STD_STANDALONE = [
+    'Gonorrhea', 
+    'Non-Gonorrhea', 
+    'PID', 
+    'Trichomoniasis', 
+    'HSV', 
+    'Chancroid', 
+    'LGV', 
+    'Donovanosis', 
+    'HPV'
 ];
+
+// 2. Syphilis Options (Dropdown/Radio under Syphilis)
+const SYPHILIS_OPTIONS = [
+    'Primary Syphilis',
+    'Secondary Syphilis',
+    'Early Syphilis',
+    'Late Latent Syphilis',
+    'Neuro Syphilis',
+    'Cardiovascular Syphilis',
+    'Congenital Syphilis',
+    'Syphilis (ไม่ทราบประเภท)'
+];
+
+// 3. Contact STD Options (Dropdown/Radio under Contact STD)
+const CONTACT_STD_OPTIONS = [
+    'Contact GC',
+    'Contact Non-Gonorrhea',
+    'Contact Syphilis',
+    'Contact PID',
+    'Contact Trichomoniasis',
+    'Contact Chancroid',
+    'Contact LGV',
+    'Contact Other'
+];
+
+interface StdSelectionFormProps {
+    selectedDiseases: Set<string>;
+    onToggleDisease: (disease: string, isChecked: boolean) => void;
+    
+    // Syphilis State
+    isSyphilisChecked: boolean;
+    syphilisType: string;
+    onToggleSyphilis: (isChecked: boolean) => void;
+    onSyphilisTypeChange: (val: string) => void;
+
+    // Contact STD State
+    isContactChecked: boolean;
+    contactType: string;
+    onToggleContact: (isChecked: boolean) => void;
+    onContactTypeChange: (val: string) => void;
+
+    // Other State
+    isOtherChecked: boolean;
+    otherText: string;
+    onToggleOther: (isChecked: boolean) => void;
+    onOtherTextChange: (val: string) => void;
+}
+
+const StdSelectionForm: React.FC<StdSelectionFormProps> = ({
+    selectedDiseases, onToggleDisease,
+    isSyphilisChecked, syphilisType, onToggleSyphilis, onSyphilisTypeChange,
+    isContactChecked, contactType, onToggleContact, onContactTypeChange,
+    isOtherChecked, otherText, onToggleOther, onOtherTextChange
+}) => {
+    return (
+        <div className="space-y-4">
+            {/* Group 1: Standalone Diseases */}
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                {STD_STANDALONE.map(disease => (
+                    <div key={disease} className="flex items-center">
+                        <input
+                            type="checkbox"
+                            id={`std-${disease}`}
+                            checked={selectedDiseases.has(disease)}
+                            onChange={(e) => onToggleDisease(disease, e.target.checked)}
+                            className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                        />
+                        <label htmlFor={`std-${disease}`} className="ml-2 text-sm text-gray-700">{disease}</label>
+                    </div>
+                ))}
+            </div>
+
+            <div className="border-t border-gray-100 my-2"></div>
+
+            {/* Group 2: Syphilis Hierarchy */}
+            <div className="bg-orange-50 p-3 rounded-md border border-orange-100">
+                <div className="flex items-center">
+                    <input
+                        type="checkbox"
+                        id="std-syphilis-parent"
+                        checked={isSyphilisChecked}
+                        onChange={(e) => onToggleSyphilis(e.target.checked)}
+                        className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                    />
+                    <label htmlFor="std-syphilis-parent" className="ml-2 text-sm font-semibold text-gray-800">Syphilis</label>
+                </div>
+                {isSyphilisChecked && (
+                    <div className="mt-2 ml-6">
+                        <label className="block text-xs text-gray-500 mb-1">ระบุประเภท Syphilis</label>
+                        <select 
+                            value={syphilisType} 
+                            onChange={(e) => onSyphilisTypeChange(e.target.value)}
+                            className={inputClass + " py-1.5 text-sm"}
+                        >
+                            <option value="">-- กรุณาเลือก --</option>
+                            {SYPHILIS_OPTIONS.map(opt => (
+                                <option key={opt} value={opt}>{opt}</option>
+                            ))}
+                        </select>
+                    </div>
+                )}
+            </div>
+
+            {/* Group 3: Contact STD Hierarchy */}
+            <div className="bg-blue-50 p-3 rounded-md border border-blue-100">
+                <div className="flex items-center">
+                    <input
+                        type="checkbox"
+                        id="std-contact-parent"
+                        checked={isContactChecked}
+                        onChange={(e) => onToggleContact(e.target.checked)}
+                        className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                    />
+                    <label htmlFor="std-contact-parent" className="ml-2 text-sm font-semibold text-gray-800">Contact STD</label>
+                </div>
+                {isContactChecked && (
+                    <div className="mt-2 ml-6">
+                        <label className="block text-xs text-gray-500 mb-1">ระบุประเภท Contact</label>
+                        <select 
+                            value={contactType} 
+                            onChange={(e) => onContactTypeChange(e.target.value)}
+                            className={inputClass + " py-1.5 text-sm"}
+                        >
+                            <option value="">-- กรุณาเลือก --</option>
+                            {CONTACT_STD_OPTIONS.map(opt => (
+                                <option key={opt} value={opt}>{opt}</option>
+                            ))}
+                        </select>
+                    </div>
+                )}
+            </div>
+
+            <div className="border-t border-gray-100 my-2"></div>
+
+            {/* Group 4: Other */}
+            <div>
+                <div className="flex items-center">
+                        <input type="checkbox" id="std-other-check" checked={isOtherChecked} onChange={e => onToggleOther(e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" />
+                        <label htmlFor="std-other-check" className="ml-2 text-sm font-semibold text-gray-800">อื่นๆ</label>
+                </div>
+                {isOtherChecked && (
+                    <div className="mt-2 pl-6">
+                        <label htmlFor="std-other-text" className={labelClass}>ระบุโรคอื่นๆ</label>
+                        <input type="text" id="std-other-text" value={otherText} onChange={e => onOtherTextChange(e.target.value)} className={inputClass} />
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
 
 const EditStdModal: React.FC<{
     isOpen: boolean;
@@ -23,53 +181,103 @@ const EditStdModal: React.FC<{
     onSave: (record: StdRecord) => void;
 }> = ({ isOpen, record, onClose, onSave }) => {
     const [date, setDate] = useState('');
+    
+    // Form States
     const [selectedDiseases, setSelectedDiseases] = useState<Set<string>>(new Set());
+    
+    const [isSyphilisChecked, setIsSyphilisChecked] = useState(false);
+    const [syphilisType, setSyphilisType] = useState('');
+
+    const [isContactChecked, setIsContactChecked] = useState(false);
+    const [contactType, setContactType] = useState('');
+
     const [isOtherChecked, setIsOtherChecked] = useState(false);
-    const [otherDiseaseText, setOtherDiseaseText] = useState('');
+    const [otherText, setOtherText] = useState('');
 
     useEffect(() => {
         if (record) {
             setDate(record.date);
-            const newSelectedDiseases = new Set<string>();
-            let otherText = '';
-            let otherChecked = false;
+            const newSelected = new Set<string>();
+            let foundOther = false;
+            let foundOtherText = '';
+            
+            let foundSyphilis = false;
+            let foundSyphilisType = '';
 
-            record.diseases.forEach(disease => {
-                if (stdDiseaseList.includes(disease)) {
-                    newSelectedDiseases.add(disease);
+            let foundContact = false;
+            let foundContactType = '';
+
+            record.diseases.forEach(d => {
+                if (STD_STANDALONE.includes(d)) {
+                    newSelected.add(d);
+                } else if (SYPHILIS_OPTIONS.includes(d)) {
+                    foundSyphilis = true;
+                    foundSyphilisType = d;
+                } else if (CONTACT_STD_OPTIONS.includes(d)) {
+                    foundContact = true;
+                    foundContactType = d;
                 } else {
-                    otherChecked = true;
-                    otherText = disease;
+                    // Assuming anything else is 'Other'
+                    foundOther = true;
+                    foundOtherText = d;
                 }
             });
 
-            setSelectedDiseases(newSelectedDiseases);
-            setIsOtherChecked(otherChecked);
-            setOtherDiseaseText(otherText);
+            setSelectedDiseases(newSelected);
+            
+            setIsSyphilisChecked(foundSyphilis);
+            setSyphilisType(foundSyphilisType);
+
+            setIsContactChecked(foundContact);
+            setContactType(foundContactType);
+
+            setIsOtherChecked(foundOther);
+            setOtherText(foundOtherText);
         }
     }, [record]);
 
     if (!isOpen || !record) return null;
 
-    const handleCheckboxChange = (disease: string, checked: boolean) => {
+    const handleToggleDisease = (disease: string, checked: boolean) => {
         setSelectedDiseases(prev => {
-            const newSet = new Set(prev);
-            if (checked) {
-                newSet.add(disease);
-            } else {
-                newSet.delete(disease);
-            }
-            return newSet;
+            const next = new Set(prev);
+            if (checked) next.add(disease);
+            else next.delete(disease);
+            return next;
         });
     };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         const finalDiseases = [...selectedDiseases];
-        if (isOtherChecked && otherDiseaseText.trim()) {
-            finalDiseases.push(otherDiseaseText.trim());
+
+        // Add Syphilis
+        if (isSyphilisChecked) {
+            if (syphilisType) finalDiseases.push(syphilisType);
+            else {
+                alert('กรุณาระบุประเภทของ Syphilis');
+                return;
+            }
         }
-        if (finalDiseases.length === 0) return; // Prevent empty save
+
+        // Add Contact
+        if (isContactChecked) {
+            if (contactType) finalDiseases.push(contactType);
+            else {
+                alert('กรุณาระบุประเภทของ Contact STD');
+                return;
+            }
+        }
+
+        // Add Other
+        if (isOtherChecked && otherText.trim()) {
+            finalDiseases.push(otherText.trim());
+        }
+
+        if (finalDiseases.length === 0) {
+            alert('กรุณาเลือกโรคอย่างน้อย 1 รายการ');
+            return;
+        }
 
         onSave({ ...record, date, diseases: finalDiseases });
     };
@@ -77,7 +285,7 @@ const EditStdModal: React.FC<{
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-[100] flex justify-center items-center p-4" onClick={onClose}>
             <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-                <div className="p-6 border-b flex justify-between items-center sticky top-0 bg-white">
+                <div className="p-6 border-b flex justify-between items-center sticky top-0 bg-white z-10">
                     <h3 className="text-xl font-semibold text-gray-800">แก้ไขข้อมูล STD</h3>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-600">&times;</button>
                 </div>
@@ -86,35 +294,24 @@ const EditStdModal: React.FC<{
                         <label htmlFor="stdDateEdit" className={labelClass}>วันที่</label>
                         <DateInput id="stdDateEdit" value={date} onChange={(e) => setDate(e.target.value)} />
                     </div>
-                    <div>
-                        <label className={labelClass}>โรค (เลือกได้หลายข้อ)</label>
-                        <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2">
-                            {stdDiseaseList.map(disease => (
-                                <div key={disease} className="flex items-center">
-                                    <input
-                                        type="checkbox"
-                                        id={`std-edit-${disease}`}
-                                        checked={selectedDiseases.has(disease)}
-                                        onChange={(e) => handleCheckboxChange(disease, e.target.checked)}
-                                        className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-                                    />
-                                    <label htmlFor={`std-edit-${disease}`} className="ml-2 text-sm text-gray-700">{disease}</label>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                     <div className="pt-2 border-t mt-4">
-                        <div className="flex items-center">
-                             <input type="checkbox" id="std-other-check-edit" checked={isOtherChecked} onChange={e => setIsOtherChecked(e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" />
-                             <label htmlFor="std-other-check-edit" className="ml-2 text-sm font-semibold text-gray-800">อื่นๆ</label>
-                        </div>
-                        {isOtherChecked && (
-                           <div className="mt-2 pl-6">
-                               <label htmlFor="std-other-text-edit" className={labelClass}>ระบุโรคอื่นๆ</label>
-                               <input type="text" id="std-other-text-edit" value={otherDiseaseText} onChange={e => setOtherDiseaseText(e.target.value)} className={inputClass} />
-                           </div>
-                        )}
-                    </div>
+                    
+                    <StdSelectionForm 
+                        selectedDiseases={selectedDiseases}
+                        onToggleDisease={handleToggleDisease}
+                        isSyphilisChecked={isSyphilisChecked}
+                        syphilisType={syphilisType}
+                        onToggleSyphilis={setIsSyphilisChecked}
+                        onSyphilisTypeChange={setSyphilisType}
+                        isContactChecked={isContactChecked}
+                        contactType={contactType}
+                        onToggleContact={setIsContactChecked}
+                        onContactTypeChange={setContactType}
+                        isOtherChecked={isOtherChecked}
+                        otherText={otherText}
+                        onToggleOther={setIsOtherChecked}
+                        onOtherTextChange={setOtherText}
+                    />
+
                     <div className="flex justify-end gap-x-3 pt-4 border-t">
                        <button onClick={onClose} type="button" className="px-6 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
                            ยกเลิก
@@ -131,17 +328,30 @@ const EditStdModal: React.FC<{
 
 export const StdTab: React.FC<StdTabProps> = ({ patient, onUpdatePatient }) => {
     const [date, setDate] = useState(toLocalISOString(new Date()));
+    
+    // Form States
     const [selectedDiseases, setSelectedDiseases] = useState<Set<string>>(new Set());
+    
+    const [isSyphilisChecked, setIsSyphilisChecked] = useState(false);
+    const [syphilisType, setSyphilisType] = useState('');
+
+    const [isContactChecked, setIsContactChecked] = useState(false);
+    const [contactType, setContactType] = useState('');
+
     const [isOtherChecked, setIsOtherChecked] = useState(false);
-    const [otherDiseaseText, setOtherDiseaseText] = useState('');
+    const [otherText, setOtherText] = useState('');
     
     const [editingRecord, setEditingRecord] = useState<StdRecord | null>(null);
 
     const resetForm = () => {
         setDate(toLocalISOString(new Date()));
         setSelectedDiseases(new Set());
+        setIsSyphilisChecked(false);
+        setSyphilisType('');
+        setIsContactChecked(false);
+        setContactType('');
         setIsOtherChecked(false);
-        setOtherDiseaseText('');
+        setOtherText('');
     };
 
     const handleDelete = (id: string) => {
@@ -155,11 +365,34 @@ export const StdTab: React.FC<StdTabProps> = ({ patient, onUpdatePatient }) => {
         e.preventDefault();
         
         const finalDiseases = [...selectedDiseases];
-        if (isOtherChecked && otherDiseaseText.trim()) {
-            finalDiseases.push(otherDiseaseText.trim());
+
+        // Add Syphilis
+        if (isSyphilisChecked) {
+            if (syphilisType) finalDiseases.push(syphilisType);
+            else {
+                alert('กรุณาระบุประเภทของ Syphilis');
+                return;
+            }
         }
 
-        if (finalDiseases.length === 0) return;
+        // Add Contact
+        if (isContactChecked) {
+            if (contactType) finalDiseases.push(contactType);
+            else {
+                alert('กรุณาระบุประเภทของ Contact STD');
+                return;
+            }
+        }
+
+        // Add Other
+        if (isOtherChecked && otherText.trim()) {
+            finalDiseases.push(otherText.trim());
+        }
+
+        if (finalDiseases.length === 0) {
+            alert('กรุณาเลือกโรคอย่างน้อย 1 รายการ');
+            return;
+        }
 
         const currentRecords = patient.stdInfo?.records || [];
         const newRecord: StdRecord = {
@@ -180,15 +413,12 @@ export const StdTab: React.FC<StdTabProps> = ({ patient, onUpdatePatient }) => {
         setEditingRecord(null);
     }
     
-    const handleCheckboxChange = (disease: string, checked: boolean) => {
+    const handleToggleDisease = (disease: string, checked: boolean) => {
         setSelectedDiseases(prev => {
-            const newSet = new Set(prev);
-            if (checked) {
-                newSet.add(disease);
-            } else {
-                newSet.delete(disease);
-            }
-            return newSet;
+            const next = new Set(prev);
+            if (checked) next.add(disease);
+            else next.delete(disease);
+            return next;
         });
     };
 
@@ -204,38 +434,29 @@ export const StdTab: React.FC<StdTabProps> = ({ patient, onUpdatePatient }) => {
                         <label htmlFor="stdDate" className={labelClass}>วันที่</label>
                         <DateInput id="stdDate" value={date} onChange={(e) => setDate(e.target.value)} />
                     </div>
+                    
                     <div>
-                        <label className={labelClass}>โรค (เลือกได้หลายข้อ)</label>
-                        <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2">
-                            {stdDiseaseList.map(disease => (
-                                <div key={disease} className="flex items-center">
-                                    <input
-                                        type="checkbox"
-                                        id={`std-${disease}`}
-                                        checked={selectedDiseases.has(disease)}
-                                        onChange={(e) => handleCheckboxChange(disease, e.target.checked)}
-                                        className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-                                    />
-                                    <label htmlFor={`std-${disease}`} className="ml-2 text-sm text-gray-700">{disease}</label>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                     <div className="pt-2 border-t mt-4">
-                        <div className="flex items-center">
-                             <input type="checkbox" id="std-other-check" checked={isOtherChecked} onChange={e => setIsOtherChecked(e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" />
-                             <label htmlFor="std-other-check" className="ml-2 text-sm font-semibold text-gray-800">อื่นๆ</label>
-                        </div>
-                        {isOtherChecked && (
-                           <div className="mt-2 pl-6">
-                               <label htmlFor="std-other-text" className={labelClass}>ระบุโรคอื่นๆ</label>
-                               <input type="text" id="std-other-text" value={otherDiseaseText} onChange={e => setOtherDiseaseText(e.target.value)} className={inputClass} />
-                           </div>
-                        )}
+                        <label className={labelClass + " mb-2"}>เลือกโรคที่พบ</label>
+                        <StdSelectionForm 
+                            selectedDiseases={selectedDiseases}
+                            onToggleDisease={handleToggleDisease}
+                            isSyphilisChecked={isSyphilisChecked}
+                            syphilisType={syphilisType}
+                            onToggleSyphilis={setIsSyphilisChecked}
+                            onSyphilisTypeChange={setSyphilisType}
+                            isContactChecked={isContactChecked}
+                            contactType={contactType}
+                            onToggleContact={setIsContactChecked}
+                            onContactTypeChange={setContactType}
+                            isOtherChecked={isOtherChecked}
+                            otherText={otherText}
+                            onToggleOther={setIsOtherChecked}
+                            onOtherTextChange={setOtherText}
+                        />
                     </div>
 
                     <div className="flex justify-end gap-x-3 pt-4 border-t">
-                       <button type="submit" className="px-6 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700">
+                       <button type="submit" className="w-full flex items-center justify-center px-6 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700">
                            บันทึกข้อมูล
                        </button>
                     </div>

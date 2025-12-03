@@ -96,7 +96,7 @@ const DonutChart: React.FC<{ data: { label: string; count: number; color: string
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                     <span className="text-3xl font-bold text-gray-700">{total}</span>
-                    <span className="text-xs text-gray-500">Cases</span>
+                    <span className="text-xs text-gray-500">Cases (Total Count)</span>
                 </div>
             </div>
             <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 w-full">
@@ -852,14 +852,27 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
             if (tptEvents.length > 0) s.tpt++;
 
             // TB Breakdown (from Opportunistic Infections)
+            // Logic: Count PATIENTS, not just events. 
+            // If Patient A has 'TB Lung' twice in the range, count 1 for TB Lung.
+            // If Patient A has 'TB Lung' and 'TB Spine', count 1 for each type.
+            const uniquePatientTbTypes = new Set<string>();
             const oiEvents = p.medicalHistory.filter(e => e.type === MedicalEventType.OPPORTUNISTIC_INFECTION && isInRange(e.date));
+            
             oiEvents.forEach(e => {
                 const infections = e.details.infections || [];
+                // Handle legacy single string format if present
+                if (e.details.โรค) infections.push(e.details.โรค);
+
                 infections.forEach((inf: string) => {
                     if (TB_SUBTYPES.includes(inf)) {
-                        s.tbBreakdown[inf] = (s.tbBreakdown[inf] || 0) + 1;
+                        uniquePatientTbTypes.add(inf);
                     }
                 });
+            });
+
+            // Add unique types for this patient to global stats
+            uniquePatientTbTypes.forEach(tbType => {
+                s.tbBreakdown[tbType] = (s.tbBreakdown[tbType] || 0) + 1;
             });
 
             // STD Total Count & Syphilis Breakdown
@@ -985,7 +998,7 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                     <h3 className="text-lg font-bold text-gray-800 mb-6 pb-2 border-b flex justify-between">
                         <span>สรุปสถานการณ์ วัณโรค</span>
-                        <span className="text-xs font-normal text-gray-500 self-end">แยกตามประเภท TB</span>
+                        <span className="text-xs font-normal text-gray-500 self-end">แยกตามประเภท (นับจำนวนคน)</span>
                     </h3>
                     <DonutChart data={tbChartData} />
                 </div>

@@ -21,7 +21,7 @@ const HcvTestHistoryCard: React.FC<{
     const [isAdding, setIsAdding] = useState(false);
     const [newTest, setNewTest] = useState<{date: string; type: 'Anti-HCV' | 'HCV-Ab'; result: 'Positive' | 'Negative' | 'Inconclusive'}>({
         date: toLocalISOString(new Date()),
-        type: 'Anti-HCV',
+        type: 'HCV-Ab',
         result: 'Negative',
     });
     const [editingRecord, setEditingRecord] = useState<HcvTest | null>(null);
@@ -29,7 +29,7 @@ const HcvTestHistoryCard: React.FC<{
     const handleAddClick = () => {
         if (!newTest.date) return;
         onAdd({ ...newTest, id: `hcv-test-${Date.now()}` });
-        setNewTest({ date: toLocalISOString(new Date()), type: 'Anti-HCV', result: 'Negative' });
+        setNewTest({ date: toLocalISOString(new Date()), type: 'HCV-Ab', result: 'Negative' });
         setIsAdding(false);
     };
     
@@ -86,7 +86,7 @@ const HcvTestHistoryCard: React.FC<{
                     <div className="flex flex-col gap-2">
                         <div><label className="text-xs text-gray-500">Date</label><DateInput value={newTest.date} onChange={e => setNewTest(p => ({...p, date: e.target.value}))} className="py-1.5 text-sm" /></div>
                         <div className="grid grid-cols-2 gap-x-2">
-                            <div><label className="text-xs text-gray-500">Type</label><select value={newTest.type} onChange={e => setNewTest(p => ({...p, type: e.target.value as any}))} className={inputClass + " py-1.5 text-sm"}><option>Anti-HCV</option><option>HCV-Ab</option></select></div>
+                            <div><label className="text-xs text-gray-500">Type</label><select value={newTest.type} onChange={e => setNewTest(p => ({...p, type: e.target.value as any}))} className={inputClass + " py-1.5 text-sm"}><option>HCV-Ab</option><option>Anti-HCV</option></select></div>
                             <div><label className="text-xs text-gray-500">Result</label><select value={newTest.result} onChange={e => setNewTest(p => ({...p, result: e.target.value as any}))} className={inputClass + " py-1.5 text-sm"}><option>Negative</option><option>Positive</option><option>Inconclusive</option></select></div>
                         </div>
                     </div>
@@ -112,8 +112,8 @@ const HcvTestHistoryCard: React.FC<{
                              <div>
                                 <label className="block text-sm font-medium text-gray-700">ประเภทการตรวจ</label>
                                 <select value={editingRecord.type} onChange={e => setEditingRecord({...editingRecord, type: e.target.value as any})} className={inputClass}>
-                                    <option>Anti-HCV</option>
                                     <option>HCV-Ab</option>
+                                    <option>Anti-HCV</option>
                                 </select>
                             </div>
                              <div>
@@ -397,7 +397,7 @@ export const HbvHcvTab: React.FC<HbvHcvTabProps> = ({ patient, onUpdatePatient }
                         recordKey="result"
                         resultLabel="Result"
                         resultInputType="select"
-                        resultOptions={['Positive', 'Negative', 'Inconclusive']}
+                        resultOptions={['Negative', 'Positive', 'Inconclusive']}
                     />
                     <TestHistoryCard
                         title="HBV Viral Load History"

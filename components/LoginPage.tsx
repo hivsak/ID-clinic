@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { register } from '../services/authService';
 
@@ -265,7 +266,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
         )}
         
         <div className="text-center mt-8">
-             <p className="text-[10px] text-slate-400 uppercase tracking-widest font-medium">© 2025 ID CLINIC MANAGER v1.5.1</p>
+             <p className="text-[10px] text-slate-400 uppercase tracking-widest font-medium">© 2025 ID CLINIC MANAGER by Karpark ▕   V 1.5.1</p>
         </div>
       </div>
     </div>

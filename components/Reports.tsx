@@ -102,11 +102,11 @@ const DonutChart: React.FC<{ data: { label: string; count: number; color: string
             <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 w-full">
                 {data.map((item) => (
                     <div key={item.label} className="flex justify-between items-center text-sm">
-                        <div className="flex items-center">
-                            <span className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: item.color }}></span>
-                            <span className="text-gray-600 truncate max-w-[140px]" title={item.label}>{item.label}</span>
+                        <div className="flex items-center overflow-hidden">
+                            <span className="w-3 h-3 rounded-full mr-2 flex-shrink-0" style={{ backgroundColor: item.color }}></span>
+                            <span className="text-gray-600 truncate" title={item.label}>{item.label}</span>
                         </div>
-                        <span className="font-semibold text-gray-800">{item.count}</span>
+                        <span className="font-semibold text-gray-800 ml-2">{item.count}</span>
                     </div>
                 ))}
             </div>
@@ -136,6 +136,26 @@ const SYPHILIS_SUBTYPES = [
     'Cardiovascular Syphilis',
     'Congenital Syphilis',
     'Syphilis (ไม่ทราบ)'
+];
+
+const TB_SUBTYPES = [
+    "Disemminated TB",
+    "TB lung",
+    "TB larynx",
+    "TB lymphadinitis",
+    "TB pleuritis",
+    "TB pericarditis",
+    "TB peritonitis",
+    "Tb colitis",
+    "TB meningitis",
+    "Tuberculoma",
+    "TB spine",
+    "TB arthritis",
+    "TB endophthalmitis",
+    "TB Liver abscess",
+    "TB splenic abscess",
+    "TB muscle abscess",
+    "TB Nephritis"
 ];
 
 // --- General Trend Chart ---
@@ -768,6 +788,7 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
                 totalDiagnoses: 0,
                 syphilisBreakdown: {} as Record<string, number>
             },
+            tbBreakdown: {} as Record<string, number>,
             prep: 0,
             pep: 0
         };
@@ -830,6 +851,17 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
             const tptEvents = p.medicalHistory.filter(e => e.type === MedicalEventType.PROPHYLAXIS && e.details.TPT && isInRange(e.date));
             if (tptEvents.length > 0) s.tpt++;
 
+            // TB Breakdown (from Opportunistic Infections)
+            const oiEvents = p.medicalHistory.filter(e => e.type === MedicalEventType.OPPORTUNISTIC_INFECTION && isInRange(e.date));
+            oiEvents.forEach(e => {
+                const infections = e.details.infections || [];
+                infections.forEach((inf: string) => {
+                    if (TB_SUBTYPES.includes(inf)) {
+                        s.tbBreakdown[inf] = (s.tbBreakdown[inf] || 0) + 1;
+                    }
+                });
+            });
+
             // STD Total Count & Syphilis Breakdown
             if (p.stdInfo?.records) {
                 p.stdInfo.records.forEach(rec => {
@@ -866,6 +898,15 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
             label,
             count,
             color: STD_COLORS[index % STD_COLORS.length]
+        }))
+        .filter(d => d.count > 0)
+        .sort((a, b) => b.count - a.count);
+
+    const tbChartData = Object.entries(stats.tbBreakdown)
+        .map(([label, count], index) => ({
+            label,
+            count,
+            color: STD_COLORS[(index + 3) % STD_COLORS.length] // Offset colors slightly from syphilis
         }))
         .filter(d => d.count > 0)
         .sort((a, b) => b.count - a.count);
@@ -921,7 +962,7 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
             {/* General Monthly Trends */}
             <GeneralTrendChart patients={patients} />
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* HCV Breakdown */}
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                     <h3 className="text-lg font-bold text-gray-800 mb-6 pb-2 border-b flex justify-between">
@@ -938,6 +979,15 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
                         <span className="text-xs font-normal text-gray-500 self-end">แยกตามประเภท</span>
                     </h3>
                     <DonutChart data={syphilisChartData} />
+                </div>
+
+                {/* TB Breakdown */}
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h3 className="text-lg font-bold text-gray-800 mb-6 pb-2 border-b flex justify-between">
+                        <span>สรุปสถานการณ์ วัณโรค</span>
+                        <span className="text-xs font-normal text-gray-500 self-end">แยกตามประเภท TB</span>
+                    </h3>
+                    <DonutChart data={tbChartData} />
                 </div>
             </div>
 

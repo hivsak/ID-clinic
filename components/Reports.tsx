@@ -127,6 +127,17 @@ const GENERAL_COLORS = {
     PEP: '#a855f7', // Purple
 };
 
+const SYPHILIS_SUBTYPES = [
+    'Primary Syphilis',
+    'Secondary Syphilis',
+    'Early Syphilis',
+    'Late Latent Syphilis',
+    'Neuro Syphilis',
+    'Cardiovascular Syphilis',
+    'Congenital Syphilis',
+    'Syphilis (ไม่ทราบ)'
+];
+
 // --- General Trend Chart ---
 
 const GeneralTrendChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
@@ -464,7 +475,12 @@ const StdLineChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
                 if (!db[y][m]) db[y][m] = {};
 
                 r.diseases.forEach(disease => {
-                    db[y][m][disease] = (db[y][m][disease] || 0) + 1;
+                    let dName = disease;
+                    // Group Syphilis subtypes into one "Syphilis" category for the trend chart
+                    if (SYPHILIS_SUBTYPES.includes(disease)) {
+                        dName = 'Syphilis';
+                    }
+                    db[y][m][dName] = (db[y][m][dName] || 0) + 1;
                 });
             });
         });
@@ -554,7 +570,7 @@ const StdLineChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
     return (
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
-                <h3 className="text-lg font-bold text-gray-800">สถิติโรคติดต่อทางเพศสัมพันธ์ (STD)</h3>
+                <h3 className="text-lg font-bold text-gray-800">สถิติโรคติดต่อทางเพศสัมพันธ์ (STD Trend)</h3>
                 
                 {years.length > 0 && (
                     <div className="relative mt-2 sm:mt-0">
@@ -748,7 +764,10 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
                 totalPositiveDiagnostic: 0
             },
             tpt: 0,
-            std: { totalDiagnoses: 0 },
+            std: { 
+                totalDiagnoses: 0,
+                syphilisBreakdown: {} as Record<string, number>
+            },
             prep: 0,
             pep: 0
         };
@@ -811,12 +830,15 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
             const tptEvents = p.medicalHistory.filter(e => e.type === MedicalEventType.PROPHYLAXIS && e.details.TPT && isInRange(e.date));
             if (tptEvents.length > 0) s.tpt++;
 
-            // STD Total Count
+            // STD Total Count & Syphilis Breakdown
             if (p.stdInfo?.records) {
                 p.stdInfo.records.forEach(rec => {
                     if (isInRange(rec.date)) {
                         rec.diseases.forEach(d => {
                             s.std.totalDiagnoses++;
+                            if (SYPHILIS_SUBTYPES.includes(d)) {
+                                s.std.syphilisBreakdown[d] = (s.std.syphilisBreakdown[d] || 0) + 1;
+                            }
                         });
                     }
                 });
@@ -838,6 +860,15 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
         { label: 'รักษาหายแล้ว (Cured)', count: stats.hcv.cured, color: '#059669' },
         { label: 'Active HCV (ยังไม่รักษา)', count: stats.hcv.activeHcv, color: '#f87171' },
     ].filter(d => d.count > 0);
+
+    const syphilisChartData = Object.entries(stats.std.syphilisBreakdown)
+        .map(([label, count], index) => ({
+            label,
+            count,
+            color: STD_COLORS[index % STD_COLORS.length]
+        }))
+        .filter(d => d.count > 0)
+        .sort((a, b) => b.count - a.count);
 
     const clearFilter = () => {
         setStartDate('');
@@ -900,9 +931,18 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
                     <DonutChart data={hcvChartData} />
                 </div>
 
-                {/* STD Chart */}
-                <StdLineChart patients={patients} />
+                {/* Syphilis Breakdown */}
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h3 className="text-lg font-bold text-gray-800 mb-6 pb-2 border-b flex justify-between">
+                        <span>สรุปสถานการณ์ Syphilis</span>
+                        <span className="text-xs font-normal text-gray-500 self-end">แยกตามประเภท</span>
+                    </h3>
+                    <DonutChart data={syphilisChartData} />
+                </div>
             </div>
+
+            {/* STD Trend Chart */}
+            <StdLineChart patients={patients} />
         </div>
     );
 };

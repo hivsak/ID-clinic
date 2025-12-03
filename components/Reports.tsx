@@ -96,7 +96,7 @@ const DonutChart: React.FC<{ data: { label: string; count: number; color: string
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                     <span className="text-3xl font-bold text-gray-700">{total}</span>
-                    <span className="text-xs text-gray-500">Cases (Total Count)</span>
+                    <span className="text-xs text-gray-500">Cases</span>
                 </div>
             </div>
             <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 w-full">
@@ -789,6 +789,7 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
                 syphilisBreakdown: {} as Record<string, number>
             },
             tbBreakdown: {} as Record<string, number>,
+            oiBreakdown: {} as Record<string, number>, // General OI Breakdown
             prep: 0,
             pep: 0
         };
@@ -851,11 +852,10 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
             const tptEvents = p.medicalHistory.filter(e => e.type === MedicalEventType.PROPHYLAXIS && e.details.TPT && isInRange(e.date));
             if (tptEvents.length > 0) s.tpt++;
 
-            // TB Breakdown (from Opportunistic Infections)
-            // Logic: Count PATIENTS, not just events. 
-            // If Patient A has 'TB Lung' twice in the range, count 1 for TB Lung.
-            // If Patient A has 'TB Lung' and 'TB Spine', count 1 for each type.
+            // --- TB Breakdown (Detailed) & OI Breakdown (General) ---
             const uniquePatientTbTypes = new Set<string>();
+            const uniquePatientOIs = new Set<string>(); // General OI grouping (TB aggregated)
+
             const oiEvents = p.medicalHistory.filter(e => e.type === MedicalEventType.OPPORTUNISTIC_INFECTION && isInRange(e.date));
             
             oiEvents.forEach(e => {
@@ -864,15 +864,28 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
                 if (e.details.โรค) infections.push(e.details.โรค);
 
                 infections.forEach((inf: string) => {
+                    // 1. Detailed TB Breakdown
                     if (TB_SUBTYPES.includes(inf)) {
                         uniquePatientTbTypes.add(inf);
+                    }
+
+                    // 2. General OI Breakdown (Grouping TB)
+                    if (TB_SUBTYPES.includes(inf) || inf === 'Tuberculosis') {
+                        uniquePatientOIs.add('Tuberculosis');
+                    } else {
+                        uniquePatientOIs.add(inf);
                     }
                 });
             });
 
-            // Add unique types for this patient to global stats
+            // Add unique Detailed TB types for this patient to global stats
             uniquePatientTbTypes.forEach(tbType => {
                 s.tbBreakdown[tbType] = (s.tbBreakdown[tbType] || 0) + 1;
+            });
+
+            // Add unique General OI types for this patient to global stats
+            uniquePatientOIs.forEach(oi => {
+                s.oiBreakdown[oi] = (s.oiBreakdown[oi] || 0) + 1;
             });
 
             // STD Total Count & Syphilis Breakdown
@@ -919,7 +932,16 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
         .map(([label, count], index) => ({
             label,
             count,
-            color: STD_COLORS[(index + 3) % STD_COLORS.length] // Offset colors slightly from syphilis
+            color: STD_COLORS[(index + 3) % STD_COLORS.length] // Offset colors slightly
+        }))
+        .filter(d => d.count > 0)
+        .sort((a, b) => b.count - a.count);
+
+    const oiChartData = Object.entries(stats.oiBreakdown)
+        .map(([label, count], index) => ({
+            label,
+            count,
+            color: STD_COLORS[(index + 5) % STD_COLORS.length] // Offset colors
         }))
         .filter(d => d.count > 0)
         .sort((a, b) => b.count - a.count);
@@ -975,8 +997,8 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
             {/* General Monthly Trends */}
             <GeneralTrendChart patients={patients} />
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* HCV Breakdown */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Row 1: HCV and Syphilis */}
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                     <h3 className="text-lg font-bold text-gray-800 mb-6 pb-2 border-b flex justify-between">
                         <span>สรุปสถานการณ์ HCV</span>
@@ -985,7 +1007,6 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
                     <DonutChart data={hcvChartData} />
                 </div>
 
-                {/* Syphilis Breakdown */}
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                     <h3 className="text-lg font-bold text-gray-800 mb-6 pb-2 border-b flex justify-between">
                         <span>สรุปสถานการณ์ Syphilis</span>
@@ -994,10 +1015,18 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
                     <DonutChart data={syphilisChartData} />
                 </div>
 
-                {/* TB Breakdown */}
+                {/* Row 2: OI (General) and TB (Detailed) */}
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                     <h3 className="text-lg font-bold text-gray-800 mb-6 pb-2 border-b flex justify-between">
-                        <span>สรุปสถานการณ์ วัณโรค</span>
+                        <span>สรุปการติดเชื้อฉวยโอกาส (OI)</span>
+                        <span className="text-xs font-normal text-gray-500 self-end">นับจำนวนคน (TB รวมเป็นหนึ่ง)</span>
+                    </h3>
+                    <DonutChart data={oiChartData} />
+                </div>
+
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h3 className="text-lg font-bold text-gray-800 mb-6 pb-2 border-b flex justify-between">
+                        <span>รายละเอียดประเภทวัณโรค (TB)</span>
                         <span className="text-xs font-normal text-gray-500 self-end">แยกตามประเภท (นับจำนวนคน)</span>
                     </h3>
                     <DonutChart data={tbChartData} />

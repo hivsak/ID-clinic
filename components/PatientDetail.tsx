@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Patient, MedicalEvent } from '../types';
 import { ChevronLeftIcon, PrepPepIcon, ActivityIcon } from './icons';
@@ -147,39 +146,56 @@ export const PatientDetail: React.FC<PatientDetailProps> = ({ patient, onBack, o
   };
 
   return (
-    <div className="p-6 md:p-8">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+    <div className="p-6 md:p-10 max-w-7xl mx-auto">
+      {/* Back Button & Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
-            <a href="#" onClick={(e) => { e.preventDefault(); onBack(); }} className="text-sm text-gray-500 hover:underline flex items-center mb-2">
-                <ChevronLeftIcon className="h-4 w-4 mr-1" />
+            <button 
+                onClick={onBack} 
+                className="group flex items-center text-sm font-medium text-slate-500 hover:text-emerald-600 transition-colors mb-2"
+            >
+                <div className="p-1 rounded-full bg-slate-100 group-hover:bg-emerald-100 mr-2 transition-colors">
+                    <ChevronLeftIcon className="h-4 w-4" />
+                </div>
                 กลับไปที่รายชื่อผู้ป่วย
-            </a>
-            <h1 className="text-2xl font-bold text-gray-800">{`${patient.firstName || ''} ${patient.lastName || ''}`}</h1>
-            <div className="flex items-center gap-x-4 text-sm text-gray-500 mt-2">
-                <span>HN: {patient.hn}</span>
-                <span>อายุ: {calculateAge(patient.dob)} ปี</span>
-                <span>เพศ: {patient.sex || '-'}</span>
+            </button>
+            <div className="flex items-center gap-4">
+                <h1 className="text-3xl font-bold text-slate-800 tracking-tight">{`${patient.firstName || ''} ${patient.lastName || ''}`}</h1>
+                <span className={`px-3 py-1 text-xs font-bold rounded-full ${patient.sex === 'ชาย' ? 'bg-indigo-100 text-indigo-700' : 'bg-pink-100 text-pink-700'}`}>
+                    {patient.sex || '-'}
+                </span>
+            </div>
+            <div className="flex items-center gap-x-6 text-sm text-slate-500 mt-2 font-medium">
+                <span className="flex items-center"><span className="w-2 h-2 rounded-full bg-slate-300 mr-2"></span>HN: {patient.hn}</span>
+                <span className="flex items-center"><span className="w-2 h-2 rounded-full bg-slate-300 mr-2"></span>อายุ: {calculateAge(patient.dob)} ปี</span>
             </div>
         </div>
       </div>
 
-      <div className="border-b border-gray-200 mb-6">
-        <nav className="-mb-px flex space-x-6 overflow-x-auto" aria-label="Tabs">
+      {/* Tabs Navigation */}
+      <div className="border-b border-slate-200 mb-8 overflow-x-auto">
+        <nav className="-mb-px flex space-x-1" aria-label="Tabs">
           {tabs.map(tab => {
             const hasIcon = 'icon' in tab;
             const tabShouldHaveIcon = !['GENERAL', 'HIV', 'HBV_HCV', 'TPT', 'STD', 'PREP', 'PREGNANCY'].includes(tab.id);
+            const isActive = activeTab === tab.id;
 
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as Tab)}
-                className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center justify-center ${ (hasIcon && tabShouldHaveIcon) ? 'gap-x-2' : '' } ${
-                  activeTab === tab.id
-                    ? 'border-emerald-500 text-emerald-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
+                className={`
+                    whitespace-nowrap py-4 px-5 font-medium text-sm border-b-2 transition-all duration-200 flex items-center justify-center gap-2 outline-none
+                    ${isActive 
+                        ? 'border-emerald-500 text-emerald-700 bg-emerald-50/50' 
+                        : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 hover:bg-slate-50'}
+                `}
               >
-                {hasIcon && tabShouldHaveIcon && tab.icon}
+                {hasIcon && tabShouldHaveIcon && (
+                    <span className={`${isActive ? 'text-emerald-600' : 'text-slate-400'}`}>
+                        {tab.icon}
+                    </span>
+                )}
                 {tab.label}
               </button>
             )
@@ -187,7 +203,8 @@ export const PatientDetail: React.FC<PatientDetailProps> = ({ patient, onBack, o
         </nav>
       </div>
 
-      <div>
+      {/* Content Area */}
+      <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
         {renderTabContent()}
       </div>
     </div>

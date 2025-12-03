@@ -922,7 +922,7 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
     const syphilisChartData = Object.entries(stats.std.syphilisBreakdown)
         .map(([label, count], index) => ({
             label,
-            count,
+            count: count as number,
             color: STD_COLORS[index % STD_COLORS.length]
         }))
         .filter(d => d.count > 0)
@@ -931,7 +931,7 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
     const tbChartData = Object.entries(stats.tbBreakdown)
         .map(([label, count], index) => ({
             label,
-            count,
+            count: count as number,
             color: STD_COLORS[(index + 3) % STD_COLORS.length] // Offset colors slightly
         }))
         .filter(d => d.count > 0)
@@ -940,7 +940,7 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
     const oiChartData = Object.entries(stats.oiBreakdown)
         .map(([label, count], index) => ({
             label,
-            count,
+            count: count as number,
             color: STD_COLORS[(index + 5) % STD_COLORS.length] // Offset colors
         }))
         .filter(d => d.count > 0)

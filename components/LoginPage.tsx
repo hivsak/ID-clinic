@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { register } from '../services/authService';
 
@@ -102,32 +101,36 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4 sm:px-6 lg:px-8 font-sans relative">
-        
-      <div className="max-w-md w-full space-y-8 bg-white p-10 rounded-xl shadow-lg border border-gray-200">
-        <div className="text-center">
-           <div className="mx-auto h-16 w-16 bg-emerald-500 rounded-full flex items-center justify-center">
-                <span className="text-white text-2xl font-bold">ID</span>
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 font-sans relative overflow-hidden">
+      {/* Background Decorative Elements */}
+      <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-emerald-50 to-slate-100 z-0"></div>
+      <div className="absolute -top-40 -left-40 w-96 h-96 bg-emerald-200/30 rounded-full blur-3xl z-0"></div>
+      <div className="absolute top-1/2 right-0 w-80 h-80 bg-blue-200/20 rounded-full blur-3xl z-0"></div>
+
+      <div className="max-w-md w-full bg-white/80 backdrop-blur-xl p-8 sm:p-10 rounded-3xl shadow-2xl border border-white/50 relative z-10">
+        <div className="text-center mb-8">
+           <div className="mx-auto h-20 w-20 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-2xl shadow-lg flex items-center justify-center transform rotate-3 hover:rotate-0 transition-transform duration-300">
+                <span className="text-white text-3xl font-bold tracking-tight">ID</span>
            </div>
-          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
+          <h2 className="mt-6 text-3xl font-extrabold text-slate-800 tracking-tight">
             ID Clinic Manager
           </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            {isRegistering ? 'สมัครสมาชิกเพื่อขอเข้าใช้งาน' : 'กรุณาเข้าสู่ระบบเพื่อใช้งาน'}
+          <p className="mt-2 text-sm text-slate-500">
+            {isRegistering ? 'สร้างบัญชีผู้ใช้งานใหม่' : 'ยินดีต้อนรับกลับสู่ระบบ'}
           </p>
         </div>
         
         {isRegistering ? (
             // --- REGISTER FORM ---
-            <form className="mt-8 space-y-4" onSubmit={handleRegisterSubmit}>
-                <div className="rounded-md shadow-sm space-y-3">
+            <form className="space-y-5" onSubmit={handleRegisterSubmit}>
+                <div className="space-y-4">
                     <div>
                         <label htmlFor="regDisplayName" className="sr-only">Name</label>
                         <input
                             id="regDisplayName"
                             type="text"
                             required
-                            className="appearance-none rounded-lg relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 focus:z-10 sm:text-sm"
+                            className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
                             placeholder="ชื่อ-นามสกุล (Display Name)"
                             value={regDisplayName}
                             onChange={(e) => setRegDisplayName(e.target.value)}
@@ -139,8 +142,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                             id="regUsername"
                             type="text"
                             required
-                            className="appearance-none rounded-lg relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 focus:z-10 sm:text-sm"
-                            placeholder="Username (สำหรับเข้าสู่ระบบ)"
+                            className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                            placeholder="Username"
                             value={regUsername}
                             onChange={(e) => setRegUsername(e.target.value)}
                         />
@@ -151,7 +154,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                             id="regPassword"
                             type="password"
                             required
-                            className="appearance-none rounded-lg relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 focus:z-10 sm:text-sm"
+                            className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
                             placeholder="Password"
                             value={regPassword}
                             onChange={(e) => setRegPassword(e.target.value)}
@@ -163,8 +166,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                             id="regConfirmPassword"
                             type="password"
                             required
-                            className="appearance-none rounded-lg relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 focus:z-10 sm:text-sm"
-                            placeholder="ยืนยัน Password"
+                            className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                            placeholder="Confirm Password"
                             value={regConfirmPassword}
                             onChange={(e) => setRegConfirmPassword(e.target.value)}
                         />
@@ -172,7 +175,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                 </div>
 
                 {error && (
-                    <div className="text-red-500 text-sm text-center bg-red-50 p-2 rounded-md border border-red-200 break-words">
+                    <div className="text-red-600 text-sm text-center bg-red-50 p-3 rounded-xl border border-red-100">
                         {error}
                     </div>
                 )}
@@ -181,44 +184,44 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                     <button
                         type="submit"
                         disabled={isLoading}
-                        className={`group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white ${isLoading ? 'bg-emerald-400 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700'} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-colors`}
+                        className={`w-full flex justify-center py-3.5 px-4 border border-transparent text-sm font-semibold rounded-xl text-white shadow-lg shadow-emerald-500/30 ${isLoading ? 'bg-emerald-400 cursor-not-allowed' : 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 transform hover:-translate-y-0.5'} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all duration-200`}
                     >
-                        {isLoading ? 'กำลังบันทึก...' : 'สมัครสมาชิก'}
+                        {isLoading ? 'กำลังบันทึก...' : 'ลงทะเบียน'}
                     </button>
                 </div>
-                <div className="text-center mt-4">
-                    <span className="text-sm text-gray-600">มีบัญชีอยู่แล้ว? </span>
-                    <button type="button" onClick={toggleMode} className="text-sm text-emerald-600 hover:text-emerald-500 font-medium hover:underline">
+                <div className="text-center mt-6">
+                    <span className="text-sm text-slate-500">มีบัญชีอยู่แล้ว? </span>
+                    <button type="button" onClick={toggleMode} className="text-sm text-emerald-600 hover:text-emerald-700 font-semibold hover:underline transition-colors">
                         เข้าสู่ระบบ
                     </button>
                 </div>
             </form>
         ) : (
             // --- LOGIN FORM ---
-            <form className="mt-8 space-y-6" onSubmit={handleLoginSubmit}>
-                <div className="rounded-md shadow-sm -space-y-px">
-                    <div className="mb-4">
-                        <label htmlFor="username" className="sr-only">Username</label>
+            <form className="space-y-6" onSubmit={handleLoginSubmit}>
+                <div className="space-y-4">
+                    <div>
+                        <label htmlFor="username" className="block text-sm font-medium text-slate-700 mb-1 ml-1">Username</label>
                         <input
                             id="username"
                             name="username"
                             type="text"
                             required
-                            className="appearance-none rounded-lg relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 focus:z-10 sm:text-sm"
-                            placeholder="ชื่อผู้ใช้งาน (username)"
+                            className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                            placeholder="ระบุชื่อผู้ใช้งาน"
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
                         />
                     </div>
                     <div>
-                        <label htmlFor="password" className="sr-only">Password</label>
+                        <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1 ml-1">Password</label>
                         <input
                             id="password"
                             name="password"
                             type="password"
                             required
-                            className="appearance-none rounded-lg relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 focus:z-10 sm:text-sm"
-                            placeholder="รหัสผ่าน (password)"
+                            className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                            placeholder="ระบุรหัสผ่าน"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                         />
@@ -226,13 +229,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                 </div>
 
                 {error && (
-                    <div className="text-red-500 text-sm text-center bg-red-50 p-2 rounded-md border border-red-200 break-words">
+                    <div className="text-red-600 text-sm text-center bg-red-50 p-3 rounded-xl border border-red-100">
                         {error}
                     </div>
                 )}
 
                 {successMsg && (
-                    <div className="text-emerald-700 text-sm text-center bg-emerald-50 p-2 rounded-md border border-emerald-200 break-words">
+                    <div className="text-emerald-700 text-sm text-center bg-emerald-50 p-3 rounded-xl border border-emerald-100">
                         {successMsg}
                     </div>
                 )}
@@ -241,7 +244,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                     <button
                         type="submit"
                         disabled={isLoading}
-                        className={`group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white ${isLoading ? 'bg-emerald-400 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700'} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-colors`}
+                        className={`w-full flex justify-center py-3.5 px-4 border border-transparent text-sm font-semibold rounded-xl text-white shadow-lg shadow-emerald-500/30 ${isLoading ? 'bg-emerald-400 cursor-not-allowed' : 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 transform hover:-translate-y-0.5'} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all duration-200`}
                     >
                         {isLoading ? (
                             <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -252,17 +255,17 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                     </button>
                 </div>
 
-                <div className="text-center mt-4">
-                    <span className="text-sm text-gray-600">ยังไม่มีบัญชี? </span>
-                    <button type="button" onClick={toggleMode} className="text-sm text-emerald-600 hover:text-emerald-500 font-medium hover:underline">
+                <div className="text-center mt-6 pt-4 border-t border-slate-100">
+                    <span className="text-sm text-slate-500">ยังไม่มีบัญชี? </span>
+                    <button type="button" onClick={toggleMode} className="text-sm text-emerald-600 hover:text-emerald-700 font-semibold hover:underline transition-colors">
                         ลงทะเบียน
                     </button>
                 </div>
             </form>
         )}
         
-        <div className="text-center mt-4">
-             <p className="text-xs text-gray-400">© 2025 ID CLINIC MANAGER | Version 1.5.1</p>
+        <div className="text-center mt-8">
+             <p className="text-[10px] text-slate-400 uppercase tracking-widest font-medium">© 2025 ID CLINIC MANAGER v1.5.1</p>
         </div>
       </div>
     </div>

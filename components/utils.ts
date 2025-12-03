@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Patient, PatientStatus, HcvTest, HcvInfo } from '../types';
 
@@ -143,16 +142,17 @@ export const formatThaiDateShort = (isoDate: string) => {
     return formatThaiDateBE(isoDate);
 };
 
-export const inputClass = "mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm";
-export const labelClass = "block text-sm font-medium text-gray-700";
-export const textareaClass = `${inputClass} min-h-[80px]`;
+// Modern UI Classes
+export const inputClass = "mt-1 block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all sm:text-sm";
+export const labelClass = "block text-sm font-semibold text-slate-700 mb-1";
+export const textareaClass = `${inputClass} min-h-[100px] resize-y`;
 
 export const DisplayField: React.FC<{ label: string; value?: string | React.ReactNode | null }> = ({ label, value }) => {
     return React.createElement(
         'div',
-        null,
-        React.createElement('p', { className: "text-sm font-medium text-gray-500" }, label),
-        React.createElement('div', { className: "mt-1 text-gray-900" }, value || '-')
+        { className: "bg-slate-50 p-3 rounded-xl border border-slate-100" },
+        React.createElement('p', { className: "text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1" }, label),
+        React.createElement('div', { className: "text-base font-medium text-slate-900" }, value || '-')
     );
 };
 
@@ -162,10 +162,10 @@ export const determineHbvStatus = (patient: Patient): { text: string; color: str
     // 1. Manual Override
     if (patient.hbvInfo?.manualSummary) {
         const summary = patient.hbvInfo.manualSummary;
-        let color = 'bg-gray-100 text-gray-800';
-        if (summary === 'ไม่เป็น HBV') color = 'bg-emerald-100 text-emerald-800';
-        else if (summary === 'เป็น HBV') color = 'bg-red-100 text-red-800';
-        else if (summary === 'รอตรวจเพิ่มเติม') color = 'bg-amber-100 text-amber-800';
+        let color = 'bg-slate-100 text-slate-800';
+        if (summary === 'ไม่เป็น HBV') color = 'bg-emerald-100 text-emerald-800 ring-1 ring-emerald-500/20';
+        else if (summary === 'เป็น HBV') color = 'bg-red-100 text-red-800 ring-1 ring-red-500/20';
+        else if (summary === 'รอตรวจเพิ่มเติม') color = 'bg-amber-100 text-amber-800 ring-1 ring-amber-500/20';
         return { text: summary, color };
     }
 
@@ -173,13 +173,13 @@ export const determineHbvStatus = (patient: Patient): { text: string; color: str
     const hbvData = patient.hbvInfo || { hbsAgTests: [] };
     const latestHbsAgTest = [...(hbvData.hbsAgTests || [])].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
 
-    if (!latestHbsAgTest) return { text: 'ไม่มีข้อมูล', color: 'bg-gray-100 text-gray-800' };
+    if (!latestHbsAgTest) return { text: 'ไม่มีข้อมูล', color: 'bg-slate-100 text-slate-600' };
     
     switch (latestHbsAgTest.result) {
-        case 'Negative': return { text: 'ไม่เป็น HBV', color: 'bg-emerald-100 text-emerald-800' };
-        case 'Positive': return { text: 'เป็น HBV', color: 'bg-red-100 text-red-800' };
-        case 'Inconclusive': return { text: 'รอตรวจเพิ่มเติม', color: 'bg-amber-100 text-amber-800' };
-        default: return { text: 'ไม่มีข้อมูล', color: 'bg-gray-100 text-gray-800' };
+        case 'Negative': return { text: 'ไม่เป็น HBV', color: 'bg-emerald-100 text-emerald-800 ring-1 ring-emerald-500/20' };
+        case 'Positive': return { text: 'เป็น HBV', color: 'bg-red-100 text-red-800 ring-1 ring-red-500/20' };
+        case 'Inconclusive': return { text: 'รอตรวจเพิ่มเติม', color: 'bg-amber-100 text-amber-800 ring-1 ring-amber-500/20' };
+        default: return { text: 'ไม่มีข้อมูล', color: 'bg-slate-100 text-slate-600' };
     }
 };
 
@@ -227,37 +227,37 @@ export const determineHcvStatus = (patient: Patient): { text: string; color: str
 
     // Rule 1: Patient is Negative
     if (hcvDiagnosticStatus === 'NEGATIVE') {
-        return { text: 'ไม่เป็น HCV', color: 'bg-emerald-100 text-emerald-800' };
+        return { text: 'ไม่เป็น HCV', color: 'bg-emerald-100 text-emerald-800 ring-1 ring-emerald-500/20' };
     }
 
     if (hcvDiagnosticStatus === 'POSITIVE' || hcvDiagnosticStatus === 'INCONCLUSIVE') {
         // Rule 5: Has post-treatment data
         if (preVlValue !== null && preVlValue > 15 && latestTreatment && postVlValue !== null) {
             if (postVlValue < 15) {
-                return { text: 'เคยเป็น HCV รักษาหายแล้ว', color: 'bg-emerald-100 text-emerald-800' };
+                return { text: 'เคยเป็น HCV รักษาหายแล้ว', color: 'bg-emerald-100 text-emerald-800 ring-1 ring-emerald-500/20' };
             } else {
-                return { text: 'เป็น HCV รักษาแล้วไม่หาย', color: 'bg-red-100 text-red-800' };
+                return { text: 'เป็น HCV รักษาแล้วไม่หาย', color: 'bg-red-100 text-red-800 ring-1 ring-red-500/20' };
             }
         }
 
         // Rule 4: Currently in treatment
         if (preVlValue !== null && preVlValue > 15 && latestTreatment) {
-            return { text: 'กำลังรักษา HCV', color: 'bg-amber-100 text-amber-800' };
+            return { text: 'กำลังรักษา HCV', color: 'bg-amber-100 text-amber-800 ring-1 ring-amber-500/20' };
         }
 
         // Rule 3: Has pre-treatment data only (Spontaneous clearance check)
         if (preVlValue !== null) {
             if (preVlValue < 15) {
-                return { text: 'เคยเป็น HCV หายเอง', color: 'bg-emerald-100 text-emerald-800' };
+                return { text: 'เคยเป็น HCV หายเอง', color: 'bg-emerald-100 text-emerald-800 ring-1 ring-emerald-500/20' };
             } else {
-                return { text: 'เป็น HCV', color: 'bg-red-100 text-red-800' };
+                return { text: 'เป็น HCV', color: 'bg-red-100 text-red-800 ring-1 ring-red-500/20' };
             }
         }
 
         // Rule 2: Positive/Inconclusive but no further VL data
-        return { text: 'รอการตรวจเพิ่มเติม', color: 'bg-amber-100 text-amber-800' };
+        return { text: 'รอการตรวจเพิ่มเติม', color: 'bg-amber-100 text-amber-800 ring-1 ring-amber-500/20' };
     }
 
     // Default/Unknown case
-    return { text: 'ไม่มีข้อมูล', color: 'bg-gray-100 text-gray-800' };
+    return { text: 'ไม่มีข้อมูล', color: 'bg-slate-100 text-slate-600' };
 };

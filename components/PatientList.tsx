@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Patient, PatientStatus, MedicalEventType } from '../types';
 import { PlusIcon, SearchIcon, ChevronLeftIcon, ChevronRightIcon, TrashIcon } from './icons';
@@ -14,19 +13,19 @@ interface PatientListProps {
 
 const getStatusBadge = (status: PatientStatus | null) => {
   if (!status) {
-      return <span>-</span>;
+      return <span className="text-slate-400">-</span>;
   }
   switch (status) {
     case PatientStatus.ACTIVE:
-      return <span className="px-2 py-1 text-xs font-medium text-emerald-800 bg-emerald-100 rounded-full">Active</span>;
+      return <span className="px-2.5 py-1 text-xs font-bold text-emerald-700 bg-emerald-100 border border-emerald-200 rounded-lg">Active</span>;
     case PatientStatus.LTFU:
-      return <span className="px-2 py-1 text-xs font-medium text-red-800 bg-red-100 rounded-full">LTFU</span>;
+      return <span className="px-2.5 py-1 text-xs font-bold text-red-700 bg-red-100 border border-red-200 rounded-lg">LTFU</span>;
     case PatientStatus.TRANSFERRED:
-      return <span className="px-2 py-1 text-xs font-medium text-gray-800 bg-gray-100 rounded-full">Transferred</span>;
+      return <span className="px-2.5 py-1 text-xs font-bold text-slate-700 bg-slate-100 border border-slate-200 rounded-lg">Transferred</span>;
     case PatientStatus.EXPIRED:
-      return <span className="px-2 py-1 text-xs font-medium text-white bg-black rounded-full">Expired</span>;
+      return <span className="px-2.5 py-1 text-xs font-bold text-white bg-slate-700 border border-slate-600 rounded-lg">Expired</span>;
     case PatientStatus.RESTART:
-        return <span className="px-2 py-1 text-xs font-medium text-orange-800 bg-orange-100 rounded-full">Restart</span>;
+        return <span className="px-2.5 py-1 text-xs font-bold text-orange-700 bg-orange-100 border border-orange-200 rounded-lg">Restart</span>;
     default:
       return <span>-</span>;
   }
@@ -182,48 +181,47 @@ export const PatientList: React.FC<PatientListProps> = ({ patients, onSelectPati
   };
 
   return (
-    <div className="p-6 md:p-8">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">รายชื่อผู้ป่วยทั้งหมด</h1>
-        <button onClick={onAddNew} className="flex items-center mt-4 md:mt-0 px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500">
-          <PlusIcon className="mr-2 h-4 w-4" />
+    <div className="p-6 md:p-10 max-w-7xl mx-auto">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+        <div>
+            <h1 className="text-3xl font-bold text-slate-800 tracking-tight">รายชื่อผู้ป่วยทั้งหมด</h1>
+            <p className="text-slate-500 mt-1">จัดการข้อมูลและสถานะผู้ป่วย</p>
+        </div>
+        <button 
+            onClick={onAddNew} 
+            className="flex items-center px-5 py-2.5 text-sm font-semibold text-white bg-emerald-600 rounded-xl hover:bg-emerald-700 shadow-md shadow-emerald-500/20 transition-all hover:-translate-y-0.5"
+        >
+          <PlusIcon className="mr-2 h-5 w-5" />
           เพิ่มผู้ป่วยใหม่
         </button>
       </div>
 
-      <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         
         {/* --- Advanced Filters Section --- */}
-        <div className="space-y-4 mb-6">
+        <div className="p-6 bg-slate-50/50 border-b border-slate-200 space-y-5">
             
             {/* Row 1: Search & Date Range */}
             <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                <div className="md:col-span-4 relative">
+                <div className="md:col-span-4 relative group">
                     <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                        <SearchIcon className="text-gray-400" />
+                        <SearchIcon className="text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
                     </div>
                     <input
                         type="text"
                         placeholder="ค้นหา HN, เลขบัตรปชช, ชื่อ, เบอร์โทร..."
                         value={searchText}
                         onChange={(e) => setSearchText(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                        className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all shadow-sm"
                     />
                 </div>
                 <div className="md:col-span-8 flex flex-col md:flex-row items-start md:items-center gap-2">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full">
-                         <span className="text-sm text-gray-500 whitespace-nowrap flex-shrink-0 pt-2 sm:pt-0">วันนัด:</span>
-                         <div className="flex flex-col sm:flex-row gap-2 w-full">
-                             <DateInput 
-                                value={apptStartDate} 
-                                onChange={(e) => setApptStartDate(e.target.value)} 
-                            />
-                            <span className="text-sm text-gray-500 flex-shrink-0 self-center hidden sm:block">-</span>
-                            <span className="text-sm text-gray-500 flex-shrink-0 sm:hidden">ถึง</span>
-                            <DateInput 
-                                value={apptEndDate} 
-                                onChange={(e) => setApptEndDate(e.target.value)} 
-                            />
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full p-2 bg-white rounded-xl border border-slate-200 shadow-sm">
+                         <span className="text-sm font-medium text-slate-500 whitespace-nowrap pl-2">วันนัด:</span>
+                         <div className="flex flex-col sm:flex-row gap-2 w-full items-center">
+                             <div className="w-full"><DateInput value={apptStartDate} onChange={(e) => setApptStartDate(e.target.value)} className="w-full" /></div>
+                            <span className="text-slate-400 hidden sm:block">→</span>
+                            <div className="w-full"><DateInput value={apptEndDate} onChange={(e) => setApptEndDate(e.target.value)} className="w-full" /></div>
                          </div>
                     </div>
                 </div>
@@ -234,7 +232,7 @@ export const PatientList: React.FC<PatientListProps> = ({ patients, onSelectPati
                  <select 
                     value={statusFilter} 
                     onChange={(e) => setStatusFilter(e.target.value)} 
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                    className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none shadow-sm cursor-pointer hover:border-emerald-300 transition-colors"
                  >
                      <option value="">สถานะการรักษา (ทั้งหมด)</option>
                      {Object.values(PatientStatus).map(s => <option key={s} value={s}>{s}</option>)}
@@ -243,7 +241,7 @@ export const PatientList: React.FC<PatientListProps> = ({ patients, onSelectPati
                  <select 
                     value={hbvFilter} 
                     onChange={(e) => setHbvFilter(e.target.value)} 
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                    className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none shadow-sm cursor-pointer hover:border-emerald-300 transition-colors"
                  >
                      <option value="">สรุปผล HBV (ทั้งหมด)</option>
                      {HBV_STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
@@ -252,7 +250,7 @@ export const PatientList: React.FC<PatientListProps> = ({ patients, onSelectPati
                  <select 
                     value={hcvFilter} 
                     onChange={(e) => setHcvFilter(e.target.value)} 
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                    className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none shadow-sm cursor-pointer hover:border-emerald-300 transition-colors"
                  >
                      <option value="">สรุปผล HCV (ทั้งหมด)</option>
                      {HCV_STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
@@ -261,7 +259,7 @@ export const PatientList: React.FC<PatientListProps> = ({ patients, onSelectPati
                  <select 
                     value={stdFilter} 
                     onChange={(e) => setStdFilter(e.target.value)} 
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                    className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none shadow-sm cursor-pointer hover:border-emerald-300 transition-colors"
                  >
                      <option value="">ประวัติ STD (โรค)</option>
                      {STD_DISEASE_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
@@ -269,66 +267,72 @@ export const PatientList: React.FC<PatientListProps> = ({ patients, onSelectPati
             </div>
 
             {/* Row 3: Toggles & Reset */}
-            <div className="flex flex-wrap items-center justify-between gap-4 pt-2 border-t border-gray-100">
-                <div className="flex gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-4 pt-2">
+                <div className="flex gap-2 flex-wrap">
                     <button 
                         onClick={() => setTptFilter(!tptFilter)}
-                        className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${tptFilter ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-white text-gray-500 border-gray-300 hover:bg-gray-50'}`}
+                        className={`px-4 py-1.5 text-xs font-bold rounded-full border transition-all ${tptFilter ? 'bg-emerald-100 text-emerald-700 border-emerald-200 shadow-sm' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50 hover:border-slate-300'}`}
                     >
-                        {tptFilter ? '✓ เฉพาะได้รับ TPT' : 'ได้รับ TPT'}
+                        {tptFilter ? '✓ TPT' : 'TPT'}
                     </button>
                     <button 
                         onClick={() => setPrepFilter(!prepFilter)}
-                        className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${prepFilter ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : 'bg-white text-gray-500 border-gray-300 hover:bg-gray-50'}`}
+                        className={`px-4 py-1.5 text-xs font-bold rounded-full border transition-all ${prepFilter ? 'bg-indigo-100 text-indigo-700 border-indigo-200 shadow-sm' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50 hover:border-slate-300'}`}
                     >
-                        {prepFilter ? '✓ เฉพาะรับ PrEP' : 'รับ PrEP'}
+                        {prepFilter ? '✓ PrEP' : 'PrEP'}
                     </button>
                     <button 
                         onClick={() => setPepFilter(!pepFilter)}
-                        className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${pepFilter ? 'bg-purple-100 text-purple-700 border-purple-200' : 'bg-white text-gray-500 border-gray-300 hover:bg-gray-50'}`}
+                        className={`px-4 py-1.5 text-xs font-bold rounded-full border transition-all ${pepFilter ? 'bg-purple-100 text-purple-700 border-purple-200 shadow-sm' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50 hover:border-slate-300'}`}
                     >
-                        {pepFilter ? '✓ เฉพาะรับ PEP' : 'รับ PEP'}
+                        {pepFilter ? '✓ PEP' : 'PEP'}
                     </button>
                 </div>
 
-                <button onClick={resetFilters} className="text-sm text-red-600 hover:underline">
-                    ล้างตัวกรอง
+                <button onClick={resetFilters} className="text-sm font-medium text-red-600 hover:text-red-700 hover:underline px-2 transition-colors">
+                    ล้างตัวกรอง (Reset)
                 </button>
             </div>
         </div>
 
         {/* --- Table --- */}
         <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left text-gray-500">
-            <thead className="text-xs text-gray-700 uppercase bg-gray-50">
+          <table className="w-full text-sm text-left text-slate-600">
+            <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-200 font-semibold tracking-wider">
               <tr>
-                <th scope="col" className="px-6 py-3">HN</th>
-                <th scope="col" className="px-6 py-3">ชื่อ-สกุล</th>
-                <th scope="col" className="px-6 py-3">อายุ</th>
-                <th scope="col" className="px-6 py-3">เบอร์โทร</th>
-                <th scope="col" className="px-6 py-3">สิทธิ์การรักษา</th>
-                <th scope="col" className="px-6 py-3">วันนัดหมาย</th>
-                <th scope="col" className="px-6 py-3">สถานะ</th>
-                <th scope="col" className="px-6 py-3">การดำเนินการ</th>
+                <th scope="col" className="px-6 py-4">HN</th>
+                <th scope="col" className="px-6 py-4">ชื่อ-สกุล</th>
+                <th scope="col" className="px-6 py-4">อายุ</th>
+                <th scope="col" className="px-6 py-4">เบอร์โทร</th>
+                <th scope="col" className="px-6 py-4">สิทธิ์การรักษา</th>
+                <th scope="col" className="px-6 py-4">วันนัดหมาย</th>
+                <th scope="col" className="px-6 py-4">สถานะ</th>
+                <th scope="col" className="px-6 py-4 text-center">Action</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-slate-100">
               {paginatedPatients.length > 0 ? paginatedPatients.map((patient) => {
                 // Use strictly calculated status
                 const calculatedStatus = calculatePatientStatus(patient);
                 return (
-                    <tr key={patient.id} className="bg-white border-b hover:bg-gray-50">
-                        <td className="px-6 py-4 font-medium text-emerald-600">{patient.hn}</td>
-                        <td className="px-6 py-4">{`${patient.firstName || '-'} ${patient.lastName || ''}`}</td>
+                    <tr key={patient.id} className="bg-white hover:bg-slate-50 transition-colors">
+                        <td className="px-6 py-4 font-semibold text-emerald-700">{patient.hn}</td>
+                        <td className="px-6 py-4 font-medium text-slate-900">{`${patient.firstName || '-'} ${patient.lastName || ''}`}</td>
                         <td className="px-6 py-4">{calculateAge(patient.dob)}</td>
-                        <td className="px-6 py-4">{patient.phone || '-'}</td>
+                        <td className="px-6 py-4 font-mono text-slate-500">{patient.phone || '-'}</td>
                         <td className="px-6 py-4 truncate max-w-[150px]" title={patient.healthcareScheme}>{patient.healthcareScheme || '-'}</td>
-                        <td className="px-6 py-4">{formatThaiDateShort(patient.nextAppointmentDate || '')}</td>
-                        <td className="px-6 py-4">{getStatusBadge(calculatedStatus)}</td>
                         <td className="px-6 py-4">
-                            <div className="flex items-center justify-between w-full min-w-[100px]">
-                                <button onClick={() => onSelectPatient(patient.id)} className="font-medium text-emerald-600 hover:underline">
-                                    ดูรายละเอียด
+                            {patient.nextAppointmentDate ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700">
+                                    {formatThaiDateShort(patient.nextAppointmentDate)}
+                                </span>
+                            ) : '-'}
+                        </td>
+                        <td className="px-6 py-4">{getStatusBadge(calculatedStatus)}</td>
+                        <td className="px-6 py-4 text-center">
+                            <div className="flex items-center justify-center space-x-3">
+                                <button onClick={() => onSelectPatient(patient.id)} className="font-semibold text-emerald-600 hover:text-emerald-800 transition-colors">
+                                    ดูข้อมูล
                                 </button>
                                 <button 
                                     type="button"
@@ -337,10 +341,10 @@ export const PatientList: React.FC<PatientListProps> = ({ patients, onSelectPati
                                         e.stopPropagation(); 
                                         onDeletePatient(patient.id); 
                                     }} 
-                                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
+                                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-all"
                                     title="ลบผู้ป่วย"
                                 >
-                                    <TrashIcon className="h-5 w-5 pointer-events-none" />
+                                    <TrashIcon className="h-4 w-4 pointer-events-none" />
                                 </button>
                             </div>
                         </td>
@@ -348,8 +352,11 @@ export const PatientList: React.FC<PatientListProps> = ({ patients, onSelectPati
                 );
               }) : (
                   <tr>
-                      <td colSpan={8} className="px-6 py-10 text-center text-gray-400">
-                          ไม่พบข้อมูลผู้ป่วยที่ตรงกับเงื่อนไข
+                      <td colSpan={8} className="px-6 py-16 text-center text-slate-400 bg-slate-50/30">
+                          <div className="flex flex-col items-center justify-center">
+                              <SearchIcon className="h-10 w-10 text-slate-300 mb-2" />
+                              <p>ไม่พบข้อมูลผู้ป่วยที่ตรงกับเงื่อนไข</p>
+                          </div>
                       </td>
                   </tr>
               )}
@@ -358,21 +365,20 @@ export const PatientList: React.FC<PatientListProps> = ({ patients, onSelectPati
         </div>
         
         {/* --- Pagination Controls --- */}
-        <div className="flex flex-col md:flex-row justify-between items-center mt-4 text-sm text-gray-600 border-t pt-4">
-            <p>แสดง {filteredPatients.length > 0 ? startIndex + 1 : 0} ถึง {Math.min(startIndex + itemsPerPage, totalPatients)} จาก {totalPatients} รายการ</p>
-            <div className="flex items-center mt-4 md:mt-0 space-x-2">
+        <div className="flex flex-col md:flex-row justify-between items-center px-6 py-4 bg-white border-t border-slate-200">
+            <p className="text-sm text-slate-500 mb-4 md:mb-0">
+                แสดง <span className="font-semibold text-slate-800">{filteredPatients.length > 0 ? startIndex + 1 : 0}</span> ถึง <span className="font-semibold text-slate-800">{Math.min(startIndex + itemsPerPage, totalPatients)}</span> จาก <span className="font-semibold text-slate-800">{totalPatients}</span> รายการ
+            </p>
+            <div className="flex items-center space-x-2">
                 <button 
                     onClick={() => handlePageChange(currentPage - 1)}
                     disabled={currentPage === 1}
-                    className="p-2 rounded-md hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="p-2 rounded-lg hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-slate-600"
                 >
                     <ChevronLeftIcon />
                 </button>
                 
-                {/* Simplified Pagination for brevity */}
                 {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                    // Logic to show pages around current page could be added here for large lists
-                    // For now, showing first 5 or fewer
                     let pNum = i + 1;
                     if (totalPages > 5 && currentPage > 3) {
                         pNum = currentPage - 2 + i;
@@ -383,7 +389,7 @@ export const PatientList: React.FC<PatientListProps> = ({ patients, onSelectPati
                          <button 
                             key={pNum}
                             onClick={() => handlePageChange(pNum)}
-                            className={`px-3 py-1 rounded-md ${currentPage === pNum ? 'bg-emerald-100 text-emerald-700 font-bold' : 'hover:bg-gray-100'}`}
+                            className={`w-8 h-8 rounded-lg text-sm font-medium transition-all ${currentPage === pNum ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/30' : 'text-slate-600 hover:bg-slate-100'}`}
                         >
                             {pNum}
                         </button>
@@ -393,7 +399,7 @@ export const PatientList: React.FC<PatientListProps> = ({ patients, onSelectPati
                 <button 
                     onClick={() => handlePageChange(currentPage + 1)}
                     disabled={currentPage === totalPages || totalPages === 0}
-                    className="p-2 rounded-md hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="p-2 rounded-lg hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-slate-600"
                 >
                     <ChevronRightIcon />
                 </button>

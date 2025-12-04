@@ -29,17 +29,17 @@ const NavItem: React.FC<NavItemProps> = ({ icon, label, active = false, onClick 
       e.preventDefault();
       onClick?.();
     }}
-    className={`group flex flex-col md:flex-row items-center md:justify-start justify-center w-full md:w-auto p-2 md:px-4 md:py-3 text-sm font-medium rounded-xl transition-all duration-200 ${
+    className={`group flex flex-col md:flex-row items-center md:justify-start justify-center w-full md:w-auto p-2 md:px-4 md:py-3 text-sm font-medium rounded-xl transition-all duration-300 ease-out ${
       active
-        ? 'text-emerald-700 bg-emerald-50 ring-1 ring-emerald-500/20 shadow-sm'
-        : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+        ? 'text-emerald-700 bg-emerald-50 ring-1 ring-emerald-500/20 shadow-sm scale-105 md:translate-x-2'
+        : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50 hover:shadow-sm hover:scale-105'
     }`}
     title={label}
   >
-    <span className={`transition-transform duration-200 ${active ? 'scale-110' : 'group-hover:scale-110'}`}>
+    <span className={`transition-transform duration-300 ${active ? 'scale-110 rotate-3' : 'group-hover:scale-110 group-hover:-rotate-6'}`}>
         {icon}
     </span>
-    <span className="hidden md:inline md:ml-3 font-semibold">{label}</span>
+    <span className="hidden md:inline md:ml-3 font-semibold transition-colors">{label}</span>
   </a>
 );
 
@@ -67,15 +67,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onChangeView, noti
     <div className="relative">
         <button 
             onClick={() => setIsNotificationsOpen(!isNotificationsOpen)} 
-            className="relative p-2.5 rounded-full text-slate-500 hover:bg-slate-100 hover:text-emerald-600 transition-colors"
+            className="relative p-2.5 rounded-full text-slate-500 hover:bg-slate-100 hover:text-emerald-600 transition-all duration-300 hover:rotate-12"
         >
             <BellIcon className="w-5 h-5" />
             {notifications.length > 0 && (
-                <span className="absolute top-2 right-2 block h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white"></span>
+                <span className="absolute top-2 right-2 block h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white animate-pulse"></span>
             )}
         </button>
         {isNotificationsOpen && (
-             <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-xl border border-slate-100 z-[60] overflow-hidden">
+             <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-xl border border-slate-100 z-[60] overflow-hidden animate-fade-in-up origin-top-right">
                 <div className="p-4 border-b border-slate-100 bg-slate-50/50">
                     <h4 className="text-sm font-bold text-slate-800">การแจ้งเตือน ({notifications.length})</h4>
                 </div>
@@ -123,16 +123,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onChangeView, noti
         </header>
 
         {/* Desktop Header / Mobile Bottom Nav */}
-        <header className="fixed bottom-0 md:top-0 left-0 w-full md:h-20 h-16 bg-white border-t md:border-t-0 md:border-b border-slate-200 flex items-center z-50 shadow-sm md:shadow-none">
+        <header className="fixed bottom-0 md:top-0 left-0 w-full md:h-20 h-16 bg-white border-t md:border-t-0 md:border-b border-slate-200 flex items-center z-50 shadow-sm md:shadow-none transition-all">
             <div className="w-full max-w-7xl mx-auto flex items-center justify-between md:px-8 px-2 h-full">
 
                 {/* Logo and Title - Desktop only */}
-                <div className="hidden md:flex items-center">
-                    <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl h-10 w-10 flex items-center justify-center text-white font-bold text-lg shadow-md shadow-emerald-500/20">
+                <div className="hidden md:flex items-center group">
+                    <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl h-10 w-10 flex items-center justify-center text-white font-bold text-lg shadow-md shadow-emerald-500/20 group-hover:rotate-12 transition-transform duration-300">
                         ID
                     </div>
                     <div className="ml-3">
-                        <h1 className="text-lg font-bold text-slate-800 tracking-tight leading-tight">ID Clinic</h1>
+                        <h1 className="text-lg font-bold text-slate-800 tracking-tight leading-tight group-hover:text-emerald-700 transition-colors">ID Clinic</h1>
                         <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Manager</p>
                     </div>
                 </div>
@@ -151,7 +151,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onChangeView, noti
                     <div className="h-6 w-px bg-slate-200 mx-2"></div>
                     <button 
                         onClick={onLogout}
-                        className="flex items-center space-x-2 px-3 py-2 rounded-xl text-sm font-medium text-slate-500 hover:text-red-600 hover:bg-red-50 transition-all"
+                        className="flex items-center space-x-2 px-3 py-2 rounded-xl text-sm font-medium text-slate-500 hover:text-red-600 hover:bg-red-50 transition-all hover:scale-105 active:scale-95"
                     >
                         <LogoutIcon className="w-5 h-5" />
                         <span>Logout</span>

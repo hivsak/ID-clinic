@@ -8,12 +8,13 @@ interface DashboardProps {
     onNavigateToPatients: () => void;
 }
 
-const StatCard = ({ title, value, icon, colorClass, onClick, bgGradient }: any) => (
+const StatCard = ({ title, value, icon, colorClass, onClick, bgGradient, delay }: any) => (
     <div 
         onClick={onClick} 
-        className={`relative overflow-hidden bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center space-x-4 ${onClick ? 'cursor-pointer hover:shadow-md hover:scale-[1.02] transition-all duration-300' : ''}`}
+        style={{ animationDelay: delay }}
+        className={`relative overflow-hidden bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center space-x-4 opacity-0 animate-fade-in-up ${onClick ? 'cursor-pointer hover:shadow-md hover:scale-[1.02] transition-all duration-300' : 'hover:-translate-y-1 transition-transform duration-300'}`}
     >
-        <div className={`p-4 rounded-xl shadow-inner ${colorClass}`}>
+        <div className={`p-4 rounded-xl shadow-inner ${colorClass} transition-transform duration-500 hover:rotate-12`}>
             {icon}
         </div>
         <div className="relative z-10">
@@ -21,7 +22,7 @@ const StatCard = ({ title, value, icon, colorClass, onClick, bgGradient }: any) 
             <p className="text-3xl font-bold text-slate-800 mt-1">{value}</p>
         </div>
         {/* Decorative background blob */}
-        <div className={`absolute -right-6 -top-6 w-24 h-24 rounded-full opacity-10 ${bgGradient}`}></div>
+        <div className={`absolute -right-6 -top-6 w-24 h-24 rounded-full opacity-10 ${bgGradient} transform scale-100 hover:scale-150 transition-transform duration-700`}></div>
     </div>
 );
 
@@ -63,7 +64,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ patients, onNavigateToPati
 
     return (
         <div className="p-6 md:p-10 max-w-7xl mx-auto space-y-10">
-            <div>
+            <div className="animate-fade-in-up">
                 <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Dashboard</h1>
                 <p className="text-slate-500 mt-2 text-lg">ภาพรวมข้อมูลผู้ป่วยในคลินิก</p>
             </div>
@@ -77,6 +78,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ patients, onNavigateToPati
                     colorClass="bg-blue-50"
                     bgGradient="bg-blue-500"
                     onClick={onNavigateToPatients}
+                    delay="0ms"
                 />
                 <StatCard 
                     title="กำลังรักษา (Active)" 
@@ -84,6 +86,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ patients, onNavigateToPati
                     icon={<div className="h-6 w-6 rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/30" />} 
                     colorClass="bg-emerald-50"
                     bgGradient="bg-emerald-500"
+                    delay="100ms"
                 />
                 <StatCard 
                     title="ขาดนัด (LTFU)" 
@@ -91,6 +94,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ patients, onNavigateToPati
                     icon={<div className="h-6 w-6 rounded-full bg-red-500 shadow-lg shadow-red-500/30" />}
                     colorClass="bg-red-50"
                     bgGradient="bg-red-500"
+                    delay="200ms"
                 />
                 <StatCard 
                     title="เสียชีวิต" 
@@ -98,6 +102,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ patients, onNavigateToPati
                     icon={<div className="h-6 w-6 rounded-full bg-slate-800 shadow-lg" />}
                     colorClass="bg-slate-100"
                     bgGradient="bg-slate-800"
+                    delay="300ms"
                 />
             </div>
 
@@ -105,7 +110,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ patients, onNavigateToPati
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 
                 {/* Status Breakdown */}
-                <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
+                <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 opacity-0 animate-fade-in-up hover:shadow-lg transition-shadow duration-300" style={{ animationDelay: '400ms' }}>
                     <h3 className="text-xl font-bold text-slate-800 mb-6">สถานะการรักษา</h3>
                     <div className="space-y-6">
                         {[
@@ -114,14 +119,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ patients, onNavigateToPati
                             { label: 'LTFU (ขาดนัด)', value: stats.ltfu, color: 'bg-red-500' },
                             { label: 'Transferred (ย้ายออก)', value: stats.transferred, color: 'bg-orange-400' },
                             { label: 'Expired (เสียชีวิต)', value: stats.expired, color: 'bg-slate-600' },
-                        ].map((item) => (
-                            <div key={item.label}>
+                        ].map((item, idx) => (
+                            <div key={item.label} className="group">
                                 <div className="flex justify-between text-sm font-medium mb-2">
-                                    <span className="text-slate-600">{item.label}</span>
+                                    <span className="text-slate-600 group-hover:text-slate-900 transition-colors">{item.label}</span>
                                     <span className="text-slate-900">{item.value} <span className="text-slate-400 text-xs ml-1">({getPercent(item.value).toFixed(1)}%)</span></span>
                                 </div>
                                 <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
-                                    <div className={`h-3 rounded-full ${item.color} shadow-sm`} style={{ width: `${getPercent(item.value)}%` }}></div>
+                                    <div className={`h-3 rounded-full ${item.color} shadow-sm transform origin-left scale-x-0 animate-[scaleX_1s_ease-out_forwards]`} style={{ width: `${getPercent(item.value)}%`, animationDelay: `${500 + (idx * 100)}ms` }}></div>
                                 </div>
                             </div>
                         ))}
@@ -129,14 +134,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ patients, onNavigateToPati
                 </div>
 
                 {/* Demographics */}
-                <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 flex flex-col">
+                <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 flex flex-col opacity-0 animate-fade-in-up hover:shadow-lg transition-shadow duration-300" style={{ animationDelay: '500ms' }}>
                     <h3 className="text-xl font-bold text-slate-800 mb-6">ข้อมูลประชากร</h3>
                     <div className="grid grid-cols-2 gap-6 mb-8">
-                        <div className="bg-indigo-50 p-6 rounded-2xl text-center border border-indigo-100">
+                        <div className="bg-indigo-50 p-6 rounded-2xl text-center border border-indigo-100 hover:scale-105 transition-transform duration-300">
                             <p className="text-sm font-semibold text-indigo-600 uppercase tracking-wide mb-1">ชาย</p>
                             <p className="text-4xl font-bold text-indigo-900">{stats.male}</p>
                         </div>
-                        <div className="bg-pink-50 p-6 rounded-2xl text-center border border-pink-100">
+                        <div className="bg-pink-50 p-6 rounded-2xl text-center border border-pink-100 hover:scale-105 transition-transform duration-300">
                             <p className="text-sm font-semibold text-pink-600 uppercase tracking-wide mb-1">หญิง</p>
                             <p className="text-4xl font-bold text-pink-900">{stats.female}</p>
                         </div>
@@ -147,11 +152,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ patients, onNavigateToPati
                             <span className="font-bold text-slate-800 text-lg">{stats.nap} ราย</span>
                         </div>
                         <div className="w-full bg-slate-200 rounded-full h-3 overflow-hidden">
-                             <div className="h-3 rounded-full bg-blue-600 shadow-sm" style={{ width: `${getPercent(stats.nap)}%` }}></div>
+                             <div className="h-3 rounded-full bg-blue-600 shadow-sm transform origin-left scale-x-0 animate-[scaleX_1s_ease-out_forwards]" style={{ width: `${getPercent(stats.nap)}%`, animationDelay: '800ms' }}></div>
                         </div>
                     </div>
                 </div>
             </div>
+            <style>{`
+                @keyframes scaleX {
+                    from { transform: scaleX(0); }
+                    to { transform: scaleX(1); }
+                }
+            `}</style>
         </div>
     );
 };

@@ -181,7 +181,7 @@ export const PatientList: React.FC<PatientListProps> = ({ patients, onSelectPati
   };
 
   return (
-    <div className="p-6 md:p-10 max-w-7xl mx-auto">
+    <div className="p-6 md:p-10 max-w-7xl mx-auto animate-fade-in-up">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
             <h1 className="text-3xl font-bold text-slate-800 tracking-tight">รายชื่อผู้ป่วยทั้งหมด</h1>
@@ -189,14 +189,14 @@ export const PatientList: React.FC<PatientListProps> = ({ patients, onSelectPati
         </div>
         <button 
             onClick={onAddNew} 
-            className="flex items-center px-5 py-2.5 text-sm font-semibold text-white bg-emerald-600 rounded-xl hover:bg-emerald-700 shadow-md shadow-emerald-500/20 transition-all hover:-translate-y-0.5"
+            className="flex items-center px-5 py-2.5 text-sm font-semibold text-white bg-emerald-600 rounded-xl hover:bg-emerald-700 shadow-md shadow-emerald-500/20 transition-all hover:-translate-y-0.5 hover:shadow-lg active:scale-95"
         >
           <PlusIcon className="mr-2 h-5 w-5" />
           เพิ่มผู้ป่วยใหม่
         </button>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden transition-all duration-300 hover:shadow-md">
         
         {/* --- Advanced Filters Section --- */}
         <div className="p-6 bg-slate-50/50 border-b border-slate-200 space-y-5">
@@ -204,7 +204,7 @@ export const PatientList: React.FC<PatientListProps> = ({ patients, onSelectPati
             {/* Row 1: Search & Date Range */}
             <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
                 <div className="md:col-span-4 relative group">
-                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none transition-transform duration-300 group-focus-within:scale-110">
                         <SearchIcon className="text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
                     </div>
                     <input
@@ -212,11 +212,11 @@ export const PatientList: React.FC<PatientListProps> = ({ patients, onSelectPati
                         placeholder="ค้นหา HN, เลขบัตรปชช, ชื่อ, เบอร์โทร..."
                         value={searchText}
                         onChange={(e) => setSearchText(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all shadow-sm"
+                        className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all shadow-sm focus:shadow-md"
                     />
                 </div>
                 <div className="md:col-span-8 flex flex-col md:flex-row items-start md:items-center gap-2">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full p-2 bg-white rounded-xl border border-slate-200 shadow-sm">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full p-2 bg-white rounded-xl border border-slate-200 shadow-sm transition-shadow hover:shadow-md">
                          <span className="text-sm font-medium text-slate-500 whitespace-nowrap pl-2">วันนัด:</span>
                          <div className="flex flex-col sm:flex-row gap-2 w-full items-center">
                              <div className="w-full"><DateInput value={apptStartDate} onChange={(e) => setApptStartDate(e.target.value)} className="w-full" /></div>
@@ -232,7 +232,7 @@ export const PatientList: React.FC<PatientListProps> = ({ patients, onSelectPati
                  <select 
                     value={statusFilter} 
                     onChange={(e) => setStatusFilter(e.target.value)} 
-                    className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none shadow-sm cursor-pointer hover:border-emerald-300 transition-colors"
+                    className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none shadow-sm cursor-pointer hover:border-emerald-300 transition-all hover:-translate-y-0.5"
                  >
                      <option value="">สถานะการรักษา (ทั้งหมด)</option>
                      {Object.values(PatientStatus).map(s => <option key={s} value={s}>{s}</option>)}
@@ -241,7 +241,7 @@ export const PatientList: React.FC<PatientListProps> = ({ patients, onSelectPati
                  <select 
                     value={hbvFilter} 
                     onChange={(e) => setHbvFilter(e.target.value)} 
-                    className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none shadow-sm cursor-pointer hover:border-emerald-300 transition-colors"
+                    className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none shadow-sm cursor-pointer hover:border-emerald-300 transition-all hover:-translate-y-0.5"
                  >
                      <option value="">สรุปผล HBV (ทั้งหมด)</option>
                      {HBV_STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
@@ -250,7 +250,7 @@ export const PatientList: React.FC<PatientListProps> = ({ patients, onSelectPati
                  <select 
                     value={hcvFilter} 
                     onChange={(e) => setHcvFilter(e.target.value)} 
-                    className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none shadow-sm cursor-pointer hover:border-emerald-300 transition-colors"
+                    className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none shadow-sm cursor-pointer hover:border-emerald-300 transition-all hover:-translate-y-0.5"
                  >
                      <option value="">สรุปผล HCV (ทั้งหมด)</option>
                      {HCV_STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
@@ -259,7 +259,7 @@ export const PatientList: React.FC<PatientListProps> = ({ patients, onSelectPati
                  <select 
                     value={stdFilter} 
                     onChange={(e) => setStdFilter(e.target.value)} 
-                    className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none shadow-sm cursor-pointer hover:border-emerald-300 transition-colors"
+                    className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none shadow-sm cursor-pointer hover:border-emerald-300 transition-all hover:-translate-y-0.5"
                  >
                      <option value="">ประวัติ STD (โรค)</option>
                      {STD_DISEASE_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
@@ -271,26 +271,26 @@ export const PatientList: React.FC<PatientListProps> = ({ patients, onSelectPati
                 <div className="flex gap-2 flex-wrap">
                     <button 
                         onClick={() => setTptFilter(!tptFilter)}
-                        className={`px-4 py-1.5 text-xs font-bold rounded-full border transition-all ${tptFilter ? 'bg-emerald-100 text-emerald-700 border-emerald-200 shadow-sm' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50 hover:border-slate-300'}`}
+                        className={`px-4 py-1.5 text-xs font-bold rounded-full border transition-all duration-300 ${tptFilter ? 'bg-emerald-100 text-emerald-700 border-emerald-200 shadow-sm scale-105' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50 hover:border-slate-300 hover:scale-105'}`}
                     >
                         {tptFilter ? '✓ TPT' : 'TPT'}
                     </button>
                     <button 
                         onClick={() => setPrepFilter(!prepFilter)}
-                        className={`px-4 py-1.5 text-xs font-bold rounded-full border transition-all ${prepFilter ? 'bg-indigo-100 text-indigo-700 border-indigo-200 shadow-sm' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50 hover:border-slate-300'}`}
+                        className={`px-4 py-1.5 text-xs font-bold rounded-full border transition-all duration-300 ${prepFilter ? 'bg-indigo-100 text-indigo-700 border-indigo-200 shadow-sm scale-105' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50 hover:border-slate-300 hover:scale-105'}`}
                     >
                         {prepFilter ? '✓ PrEP' : 'PrEP'}
                     </button>
                     <button 
                         onClick={() => setPepFilter(!pepFilter)}
-                        className={`px-4 py-1.5 text-xs font-bold rounded-full border transition-all ${pepFilter ? 'bg-purple-100 text-purple-700 border-purple-200 shadow-sm' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50 hover:border-slate-300'}`}
+                        className={`px-4 py-1.5 text-xs font-bold rounded-full border transition-all duration-300 ${pepFilter ? 'bg-purple-100 text-purple-700 border-purple-200 shadow-sm scale-105' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50 hover:border-slate-300 hover:scale-105'}`}
                     >
                         {pepFilter ? '✓ PEP' : 'PEP'}
                     </button>
                 </div>
 
-                <button onClick={resetFilters} className="text-sm font-medium text-red-600 hover:text-red-700 hover:underline px-2 transition-colors">
-                    ล้างตัวกรอง (Reset)
+                <button onClick={resetFilters} className="text-sm font-medium text-red-600 hover:text-red-700 hover:underline px-2 transition-colors flex items-center group">
+                    <span className="group-hover:rotate-180 transition-transform duration-500 mr-1">↺</span> ล้างตัวกรอง (Reset)
                 </button>
             </div>
         </div>
@@ -311,11 +311,15 @@ export const PatientList: React.FC<PatientListProps> = ({ patients, onSelectPati
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {paginatedPatients.length > 0 ? paginatedPatients.map((patient) => {
+              {paginatedPatients.length > 0 ? paginatedPatients.map((patient, index) => {
                 // Use strictly calculated status
                 const calculatedStatus = calculatePatientStatus(patient);
                 return (
-                    <tr key={patient.id} className="bg-white hover:bg-slate-50 transition-colors">
+                    <tr 
+                        key={patient.id} 
+                        className="bg-white hover:bg-slate-50 transition-colors opacity-0 animate-fade-in-up"
+                        style={{ animationDelay: `${index * 50}ms` }}
+                    >
                         <td className="px-6 py-4 font-semibold text-emerald-700">{patient.hn}</td>
                         <td className="px-6 py-4 font-medium text-slate-900">{`${patient.firstName || '-'} ${patient.lastName || ''}`}</td>
                         <td className="px-6 py-4">{calculateAge(patient.dob)}</td>
@@ -331,7 +335,7 @@ export const PatientList: React.FC<PatientListProps> = ({ patients, onSelectPati
                         <td className="px-6 py-4">{getStatusBadge(calculatedStatus)}</td>
                         <td className="px-6 py-4 text-center">
                             <div className="flex items-center justify-center space-x-3">
-                                <button onClick={() => onSelectPatient(patient.id)} className="font-semibold text-emerald-600 hover:text-emerald-800 transition-colors">
+                                <button onClick={() => onSelectPatient(patient.id)} className="font-semibold text-emerald-600 hover:text-emerald-800 transition-all hover:scale-105 active:scale-95">
                                     ดูข้อมูล
                                 </button>
                                 <button 
@@ -341,7 +345,7 @@ export const PatientList: React.FC<PatientListProps> = ({ patients, onSelectPati
                                         e.stopPropagation(); 
                                         onDeletePatient(patient.id); 
                                     }} 
-                                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-all"
+                                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-all hover:rotate-12 active:scale-95"
                                     title="ลบผู้ป่วย"
                                 >
                                     <TrashIcon className="h-4 w-4 pointer-events-none" />
@@ -353,7 +357,7 @@ export const PatientList: React.FC<PatientListProps> = ({ patients, onSelectPati
               }) : (
                   <tr>
                       <td colSpan={8} className="px-6 py-16 text-center text-slate-400 bg-slate-50/30">
-                          <div className="flex flex-col items-center justify-center">
+                          <div className="flex flex-col items-center justify-center animate-pulse">
                               <SearchIcon className="h-10 w-10 text-slate-300 mb-2" />
                               <p>ไม่พบข้อมูลผู้ป่วยที่ตรงกับเงื่อนไข</p>
                           </div>
@@ -373,7 +377,7 @@ export const PatientList: React.FC<PatientListProps> = ({ patients, onSelectPati
                 <button 
                     onClick={() => handlePageChange(currentPage - 1)}
                     disabled={currentPage === 1}
-                    className="p-2 rounded-lg hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-slate-600"
+                    className="p-2 rounded-lg hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-slate-600 hover:-translate-x-1"
                 >
                     <ChevronLeftIcon />
                 </button>
@@ -389,7 +393,7 @@ export const PatientList: React.FC<PatientListProps> = ({ patients, onSelectPati
                          <button 
                             key={pNum}
                             onClick={() => handlePageChange(pNum)}
-                            className={`w-8 h-8 rounded-lg text-sm font-medium transition-all ${currentPage === pNum ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/30' : 'text-slate-600 hover:bg-slate-100'}`}
+                            className={`w-8 h-8 rounded-lg text-sm font-medium transition-all duration-200 ${currentPage === pNum ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/30 scale-110' : 'text-slate-600 hover:bg-slate-100 hover:scale-105'}`}
                         >
                             {pNum}
                         </button>
@@ -399,7 +403,7 @@ export const PatientList: React.FC<PatientListProps> = ({ patients, onSelectPati
                 <button 
                     onClick={() => handlePageChange(currentPage + 1)}
                     disabled={currentPage === totalPages || totalPages === 0}
-                    className="p-2 rounded-lg hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-slate-600"
+                    className="p-2 rounded-lg hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-slate-600 hover:translate-x-1"
                 >
                     <ChevronRightIcon />
                 </button>

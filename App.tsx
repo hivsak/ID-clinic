@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { PatientList } from './components/PatientList';
@@ -282,7 +281,9 @@ const App: React.FC = () => {
         onLogout={handleLogout}
       />
       <main className="pt-16 pb-20 md:pb-0">
-        {renderContent()}
+        <div className="animate-fade-in-up">
+            {renderContent()}
+        </div>
       </main>
     </div>
   );

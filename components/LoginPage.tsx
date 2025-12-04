@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { register } from '../services/authService';
 
@@ -103,14 +102,17 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
 
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 font-sans relative overflow-hidden">
-      {/* Background Decorative Elements */}
+      {/* Background Decorative Elements with Animations */}
       <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-emerald-50 to-slate-100 z-0"></div>
-      <div className="absolute -top-40 -left-40 w-96 h-96 bg-emerald-200/30 rounded-full blur-3xl z-0"></div>
-      <div className="absolute top-1/2 right-0 w-80 h-80 bg-blue-200/20 rounded-full blur-3xl z-0"></div>
+      
+      {/* Animated Blobs */}
+      <div className="absolute top-0 left-0 w-72 h-72 bg-emerald-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
+      <div className="absolute top-0 right-0 w-72 h-72 bg-blue-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
+      <div className="absolute -bottom-8 left-20 w-72 h-72 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000"></div>
 
-      <div className="max-w-md w-full bg-white/80 backdrop-blur-xl p-8 sm:p-10 rounded-3xl shadow-2xl border border-white/50 relative z-10">
+      <div className="max-w-md w-full bg-white/80 backdrop-blur-xl p-8 sm:p-10 rounded-3xl shadow-2xl border border-white/50 relative z-10 transition-all duration-500 ease-in-out hover:shadow-emerald-500/10">
         <div className="text-center mb-8">
-           <div className="mx-auto h-20 w-20 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-2xl shadow-lg flex items-center justify-center transform rotate-3 hover:rotate-0 transition-transform duration-300">
+           <div className="mx-auto h-20 w-20 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-2xl shadow-lg flex items-center justify-center transform hover:rotate-6 hover:scale-110 transition-all duration-300 ease-out">
                 <span className="text-white text-3xl font-bold tracking-tight">ID</span>
            </div>
           <h2 className="mt-6 text-3xl font-extrabold text-slate-800 tracking-tight">
@@ -123,51 +125,51 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
         
         {isRegistering ? (
             // --- REGISTER FORM ---
-            <form className="space-y-5" onSubmit={handleRegisterSubmit}>
+            <form className="space-y-5 animate-fade-in-up" onSubmit={handleRegisterSubmit}>
                 <div className="space-y-4">
-                    <div>
+                    <div className="group">
                         <label htmlFor="regDisplayName" className="sr-only">Name</label>
                         <input
                             id="regDisplayName"
                             type="text"
                             required
-                            className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                            className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all group-hover:border-emerald-300"
                             placeholder="ชื่อ-นามสกุล (Display Name)"
                             value={regDisplayName}
                             onChange={(e) => setRegDisplayName(e.target.value)}
                         />
                     </div>
-                    <div>
+                    <div className="group">
                         <label htmlFor="regUsername" className="sr-only">Username</label>
                         <input
                             id="regUsername"
                             type="text"
                             required
-                            className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                            className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all group-hover:border-emerald-300"
                             placeholder="Username"
                             value={regUsername}
                             onChange={(e) => setRegUsername(e.target.value)}
                         />
                     </div>
-                    <div>
+                    <div className="group">
                         <label htmlFor="regPassword" className="sr-only">Password</label>
                         <input
                             id="regPassword"
                             type="password"
                             required
-                            className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                            className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all group-hover:border-emerald-300"
                             placeholder="Password"
                             value={regPassword}
                             onChange={(e) => setRegPassword(e.target.value)}
                         />
                     </div>
-                    <div>
+                    <div className="group">
                         <label htmlFor="regConfirmPassword" className="sr-only">Confirm Password</label>
                         <input
                             id="regConfirmPassword"
                             type="password"
                             required
-                            className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                            className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all group-hover:border-emerald-300"
                             placeholder="Confirm Password"
                             value={regConfirmPassword}
                             onChange={(e) => setRegConfirmPassword(e.target.value)}
@@ -176,7 +178,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                 </div>
 
                 {error && (
-                    <div className="text-red-600 text-sm text-center bg-red-50 p-3 rounded-xl border border-red-100">
+                    <div className="text-red-600 text-sm text-center bg-red-50 p-3 rounded-xl border border-red-100 animate-pulse">
                         {error}
                     </div>
                 )}
@@ -185,7 +187,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                     <button
                         type="submit"
                         disabled={isLoading}
-                        className={`w-full flex justify-center py-3.5 px-4 border border-transparent text-sm font-semibold rounded-xl text-white shadow-lg shadow-emerald-500/30 ${isLoading ? 'bg-emerald-400 cursor-not-allowed' : 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 transform hover:-translate-y-0.5'} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all duration-200`}
+                        className={`w-full flex justify-center py-3.5 px-4 border border-transparent text-sm font-semibold rounded-xl text-white shadow-lg shadow-emerald-500/30 ${isLoading ? 'bg-emerald-400 cursor-not-allowed' : 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 transform hover:-translate-y-1 hover:shadow-emerald-500/50'} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all duration-300`}
                     >
                         {isLoading ? 'กำลังบันทึก...' : 'ลงทะเบียน'}
                     </button>
@@ -199,29 +201,29 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
             </form>
         ) : (
             // --- LOGIN FORM ---
-            <form className="space-y-6" onSubmit={handleLoginSubmit}>
+            <form className="space-y-6 animate-fade-in-up" onSubmit={handleLoginSubmit}>
                 <div className="space-y-4">
-                    <div>
-                        <label htmlFor="username" className="block text-sm font-medium text-slate-700 mb-1 ml-1">Username</label>
+                    <div className="group">
+                        <label htmlFor="username" className="block text-sm font-medium text-slate-700 mb-1 ml-1 transition-colors group-hover:text-emerald-600">Username</label>
                         <input
                             id="username"
                             name="username"
                             type="text"
                             required
-                            className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                            className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all group-hover:border-emerald-300"
                             placeholder="ระบุชื่อผู้ใช้งาน"
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
                         />
                     </div>
-                    <div>
-                        <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1 ml-1">Password</label>
+                    <div className="group">
+                        <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1 ml-1 transition-colors group-hover:text-emerald-600">Password</label>
                         <input
                             id="password"
                             name="password"
                             type="password"
                             required
-                            className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                            className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all group-hover:border-emerald-300"
                             placeholder="ระบุรหัสผ่าน"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
@@ -230,13 +232,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                 </div>
 
                 {error && (
-                    <div className="text-red-600 text-sm text-center bg-red-50 p-3 rounded-xl border border-red-100">
+                    <div className="text-red-600 text-sm text-center bg-red-50 p-3 rounded-xl border border-red-100 animate-pulse">
                         {error}
                     </div>
                 )}
 
                 {successMsg && (
-                    <div className="text-emerald-700 text-sm text-center bg-emerald-50 p-3 rounded-xl border border-emerald-100">
+                    <div className="text-emerald-700 text-sm text-center bg-emerald-50 p-3 rounded-xl border border-emerald-100 animate-fade-in-up">
                         {successMsg}
                     </div>
                 )}
@@ -245,7 +247,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                     <button
                         type="submit"
                         disabled={isLoading}
-                        className={`w-full flex justify-center py-3.5 px-4 border border-transparent text-sm font-semibold rounded-xl text-white shadow-lg shadow-emerald-500/30 ${isLoading ? 'bg-emerald-400 cursor-not-allowed' : 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 transform hover:-translate-y-0.5'} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all duration-200`}
+                        className={`w-full flex justify-center py-3.5 px-4 border border-transparent text-sm font-semibold rounded-xl text-white shadow-lg shadow-emerald-500/30 ${isLoading ? 'bg-emerald-400 cursor-not-allowed' : 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 transform hover:-translate-y-1 hover:shadow-emerald-500/50'} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all duration-300`}
                     >
                         {isLoading ? (
                             <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -266,7 +268,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
         )}
         
         <div className="text-center mt-8">
-             <p className="text-[10px] text-slate-400 uppercase tracking-widest font-medium">© 2025 ID CLINIC MANAGER by Karpark ▕   V 1.5.1</p>
+             <p className="text-[10px] text-slate-400 uppercase tracking-widest font-medium">© 2025 ID CLINIC MANAGER by Karpark ▕ V 1.5.1</p>
         </div>
       </div>
     </div>

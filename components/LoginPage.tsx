@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { register } from '../services/authService';
 
@@ -105,10 +106,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
       {/* Background Decorative Elements with Animations */}
       <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-emerald-50 to-slate-100 z-0"></div>
       
-      {/* Animated Blobs */}
+      {/* Animated Blobs - Changed to Green Shades */}
       <div className="absolute top-0 left-0 w-72 h-72 bg-emerald-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
-      <div className="absolute top-0 right-0 w-72 h-72 bg-blue-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
-      <div className="absolute -bottom-8 left-20 w-72 h-72 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000"></div>
+      <div className="absolute top-0 right-0 w-72 h-72 bg-emerald-400 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
+      <div className="absolute -bottom-8 left-20 w-72 h-72 bg-emerald-200 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000"></div>
 
       <div className="max-w-md w-full bg-white/80 backdrop-blur-xl p-8 sm:p-10 rounded-3xl shadow-2xl border border-white/50 relative z-10 transition-all duration-500 ease-in-out hover:shadow-emerald-500/10">
         <div className="text-center mb-8">
@@ -268,7 +269,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
         )}
         
         <div className="text-center mt-8">
-             <p className="text-[10px] text-slate-400 uppercase tracking-widest font-medium">© 2025 ID CLINIC MANAGER by Karpark ▕ V 1.5.1</p>
+             <p className="text-[10px] text-slate-400 uppercase tracking-widest font-medium">© 2025 ID CLINIC MANAGER by Karpark ▕ V 1.5.2</p>
         </div>
       </div>
     </div>

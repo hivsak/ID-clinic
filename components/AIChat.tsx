@@ -16,33 +16,59 @@ interface Message {
 }
 
 // Data minimization function to save tokens and privacy
+// Optimized: Removes empty fields and uses compact keys
 const preparePatientDataForAI = (patients: Patient[]) => {
-    return patients.map(p => ({
-        id: p.id,
-        // Demographic
-        sex: p.sex,
-        age: calculateAge(p.dob),
-        status: calculatePatientStatus(p),
-        risk: p.riskBehavior,
-        // Clinical
-        hivDiagnosis: p.medicalHistory.some(e => e.type === MedicalEventType.DIAGNOSIS),
-        arv: p.medicalHistory.filter(e => e.type === MedicalEventType.ART_START || e.type === MedicalEventType.ART_CHANGE).map(e => e.details['สูตรยา'] || e.details['เป็น']),
-        // Specific Infections / Diseases
-        infections: p.medicalHistory
+    return patients.map(p => {
+        const data: any = {
+            id: p.id,
+            s: p.sex, // sex
+            a: calculateAge(p.dob), // age
+            st: calculatePatientStatus(p), // status
+        };
+
+        // Only add fields if they have value/are true to save tokens
+        if (p.riskBehavior) data.r = p.riskBehavior; // risk
+
+        const isHiv = p.medicalHistory.some(e => e.type === MedicalEventType.DIAGNOSIS);
+        if (isHiv) data.hiv = 1;
+
+        const arv = p.medicalHistory
+            .filter(e => e.type === MedicalEventType.ART_START || e.type === MedicalEventType.ART_CHANGE)
+            .map(e => e.details['สูตรยา'] || e.details['เป็น']);
+        if (arv.length > 0) data.arv = arv;
+
+        const infections = p.medicalHistory
             .filter(e => e.type === MedicalEventType.OPPORTUNISTIC_INFECTION)
             .flatMap(e => {
                 const list = e.details.infections || [];
                 if (e.details.โรค) list.push(e.details.โรค);
                 return list;
-            }),
-        tpt: p.medicalHistory.some(e => e.type === MedicalEventType.PROPHYLAXIS && e.details.TPT),
-        stds: p.stdInfo?.records?.flatMap(r => r.diseases) || [],
-        prep: (p.prepInfo?.records || []).length > 0,
-        pep: (p.pepInfo?.records || []).length > 0,
-        hbv: p.hbvInfo?.hbsAgTests?.some(t => t.result === 'Positive'),
-        hcv: p.hcvInfo?.hcvTests?.some(t => t.result === 'Positive'),
-        underlying: p.underlyingDiseases || []
-    }));
+            });
+        if (infections.length > 0) data.oi = infections; // opportunistic infections
+
+        const tpt = p.medicalHistory.some(e => e.type === MedicalEventType.PROPHYLAXIS && e.details.TPT);
+        if (tpt) data.tpt = 1;
+
+        const stds = p.stdInfo?.records?.flatMap(r => r.diseases) || [];
+        if (stds.length > 0) data.std = stds;
+
+        const prep = (p.prepInfo?.records || []).length > 0;
+        if (prep) data.prep = 1;
+
+        const pep = (p.pepInfo?.records || []).length > 0;
+        if (pep) data.pep = 1;
+
+        const hbv = p.hbvInfo?.hbsAgTests?.some(t => t.result === 'Positive');
+        if (hbv) data.hbv = 1;
+
+        const hcv = p.hcvInfo?.hcvTests?.some(t => t.result === 'Positive');
+        if (hcv) data.hcv = 1;
+
+        const underlying = p.underlyingDiseases || [];
+        if (underlying.length > 0) data.dx = underlying; // diagnosis/comorbidities
+
+        return data;
+    });
 };
 
 export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
@@ -114,22 +140,32 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
                 const contextString = JSON.stringify(simplifiedData);
 
                 const systemInstruction = `
-                    You are a helpful and precise Medical Data Analyst for an ID Clinic (Infectious Diseases).
-                    You have access to a JSON dataset of patients.
+                    You are a helpful and precise Medical Data Analyst for an ID Clinic.
+                    You have access to a COMPRESSED JSON dataset of patients.
                     
-                    Your Goal: Answer the user's questions strictly based on the provided dataset.
+                    Field Legend (Missing fields mean 'No' or 'None'):
+                    - i: ID
+                    - s: Sex
+                    - a: Age
+                    - st: Status
+                    - r: Risk Behavior
+                    - hiv: 1 if HIV Positive
+                    - arv: List of ARV regimens
+                    - oi: List of Opportunistic Infections
+                    - tpt: 1 if TPT received
+                    - std: List of STDs
+                    - prep: 1 if history of PrEP
+                    - pep: 1 if history of PEP
+                    - hbv: 1 if HBV Positive
+                    - hcv: 1 if HCV Positive
+                    - dx: Underlying diseases (Comorbidities)
                     
                     Rules:
-                    1. The dataset contains simplified patient records.
-                    2. If the user asks for a count (e.g., "How many..."), calculate it precisely from the data.
-                    3. If the user asks about relationships (e.g., "HIV patients with Syphilis"), filter the data accordingly.
-                    4. Do NOT hallucinate data. If the answer isn't in the data, say so.
-                    5. Answer in Thai (ภาษาไทย) by default, unless the user asks in English.
-                    6. Be concise and professional.
-                    7. Note on Data: 
-                       - 'infections' array contains opportunistic infections like PJP, TB, etc.
-                       - 'stds' array contains sexually transmitted diseases like Syphilis, Gonorrhea.
-                       - 'hivDiagnosis' is boolean.
+                    1. Answer strictly based on the provided dataset.
+                    2. If asked for counts, count precisely.
+                    3. If a field is missing in the JSON object, assume it is FALSE or EMPTY.
+                    4. Answer in Thai (ภาษาไทย) by default.
+                    5. Be concise.
                     
                     Dataset:
                     ${contextString}
@@ -155,7 +191,7 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
             if (error.message) {
                  if (error.message.includes("API Key")) errorMsg = error.message;
                  else if (error.message.includes("401")) errorMsg = "API Key ไม่ถูกต้อง (401 Unauthorized)";
-                 else if (error.message.includes("429")) errorMsg = "⚠️ โควต้าการใช้งานเต็ม (429 Too Many Requests) กรุณารอประมาณ 1 นาทีแล้วลองใหม่ครับ";
+                 else if (error.message.includes("429")) errorMsg = "⚠️ ระบบกำลังประมวลผลข้อมูลจำนวนมาก (Quota Exceeded) กรุณารอ 1 นาทีแล้วกด 'ลองใหม่'";
                  else if (error.message.includes("fetch")) errorMsg = "ปัญหาการเชื่อมต่ออินเทอร์เน็ต";
             }
 

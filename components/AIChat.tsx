@@ -77,6 +77,26 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
         chatSessionRef.current = null; // Clear the session to force recreation with potentially new context
     };
 
+    const getApiKey = () => {
+        // 1. Try strict process.env first
+        try {
+            if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
+                return process.env.API_KEY;
+            }
+        } catch (e) {}
+    
+        // 2. Try Vite standard (for Vercel/Frontend deployments)
+        try {
+            // @ts-ignore
+            if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_KEY) {
+                // @ts-ignore
+                return import.meta.env.VITE_API_KEY;
+            }
+        } catch (e) {}
+        
+        return undefined;
+    };
+
     const handleSend = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!input.trim() || isLoading) return;
@@ -87,9 +107,14 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
         setIsLoading(true);
 
         try {
+            const apiKey = getApiKey();
+            if (!apiKey) {
+                throw new Error("ไม่พบ API Key (กรุณาตั้งค่า VITE_API_KEY ใน Vercel Settings)");
+            }
+
             // Initialize chat session if it doesn't exist
             if (!chatSessionRef.current) {
-                const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+                const ai = new GoogleGenAI({ apiKey });
                 
                 const simplifiedData = preparePatientDataForAI(patients);
                 const contextString = JSON.stringify(simplifiedData);
@@ -129,9 +154,18 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
             
             setMessages(prev => [...prev, { role: 'model', text }]);
 
-        } catch (error) {
+        } catch (error: any) {
             console.error('AI Error:', error);
-            setMessages(prev => [...prev, { role: 'model', text: 'เกิดข้อผิดพลาดในการเชื่อมต่อกับ AI' }]);
+            
+            let errorMsg = 'เกิดข้อผิดพลาดในการเชื่อมต่อกับ AI';
+            if (error.message) {
+                 if (error.message.includes("API Key")) errorMsg = error.message;
+                 else if (error.message.includes("401")) errorMsg = "API Key ไม่ถูกต้อง (401 Unauthorized)";
+                 else if (error.message.includes("429")) errorMsg = "โควต้าการใช้งานเต็ม (429 Too Many Requests)";
+                 else if (error.message.includes("fetch")) errorMsg = "ปัญหาการเชื่อมต่ออินเทอร์เน็ต";
+            }
+
+            setMessages(prev => [...prev, { role: 'model', text: errorMsg }]);
             // Invalidate session on error to be safe
             chatSessionRef.current = null;
         } finally {

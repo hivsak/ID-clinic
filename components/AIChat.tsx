@@ -15,57 +15,68 @@ interface Message {
     isError?: boolean;
 }
 
-// Data minimization function to save tokens and privacy
-// Optimized: Removes empty fields and uses compact keys
+// Aggressive Data Minimization
+// 1. Remove ID (not needed for aggregate stats)
+// 2. Deduplicate lists (send unique set of diseases/meds only)
+// 3. Shortest possible keys
 const preparePatientDataForAI = (patients: Patient[]) => {
     return patients.map(p => {
         const data: any = {
-            id: p.id,
-            s: p.sex, // sex
-            a: calculateAge(p.dob), // age
-            st: calculatePatientStatus(p), // status
+            s: p.sex === 'ชาย' ? 'M' : 'F', // M/F saves tokens over Full string
+            a: calculateAge(p.dob),
+            st: calculatePatientStatus(p),
         };
 
-        // Only add fields if they have value/are true to save tokens
-        if (p.riskBehavior) data.r = p.riskBehavior; // risk
+        // Risk: Shorten common values
+        if (p.riskBehavior) {
+            const r = p.riskBehavior;
+            if (r.includes('MSM')) data.r = 'MSM';
+            else if (r.includes('Hetero')) data.r = 'HET';
+            else data.r = 'OTH';
+        }
 
         const isHiv = p.medicalHistory.some(e => e.type === MedicalEventType.DIAGNOSIS);
         if (isHiv) data.hiv = 1;
 
-        const arv = p.medicalHistory
+        // Get ONLY the latest ARV regimen (Current) instead of history
+        const arvEvents = p.medicalHistory
             .filter(e => e.type === MedicalEventType.ART_START || e.type === MedicalEventType.ART_CHANGE)
-            .map(e => e.details['สูตรยา'] || e.details['เป็น']);
-        if (arv.length > 0) data.arv = arv;
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        
+        if (arvEvents.length > 0) {
+            const currentArv = arvEvents[0].details['สูตรยา'] || arvEvents[0].details['เป็น'];
+            if (currentArv) data.arv = currentArv;
+        }
 
-        const infections = p.medicalHistory
+        // Unique OIs only
+        const infections = new Set<string>();
+        p.medicalHistory
             .filter(e => e.type === MedicalEventType.OPPORTUNISTIC_INFECTION)
-            .flatMap(e => {
+            .forEach(e => {
                 const list = e.details.infections || [];
                 if (e.details.โรค) list.push(e.details.โรค);
-                return list;
+                list.forEach((i: string) => infections.add(i));
             });
-        if (infections.length > 0) data.oi = infections; // opportunistic infections
+        if (infections.size > 0) data.oi = Array.from(infections);
 
         const tpt = p.medicalHistory.some(e => e.type === MedicalEventType.PROPHYLAXIS && e.details.TPT);
         if (tpt) data.tpt = 1;
 
-        const stds = p.stdInfo?.records?.flatMap(r => r.diseases) || [];
-        if (stds.length > 0) data.std = stds;
+        // Unique STDs only
+        const stds = new Set<string>();
+        p.stdInfo?.records?.forEach(r => r.diseases.forEach(d => stds.add(d)));
+        if (stds.size > 0) data.std = Array.from(stds);
 
-        const prep = (p.prepInfo?.records || []).length > 0;
-        if (prep) data.prep = 1;
+        // Simple flags
+        if ((p.prepInfo?.records || []).length > 0) data.prep = 1;
+        if ((p.pepInfo?.records || []).length > 0) data.pep = 1;
+        if (p.hbvInfo?.hbsAgTests?.some(t => t.result === 'Positive')) data.hbv = 1;
+        if (p.hcvInfo?.hcvTests?.some(t => t.result === 'Positive')) data.hcv = 1;
 
-        const pep = (p.pepInfo?.records || []).length > 0;
-        if (pep) data.pep = 1;
-
-        const hbv = p.hbvInfo?.hbsAgTests?.some(t => t.result === 'Positive');
-        if (hbv) data.hbv = 1;
-
-        const hcv = p.hcvInfo?.hcvTests?.some(t => t.result === 'Positive');
-        if (hcv) data.hcv = 1;
-
-        const underlying = p.underlyingDiseases || [];
-        if (underlying.length > 0) data.dx = underlying; // diagnosis/comorbidities
+        // Comorbidities
+        if (p.underlyingDiseases && p.underlyingDiseases.length > 0) {
+            data.dx = p.underlyingDiseases;
+        }
 
         return data;
     });
@@ -78,8 +89,8 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
     ]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [retryStatus, setRetryStatus] = useState('');
     
-    // We use a ref for the chat session so it persists across renders but doesn't trigger re-renders
     const chatSessionRef = useRef<Chat | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -89,30 +100,25 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
 
     useEffect(() => {
         scrollToBottom();
-    }, [messages, isOpen]);
+    }, [messages, isOpen, retryStatus]);
 
-    // If patients data changes, we should invalidate the current chat session 
-    // because the system instruction (data) is now stale.
     useEffect(() => {
         chatSessionRef.current = null;
     }, [patients]);
 
     const handleReset = () => {
         setMessages([
-            { role: 'model', text: 'ระบบถูกรีเซ็ตแล้วครับ ผมพร้อมวิเคราะห์ข้อมูลใหม่ครับ' }
+            { role: 'model', text: 'รีเซ็ตระบบแล้วครับ เริ่มต้นวิเคราะห์ใหม่ได้เลย' }
         ]);
-        chatSessionRef.current = null; // Clear the session to force recreation with potentially new context
+        chatSessionRef.current = null;
     };
 
     const getApiKey = () => {
-        // 1. Try strict process.env first
         try {
             if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
                 return process.env.API_KEY;
             }
         } catch (e) {}
-    
-        // 2. Try Vite standard (for Vercel/Frontend deployments)
         try {
             // @ts-ignore
             if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_KEY) {
@@ -120,87 +126,101 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
                 return import.meta.env.VITE_API_KEY;
             }
         } catch (e) {}
-        
         return undefined;
     };
 
+    const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
     const processMessage = async (userMessage: string) => {
         setIsLoading(true);
-        try {
-            const apiKey = getApiKey();
-            if (!apiKey) {
-                throw new Error("ไม่พบ API Key (กรุณาตั้งค่า VITE_API_KEY ใน Vercel Settings)");
-            }
+        setRetryStatus('');
+        
+        let attempt = 0;
+        const maxRetries = 3;
+        let success = false;
 
-            // Initialize chat session if it doesn't exist
-            if (!chatSessionRef.current) {
-                const ai = new GoogleGenAI({ apiKey });
+        while (attempt < maxRetries && !success) {
+            try {
+                const apiKey = getApiKey();
+                if (!apiKey) {
+                    throw new Error("ไม่พบ API Key (ตรวจสอบ VITE_API_KEY)");
+                }
+
+                if (!chatSessionRef.current) {
+                    const ai = new GoogleGenAI({ apiKey });
+                    const simplifiedData = preparePatientDataForAI(patients);
+                    const contextString = JSON.stringify(simplifiedData);
+
+                    const systemInstruction = `
+                        Role: Medical Data Analyst for an ID Clinic.
+                        Data: JSON List of patients (Compressed).
+                        
+                        Keys:
+                        - s: Sex (M/F)
+                        - a: Age
+                        - st: Status
+                        - r: Risk (MSM, HET, OTH)
+                        - hiv: 1=Positive
+                        - arv: Current ARV Regimen
+                        - oi: List of Opportunistic Infections history
+                        - tpt: 1=Received TPT
+                        - std: List of STD history
+                        - prep: 1=History of PrEP
+                        - pep: 1=History of PEP
+                        - hbv: 1=HBV Positive
+                        - hcv: 1=HCV Positive
+                        - dx: Comorbidities
+                        
+                        Tasks:
+                        1. Count EXACTLY based on the data.
+                        2. If asking for specific diseases (e.g. Syphilis), check the 'std' array.
+                        3. If asking for coinfections, check multiple fields (e.g. hiv=1 AND hbv=1).
+                        4. Reply in Thai.
+                        
+                        Data: ${contextString}
+                    `;
+
+                    chatSessionRef.current = ai.chats.create({
+                        model: 'gemini-2.5-flash',
+                        config: { systemInstruction }
+                    });
+                }
+
+                const response = await chatSessionRef.current.sendMessage({ message: userMessage });
+                const text = response.text || 'ไม่สามารถประมวลผลได้';
                 
-                const simplifiedData = preparePatientDataForAI(patients);
-                const contextString = JSON.stringify(simplifiedData);
+                setMessages(prev => [...prev, { role: 'model', text }]);
+                success = true;
 
-                const systemInstruction = `
-                    You are a helpful and precise Medical Data Analyst for an ID Clinic.
-                    You have access to a COMPRESSED JSON dataset of patients.
-                    
-                    Field Legend (Missing fields mean 'No' or 'None'):
-                    - i: ID
-                    - s: Sex
-                    - a: Age
-                    - st: Status
-                    - r: Risk Behavior
-                    - hiv: 1 if HIV Positive
-                    - arv: List of ARV regimens
-                    - oi: List of Opportunistic Infections
-                    - tpt: 1 if TPT received
-                    - std: List of STDs
-                    - prep: 1 if history of PrEP
-                    - pep: 1 if history of PEP
-                    - hbv: 1 if HBV Positive
-                    - hcv: 1 if HCV Positive
-                    - dx: Underlying diseases (Comorbidities)
-                    
-                    Rules:
-                    1. Answer strictly based on the provided dataset.
-                    2. If asked for counts, count precisely.
-                    3. If a field is missing in the JSON object, assume it is FALSE or EMPTY.
-                    4. Answer in Thai (ภาษาไทย) by default.
-                    5. Be concise.
-                    
-                    Dataset:
-                    ${contextString}
-                `;
-
-                chatSessionRef.current = ai.chats.create({
-                    model: 'gemini-2.5-flash',
-                    config: {
-                        systemInstruction: systemInstruction,
+            } catch (error: any) {
+                console.error(`AI Error (Attempt ${attempt + 1}):`, error);
+                
+                const isRateLimit = error.message?.includes('429') || error.message?.includes('quota');
+                
+                if (isRateLimit && attempt < maxRetries - 1) {
+                    const waitTime = (attempt + 1) * 3000; // 3s, 6s, 9s
+                    setRetryStatus(`ระบบกำลังยุ่ง (429)... กำลังลองใหม่ใน ${waitTime/1000} วินาที...`);
+                    await delay(waitTime);
+                    attempt++;
+                } else {
+                    let errorMsg = 'เกิดข้อผิดพลาดในการเชื่อมต่อ';
+                    if (isRateLimit) {
+                        errorMsg = "⚠️ โควต้าเต็ม (429) - กรุณารอ 1 นาทีแล้วกดปุ่ม 'ลองใหม่' หรือลดจำนวนข้อมูลลง";
+                    } else if (error.message?.includes("401")) {
+                        errorMsg = "API Key ไม่ถูกต้อง";
+                    } else if (error.message?.includes("fetch")) {
+                        errorMsg = "ปัญหาการเชื่อมต่ออินเทอร์เน็ต";
                     }
-                });
+
+                    setMessages(prev => [...prev, { role: 'model', text: errorMsg, isError: true }]);
+                    chatSessionRef.current = null; // Reset session on fatal error
+                    break; // Exit loop
+                }
             }
-
-            const response = await chatSessionRef.current.sendMessage({ message: userMessage });
-            const text = response.text || 'ขออภัย ไม่สามารถประมวลผลได้ในขณะนี้';
-            
-            setMessages(prev => [...prev, { role: 'model', text }]);
-
-        } catch (error: any) {
-            console.error('AI Error:', error);
-            
-            let errorMsg = 'เกิดข้อผิดพลาดในการเชื่อมต่อกับ AI';
-            if (error.message) {
-                 if (error.message.includes("API Key")) errorMsg = error.message;
-                 else if (error.message.includes("401")) errorMsg = "API Key ไม่ถูกต้อง (401 Unauthorized)";
-                 else if (error.message.includes("429")) errorMsg = "⚠️ ระบบกำลังประมวลผลข้อมูลจำนวนมาก (Quota Exceeded) กรุณารอ 1 นาทีแล้วกด 'ลองใหม่'";
-                 else if (error.message.includes("fetch")) errorMsg = "ปัญหาการเชื่อมต่ออินเทอร์เน็ต";
-            }
-
-            setMessages(prev => [...prev, { role: 'model', text: errorMsg, isError: true }]);
-            // Invalidate session on error to be safe
-            chatSessionRef.current = null;
-        } finally {
-            setIsLoading(false);
         }
+        
+        setRetryStatus('');
+        setIsLoading(false);
     };
 
     const handleSend = async (e: React.FormEvent) => {
@@ -215,19 +235,15 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
     };
 
     const handleRetry = (index: number) => {
-        // Find the previous user message (which should be at index - 1)
         const previousUserMsg = messages[index - 1];
         if (previousUserMsg && previousUserMsg.role === 'user') {
-            // Remove the error message
             setMessages(prev => prev.filter((_, i) => i !== index));
-            // Retry processing
             processMessage(previousUserMsg.text);
         }
     };
 
     return (
         <>
-            {/* Floating Button */}
             {!isOpen && (
                 <button
                     onClick={() => setIsOpen(true)}
@@ -238,10 +254,8 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
                 </button>
             )}
 
-            {/* Chat Window */}
             {isOpen && (
                 <div className="fixed bottom-6 right-6 z-50 w-full max-w-sm md:max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col h-[500px] animate-fade-in-up">
-                    {/* Header */}
                     <div className="bg-gradient-to-r from-emerald-600 to-teal-600 p-4 flex justify-between items-center text-white">
                         <div className="flex items-center gap-2">
                             <div className="p-1.5 bg-white/20 rounded-lg backdrop-blur-sm">
@@ -249,14 +263,16 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
                             </div>
                             <div>
                                 <h3 className="font-bold text-sm">AI Analyst</h3>
-                                <p className="text-[10px] opacity-80">Powered by Gemini 2.5 Flash</p>
+                                <p className="text-[10px] opacity-80">
+                                    {patients.length} records loaded
+                                </p>
                             </div>
                         </div>
                         <div className="flex items-center gap-1">
                             <button 
                                 onClick={handleReset} 
                                 className="hover:bg-white/20 p-1.5 rounded-full transition-colors text-white/90 hover:text-white"
-                                title="Reset / Clear History"
+                                title="Reset Context"
                             >
                                 <RefreshIcon className="w-4 h-4" />
                             </button>
@@ -269,7 +285,6 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
                         </div>
                     </div>
 
-                    {/* Messages Area */}
                     <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50">
                         {messages.map((msg, idx) => (
                             <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -294,25 +309,29 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
                             </div>
                         ))}
                         {isLoading && (
-                            <div className="flex justify-start">
-                                <div className="bg-white px-4 py-3 rounded-2xl rounded-bl-none border border-slate-100 shadow-sm flex items-center gap-2">
-                                    <span className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce"></span>
-                                    <span className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce delay-75"></span>
-                                    <span className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce delay-150"></span>
+                            <div className="flex justify-start w-full">
+                                <div className="bg-white px-4 py-3 rounded-2xl rounded-bl-none border border-slate-100 shadow-sm flex items-center gap-3">
+                                    <div className="flex gap-1">
+                                        <span className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce"></span>
+                                        <span className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce delay-75"></span>
+                                        <span className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce delay-150"></span>
+                                    </div>
+                                    {retryStatus && (
+                                        <span className="text-xs text-amber-600 font-medium animate-pulse">{retryStatus}</span>
+                                    )}
                                 </div>
                             </div>
                         )}
                         <div ref={messagesEndRef} />
                     </div>
 
-                    {/* Input Area */}
                     <form onSubmit={handleSend} className="p-3 bg-white border-t border-slate-100">
                         <div className="relative flex items-center">
                             <input
                                 type="text"
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
-                                placeholder="ถามข้อมูล... (เช่น คนไข้ HIV ที่มี Syphilis มีกี่คน)"
+                                placeholder="ถามข้อมูล..."
                                 className="w-full pl-4 pr-12 py-3 bg-slate-100 border-transparent focus:bg-white focus:border-emerald-500 focus:ring-0 rounded-xl text-sm transition-all"
                                 disabled={isLoading}
                             />

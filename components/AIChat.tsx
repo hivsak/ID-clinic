@@ -12,6 +12,7 @@ interface AIChatProps {
 interface Message {
     role: 'user' | 'model';
     text: string;
+    isError?: boolean;
 }
 
 // Data minimization function to save tokens and privacy
@@ -161,11 +162,11 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
             if (error.message) {
                  if (error.message.includes("API Key")) errorMsg = error.message;
                  else if (error.message.includes("401")) errorMsg = "API Key ไม่ถูกต้อง (401 Unauthorized)";
-                 else if (error.message.includes("429")) errorMsg = "โควต้าการใช้งานเต็ม (429 Too Many Requests)";
+                 else if (error.message.includes("429")) errorMsg = "⚠️ โควต้าการใช้งานเต็ม (429 Too Many Requests) กรุณารอสักครู่แล้วลองใหม่";
                  else if (error.message.includes("fetch")) errorMsg = "ปัญหาการเชื่อมต่ออินเทอร์เน็ต";
             }
 
-            setMessages(prev => [...prev, { role: 'model', text: errorMsg }]);
+            setMessages(prev => [...prev, { role: 'model', text: errorMsg, isError: true }]);
             // Invalidate session on error to be safe
             chatSessionRef.current = null;
         } finally {
@@ -224,7 +225,9 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
                                 <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed shadow-sm ${
                                     msg.role === 'user' 
                                     ? 'bg-emerald-600 text-white rounded-br-none' 
-                                    : 'bg-white text-slate-700 border border-slate-100 rounded-bl-none'
+                                    : msg.isError 
+                                        ? 'bg-red-50 text-red-600 border border-red-200 rounded-bl-none'
+                                        : 'bg-white text-slate-700 border border-slate-100 rounded-bl-none'
                                 }`}>
                                     {msg.text}
                                 </div>

@@ -98,15 +98,8 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
         return undefined;
     };
 
-    const handleSend = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!input.trim() || isLoading) return;
-
-        const userMessage = input.trim();
-        setInput('');
-        setMessages(prev => [...prev, { role: 'user', text: userMessage }]);
+    const processMessage = async (userMessage: string) => {
         setIsLoading(true);
-
         try {
             const apiKey = getApiKey();
             if (!apiKey) {
@@ -162,7 +155,7 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
             if (error.message) {
                  if (error.message.includes("API Key")) errorMsg = error.message;
                  else if (error.message.includes("401")) errorMsg = "API Key ไม่ถูกต้อง (401 Unauthorized)";
-                 else if (error.message.includes("429")) errorMsg = "⚠️ โควต้าการใช้งานเต็ม (429 Too Many Requests) กรุณารอสักครู่แล้วลองใหม่";
+                 else if (error.message.includes("429")) errorMsg = "⚠️ โควต้าการใช้งานเต็ม (429 Too Many Requests) กรุณารอประมาณ 1 นาทีแล้วลองใหม่ครับ";
                  else if (error.message.includes("fetch")) errorMsg = "ปัญหาการเชื่อมต่ออินเทอร์เน็ต";
             }
 
@@ -171,6 +164,28 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
             chatSessionRef.current = null;
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handleSend = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!input.trim() || isLoading) return;
+
+        const userMessage = input.trim();
+        setInput('');
+        setMessages(prev => [...prev, { role: 'user', text: userMessage }]);
+        
+        await processMessage(userMessage);
+    };
+
+    const handleRetry = (index: number) => {
+        // Find the previous user message (which should be at index - 1)
+        const previousUserMsg = messages[index - 1];
+        if (previousUserMsg && previousUserMsg.role === 'user') {
+            // Remove the error message
+            setMessages(prev => prev.filter((_, i) => i !== index));
+            // Retry processing
+            processMessage(previousUserMsg.text);
         }
     };
 
@@ -222,14 +237,23 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
                     <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50">
                         {messages.map((msg, idx) => (
                             <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed shadow-sm ${
+                                <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed shadow-sm flex flex-col ${
                                     msg.role === 'user' 
                                     ? 'bg-emerald-600 text-white rounded-br-none' 
                                     : msg.isError 
                                         ? 'bg-red-50 text-red-600 border border-red-200 rounded-bl-none'
                                         : 'bg-white text-slate-700 border border-slate-100 rounded-bl-none'
                                 }`}>
-                                    {msg.text}
+                                    <span>{msg.text}</span>
+                                    {msg.isError && (
+                                        <button 
+                                            onClick={() => handleRetry(idx)}
+                                            className="mt-2 self-start px-3 py-1 bg-red-100 text-red-700 text-xs font-bold rounded-lg hover:bg-red-200 transition-colors flex items-center gap-1"
+                                        >
+                                            <RefreshIcon className="w-3 h-3" />
+                                            ลองใหม่
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         ))}

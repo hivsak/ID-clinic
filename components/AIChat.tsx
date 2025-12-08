@@ -141,8 +141,8 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
     };
 
     const getSystemApiKey = () => {
-        // Priority 1: User's manual custom key from localStorage
-        if (customKey && customKey.trim().length > 0) return customKey.trim();
+        // Priority 1: User's manual custom key from localStorage (ONLY if explicitly set)
+        if (customKey && customKey.trim().length > 5) return customKey.trim();
         
         // Priority 2: Hardcoded Key (User Request)
         return HARDCODED_KEY;
@@ -162,6 +162,11 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
             try {
                 const apiKey = getSystemApiKey();
                 
+                // Safety check
+                if (!apiKey || apiKey.includes('placeholder')) {
+                    throw new Error("API Key is missing or invalid.");
+                }
+
                 if (!chatSessionRef.current) {
                     const ai = new GoogleGenAI({ apiKey });
                     const simplifiedData = preparePatientDataForAI(patients);
@@ -219,15 +224,18 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
                     await delay(waitTime);
                     attempt++;
                 } else {
-                    let friendlyMsg = 'เกิดข้อผิดพลาดในการเชื่อมต่อ';
+                    let friendlyMsg = '';
+                    
                     if (isRateLimit) {
-                        friendlyMsg = `⚠️ โควต้าเต็ม (429) หรือข้อมูลเยอะเกินไปสำหรับการใช้งานฟรี\nกรุณารอ 1 นาที แล้วลองใหม่`;
-                    } else if (errorMsgStr.includes("401") || errorMsgStr.includes("API key not valid")) {
-                        friendlyMsg = "⚠️ API Key ไม่ถูกต้อง";
+                        friendlyMsg = `⚠️ **โควต้าเต็ม (429)**\nระบบ Google Free Tier รับข้อมูลจำนวนมากพร้อมกันไม่ไหว กรุณารอสักครู่แล้วกดลองใหม่`;
+                    } else if (errorMsgStr.includes("403") || errorMsgStr.includes("permission")) {
+                        friendlyMsg = `⚠️ **Access Denied (403)**\nAPI Key นี้อาจถูกจำกัดโดเมนไว้ (Referrer Restriction) ทำให้ใช้งานบนเว็บนี้ไม่ได้\n\nError: ${errorMsgStr}`;
+                    } else if (errorMsgStr.includes("400") || errorMsgStr.includes("INVALID_ARGUMENT")) {
+                        friendlyMsg = `⚠️ **Bad Request (400)**\nข้อมูลที่ส่งไปอาจมีรูปแบบผิดพลาด หรือ API Key ผิด\n\nError: ${errorMsgStr}`;
                     } else if (errorMsgStr.includes("fetch") || errorMsgStr.includes("Network")) {
-                        friendlyMsg = "⚠️ ปัญหาการเชื่อมต่ออินเทอร์เน็ต (Network Error)";
+                        friendlyMsg = `⚠️ **Connection Error**\nไม่สามารถเชื่อมต่อ Google API ได้ กรุณาเช็คอินเทอร์เน็ต\n\nError: ${errorMsgStr}`;
                     } else {
-                        friendlyMsg = `⚠️ Error: ${errorMsgStr.substring(0, 100)}...`;
+                        friendlyMsg = `⚠️ **Error**\n${errorMsgStr}`;
                     }
 
                     setMessages(prev => [...prev, { role: 'model', text: friendlyMsg, isError: true }]);
@@ -261,19 +269,27 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
     };
 
     const handleSaveKey = () => {
+        if (!tempCustomKey.trim()) {
+            handleClearKey();
+            return;
+        }
         localStorage.setItem('ID_CLINIC_AI_KEY', tempCustomKey.trim());
         setCustomKey(tempCustomKey.trim());
         // Reset chat to force new connection with new key
         chatSessionRef.current = null;
         setView('chat');
-        setMessages(prev => [...prev, { role: 'model', text: 'บันทึก API Key ใหม่แล้ว พร้อมใช้งานครับ' }]);
+        setMessages(prev => [...prev, { role: 'model', text: 'บันทึก Custom API Key แล้ว (ระบบจะใช้คีย์นี้แทนคีย์หลัก)' }]);
     };
 
     const handleClearKey = () => {
         localStorage.removeItem('ID_CLINIC_AI_KEY');
         setCustomKey('');
         setTempCustomKey('');
+        chatSessionRef.current = null;
+        setMessages(prev => [...prev, { role: 'model', text: 'ลบ Custom Key แล้ว ระบบกลับมาใช้ Default API Key (AIza...)' }]);
     };
+
+    const usingKeyType = customKey && customKey.length > 5 ? 'Custom (LocalStorage)' : 'Default (Hardcoded)';
 
     return (
         <>
@@ -299,12 +315,12 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
                             <div>
                                 <h3 className="font-bold text-sm flex items-center gap-2">
                                     AI Analyst
-                                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-500/20 text-green-100">
-                                        READY
+                                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${isLoading ? 'bg-amber-400/80 text-amber-900 animate-pulse' : 'bg-green-500/20 text-green-100'}`}>
+                                        {isLoading ? 'THINKING' : 'READY'}
                                     </span>
                                 </h3>
                                 <p className="text-[10px] opacity-80">
-                                    Gemini 2.5 Flash (Full Data)
+                                    Gemini 2.5 Flash
                                 </p>
                             </div>
                         </div>
@@ -349,28 +365,25 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
                             <h4 className="font-bold text-slate-800 mb-4">ตั้งค่าการเชื่อมต่อ AI</h4>
                             
                             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-4">
-                                <p className="text-xs font-semibold text-slate-500 uppercase mb-2">System API Key</p>
+                                <p className="text-xs font-semibold text-slate-500 uppercase mb-2">สถานะปัจจุบัน</p>
                                 <div className="flex items-center justify-between">
-                                    <span className="text-sm text-slate-700">Hardcoded Key</span>
-                                    <span className="text-xs px-2 py-1 rounded-full font-bold bg-green-100 text-green-700">
+                                    <span className="text-sm text-slate-700 font-medium">{usingKeyType}</span>
+                                    <span className="text-xs px-2 py-1 rounded-full font-bold bg-blue-100 text-blue-700">
                                         ACTIVE
                                     </span>
                                 </div>
-                                <p className="text-[10px] text-slate-400 mt-1">
-                                    ระบบใช้คีย์ที่ท่านระบุใน Source Code โดยตรง
-                                </p>
                             </div>
 
                             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                                <p className="text-xs font-semibold text-slate-500 uppercase mb-2">Override Key (Optional)</p>
+                                <p className="text-xs font-semibold text-slate-500 uppercase mb-2">Custom API Key</p>
                                 <p className="text-xs text-slate-600 mb-3">
-                                    ถ้าต้องการใช้คีย์ส่วนตัวอื่นแทนคีย์หลัก ใส่ได้ที่นี่
+                                    ใส่คีย์ที่นี่หากต้องการใช้คีย์ส่วนตัว หรือถ้าคีย์หลักมีปัญหา (กดถังขยะเพื่อล้างค่าและกลับไปใช้คีย์หลัก)
                                 </p>
                                 <input 
                                     type="password"
                                     value={tempCustomKey}
                                     onChange={(e) => setTempCustomKey(e.target.value)}
-                                    placeholder="วาง API Key ที่นี่ (AIza...)"
+                                    placeholder="AIza..."
                                     className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                                 />
                                 <div className="flex gap-2">
@@ -378,17 +391,15 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
                                         onClick={handleSaveKey}
                                         className="flex-1 bg-emerald-600 text-white py-2 rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors"
                                     >
-                                        บันทึก (Save)
+                                        บันทึก (Use This)
                                     </button>
-                                    {customKey && (
-                                        <button 
-                                            onClick={handleClearKey}
-                                            className="px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors"
-                                            title="Clear Key"
-                                        >
-                                            <TrashIcon className="w-4 h-4" />
-                                        </button>
-                                    )}
+                                    <button 
+                                        onClick={handleClearKey}
+                                        className="px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors"
+                                        title="Clear & Use Default"
+                                    >
+                                        <TrashIcon className="w-4 h-4" />
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -405,15 +416,22 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
                                                 ? 'bg-red-50 text-red-600 border border-red-200 rounded-bl-none'
                                                 : 'bg-white text-slate-700 border border-slate-100 rounded-bl-none'
                                         }`}>
+                                            {/* Render Error messages with line breaks nicely */}
                                             <span className="whitespace-pre-wrap">{msg.text}</span>
                                             {msg.isError && (
-                                                <div className="flex gap-2 mt-2">
+                                                <div className="flex gap-2 mt-2 pt-2 border-t border-red-200/50">
                                                     <button 
                                                         onClick={() => handleRetry(idx)}
-                                                        className="self-start px-3 py-1 bg-red-100 text-red-700 text-xs font-bold rounded-lg hover:bg-red-200 transition-colors flex items-center gap-1"
+                                                        className="self-start px-3 py-1 bg-white border border-red-200 text-red-700 text-xs font-bold rounded-lg hover:bg-red-50 transition-colors flex items-center gap-1 shadow-sm"
                                                     >
                                                         <RefreshIcon className="w-3 h-3" />
                                                         ลองใหม่
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => setView('settings')}
+                                                        className="self-start px-3 py-1 bg-white border border-slate-200 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-50 transition-colors shadow-sm"
+                                                    >
+                                                        ตั้งค่า Key
                                                     </button>
                                                 </div>
                                             )}

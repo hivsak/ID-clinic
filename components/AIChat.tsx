@@ -15,19 +15,26 @@ interface Message {
     isError?: boolean;
 }
 
-// Aggressive Data Minimization
-// 1. Remove ID (not needed for aggregate stats)
-// 2. Deduplicate lists (send unique set of diseases/meds only)
-// 3. Shortest possible keys
+// Optimization: Limit the number of records sent to AI to prevent Token Limit (429) errors on Free Tier.
+const MAX_PATIENTS_CONTEXT = 100;
+
 const preparePatientDataForAI = (patients: Patient[]) => {
-    return patients.map(p => {
+    // Sort by updated date (newest first) and take the top N
+    const slicedPatients = [...patients]
+        .sort((a, b) => {
+            const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+            const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+            return dateB - dateA;
+        })
+        .slice(0, MAX_PATIENTS_CONTEXT);
+
+    return slicedPatients.map(p => {
         const data: any = {
-            s: p.sex === 'ชาย' ? 'M' : 'F', // M/F saves tokens over Full string
+            s: p.sex === 'ชาย' ? 'M' : 'F',
             a: calculateAge(p.dob),
             st: calculatePatientStatus(p),
         };
 
-        // Risk: Shorten common values
         if (p.riskBehavior) {
             const r = p.riskBehavior;
             if (r.includes('MSM')) data.r = 'MSM';
@@ -38,7 +45,7 @@ const preparePatientDataForAI = (patients: Patient[]) => {
         const isHiv = p.medicalHistory.some(e => e.type === MedicalEventType.DIAGNOSIS);
         if (isHiv) data.hiv = 1;
 
-        // Get ONLY the latest ARV regimen (Current) instead of history
+        // Current ARV
         const arvEvents = p.medicalHistory
             .filter(e => e.type === MedicalEventType.ART_START || e.type === MedicalEventType.ART_CHANGE)
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -48,7 +55,7 @@ const preparePatientDataForAI = (patients: Patient[]) => {
             if (currentArv) data.arv = currentArv;
         }
 
-        // Unique OIs only
+        // OIs
         const infections = new Set<string>();
         p.medicalHistory
             .filter(e => e.type === MedicalEventType.OPPORTUNISTIC_INFECTION)
@@ -62,18 +69,16 @@ const preparePatientDataForAI = (patients: Patient[]) => {
         const tpt = p.medicalHistory.some(e => e.type === MedicalEventType.PROPHYLAXIS && e.details.TPT);
         if (tpt) data.tpt = 1;
 
-        // Unique STDs only
+        // STDs
         const stds = new Set<string>();
         p.stdInfo?.records?.forEach(r => r.diseases.forEach(d => stds.add(d)));
         if (stds.size > 0) data.std = Array.from(stds);
 
-        // Simple flags
         if ((p.prepInfo?.records || []).length > 0) data.prep = 1;
         if ((p.pepInfo?.records || []).length > 0) data.pep = 1;
         if (p.hbvInfo?.hbsAgTests?.some(t => t.result === 'Positive')) data.hbv = 1;
         if (p.hcvInfo?.hcvTests?.some(t => t.result === 'Positive')) data.hcv = 1;
 
-        // Comorbidities
         if (p.underlyingDiseases && p.underlyingDiseases.length > 0) {
             data.dx = p.underlyingDiseases;
         }
@@ -90,9 +95,16 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [retryStatus, setRetryStatus] = useState('');
+    const [apiKeyDetected, setApiKeyDetected] = useState<boolean>(false);
     
     const chatSessionRef = useRef<Chat | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+
+    // Check for API Key presence
+    useEffect(() => {
+        const key = getApiKey();
+        setApiKeyDetected(!!key && key.length > 10);
+    }, []);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -103,6 +115,7 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
     }, [messages, isOpen, retryStatus]);
 
     useEffect(() => {
+        // Reset chat when patient list changes significantly or component remounts
         chatSessionRef.current = null;
     }, [patients]);
 
@@ -111,6 +124,7 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
             { role: 'model', text: 'รีเซ็ตระบบแล้วครับ เริ่มต้นวิเคราะห์ใหม่ได้เลย' }
         ]);
         chatSessionRef.current = null;
+        setRetryStatus('');
     };
 
     const getApiKey = () => {
@@ -136,14 +150,14 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
         setRetryStatus('');
         
         let attempt = 0;
-        const maxRetries = 3;
+        const maxRetries = 2; // Reduced retries to fail faster and show error
         let success = false;
 
         while (attempt < maxRetries && !success) {
             try {
                 const apiKey = getApiKey();
                 if (!apiKey) {
-                    throw new Error("ไม่พบ API Key (ตรวจสอบ VITE_API_KEY)");
+                    throw new Error("API Key Missing. Please check your Vercel/Environment settings (VITE_API_KEY).");
                 }
 
                 if (!chatSessionRef.current) {
@@ -153,31 +167,30 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
 
                     const systemInstruction = `
                         Role: Medical Data Analyst for an ID Clinic.
-                        Data: JSON List of patients (Compressed).
+                        Current Context: Analyzing the latest ${simplifiedData.length} active patient records (limited for performance).
                         
-                        Keys:
+                        Data Keys:
                         - s: Sex (M/F)
                         - a: Age
                         - st: Status
-                        - r: Risk (MSM, HET, OTH)
+                        - r: Risk
                         - hiv: 1=Positive
-                        - arv: Current ARV Regimen
-                        - oi: List of Opportunistic Infections history
+                        - arv: Regimen
+                        - oi: Opportunistic Infections
                         - tpt: 1=Received TPT
-                        - std: List of STD history
-                        - prep: 1=History of PrEP
-                        - pep: 1=History of PEP
+                        - std: STDs
+                        - prep: 1=PrEP History
+                        - pep: 1=PEP History
                         - hbv: 1=HBV Positive
                         - hcv: 1=HCV Positive
                         - dx: Comorbidities
                         
                         Tasks:
-                        1. Count EXACTLY based on the data.
-                        2. If asking for specific diseases (e.g. Syphilis), check the 'std' array.
-                        3. If asking for coinfections, check multiple fields (e.g. hiv=1 AND hbv=1).
-                        4. Reply in Thai.
+                        1. Count based on the data provided.
+                        2. If asking about a specific condition, filter strictly.
+                        3. Reply in Thai. concise and professional.
                         
-                        Data: ${contextString}
+                        Dataset: ${contextString}
                     `;
 
                     chatSessionRef.current = ai.chats.create({
@@ -187,7 +200,7 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
                 }
 
                 const response = await chatSessionRef.current.sendMessage({ message: userMessage });
-                const text = response.text || 'ไม่สามารถประมวลผลได้';
+                const text = response.text || 'ไม่สามารถประมวลผลได้ (Empty Response)';
                 
                 setMessages(prev => [...prev, { role: 'model', text }]);
                 success = true;
@@ -195,26 +208,29 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
             } catch (error: any) {
                 console.error(`AI Error (Attempt ${attempt + 1}):`, error);
                 
-                const isRateLimit = error.message?.includes('429') || error.message?.includes('quota');
+                const errorMsgStr = error.message || JSON.stringify(error);
+                const isRateLimit = errorMsgStr.includes('429') || errorMsgStr.includes('quota') || errorMsgStr.includes('Resource has been exhausted');
                 
                 if (isRateLimit && attempt < maxRetries - 1) {
-                    const waitTime = (attempt + 1) * 3000; // 3s, 6s, 9s
-                    setRetryStatus(`ระบบกำลังยุ่ง (429)... กำลังลองใหม่ใน ${waitTime/1000} วินาที...`);
+                    const waitTime = 4000;
+                    setRetryStatus(`ระบบกำลังยุ่ง (429/Quota)... กำลังลองใหม่ใน ${waitTime/1000} วินาที...`);
                     await delay(waitTime);
                     attempt++;
                 } else {
-                    let errorMsg = 'เกิดข้อผิดพลาดในการเชื่อมต่อ';
+                    let friendlyMsg = 'เกิดข้อผิดพลาดในการเชื่อมต่อ';
                     if (isRateLimit) {
-                        errorMsg = "⚠️ โควต้าเต็ม (429) - กรุณารอ 1 นาทีแล้วกดปุ่ม 'ลองใหม่' หรือลดจำนวนข้อมูลลง";
-                    } else if (error.message?.includes("401")) {
-                        errorMsg = "API Key ไม่ถูกต้อง";
-                    } else if (error.message?.includes("fetch")) {
-                        errorMsg = "ปัญหาการเชื่อมต่ออินเทอร์เน็ต";
+                        friendlyMsg = `⚠️ โควต้าเต็ม (429) หรือข้อมูลเยอะเกินไป\nระบบได้จำกัดข้อมูลเหลือ ${MAX_PATIENTS_CONTEXT} คนล่าสุดแล้ว แต่ยังไม่ผ่าน กรุณารอ 1 นาที`;
+                    } else if (errorMsgStr.includes("401") || errorMsgStr.includes("API key not valid")) {
+                        friendlyMsg = "⚠️ API Key ไม่ถูกต้อง หรือยังไม่ได้ตั้งค่าใน Vercel";
+                    } else if (errorMsgStr.includes("fetch") || errorMsgStr.includes("Network")) {
+                        friendlyMsg = "⚠️ ปัญหาการเชื่อมต่ออินเทอร์เน็ต (Network Error)";
+                    } else {
+                        friendlyMsg = `⚠️ Error: ${errorMsgStr.substring(0, 100)}...`;
                     }
 
-                    setMessages(prev => [...prev, { role: 'model', text: errorMsg, isError: true }]);
-                    chatSessionRef.current = null; // Reset session on fatal error
-                    break; // Exit loop
+                    setMessages(prev => [...prev, { role: 'model', text: friendlyMsg, isError: true }]);
+                    chatSessionRef.current = null; // Reset session
+                    break;
                 }
             }
         }
@@ -251,6 +267,8 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
                     title="AI Data Analyst"
                 >
                     <SparklesIcon className="w-6 h-6 group-hover:rotate-12 transition-transform" />
+                    {/* Status Indicator Dot on Button */}
+                    <span className={`absolute top-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-white ${apiKeyDetected ? 'bg-green-400' : 'bg-red-500 animate-pulse'}`}></span>
                 </button>
             )}
 
@@ -262,9 +280,15 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
                                 <SparklesIcon className="w-5 h-5" />
                             </div>
                             <div>
-                                <h3 className="font-bold text-sm">AI Analyst</h3>
+                                <h3 className="font-bold text-sm flex items-center gap-2">
+                                    AI Analyst
+                                    {/* Connection Status Label */}
+                                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${apiKeyDetected ? 'bg-green-500/20 text-green-100' : 'bg-red-500/20 text-red-100'}`}>
+                                        {apiKeyDetected ? 'ONLINE' : 'NO KEY'}
+                                    </span>
+                                </h3>
                                 <p className="text-[10px] opacity-80">
-                                    {patients.length} records loaded
+                                    Analyzing top {Math.min(patients.length, MAX_PATIENTS_CONTEXT)} records
                                 </p>
                             </div>
                         </div>
@@ -295,7 +319,7 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
                                         ? 'bg-red-50 text-red-600 border border-red-200 rounded-bl-none'
                                         : 'bg-white text-slate-700 border border-slate-100 rounded-bl-none'
                                 }`}>
-                                    <span>{msg.text}</span>
+                                    <span className="whitespace-pre-wrap">{msg.text}</span>
                                     {msg.isError && (
                                         <button 
                                             onClick={() => handleRetry(idx)}
@@ -331,13 +355,13 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
                                 type="text"
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
-                                placeholder="ถามข้อมูล..."
+                                placeholder={apiKeyDetected ? "ถามข้อมูล..." : "กรุณาใส่ API KEY ก่อน..."}
                                 className="w-full pl-4 pr-12 py-3 bg-slate-100 border-transparent focus:bg-white focus:border-emerald-500 focus:ring-0 rounded-xl text-sm transition-all"
-                                disabled={isLoading}
+                                disabled={isLoading || !apiKeyDetected}
                             />
                             <button 
                                 type="submit" 
-                                disabled={!input.trim() || isLoading}
+                                disabled={!input.trim() || isLoading || !apiKeyDetected}
                                 className="absolute right-2 p-1.5 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 disabled:opacity-50 disabled:hover:bg-emerald-500 transition-colors"
                             >
                                 <SendIcon className="w-4 h-4" />

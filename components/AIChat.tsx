@@ -16,8 +16,6 @@ interface Message {
 }
 
 // User requested to remove the limit.
-// Note: Sending too much data might still hit browser payload limits or API token limits, 
-// but we are removing the explicit cap here.
 const preparePatientDataForAI = (patients: Patient[]) => {
     // Send ALL patients
     const slicedPatients = [...patients].sort((a, b) => {
@@ -96,7 +94,6 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
     const [retryStatus, setRetryStatus] = useState('');
     
     // Key Management
-    const [envKeyDetected, setEnvKeyDetected] = useState(false);
     const [customKey, setCustomKey] = useState('');
     const [tempCustomKey, setTempCustomKey] = useState(''); // For input field
     
@@ -113,8 +110,6 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
             setCustomKey(storedKey);
             setTempCustomKey(storedKey);
         }
-        // Always true now because we have a hardcoded key
-        setEnvKeyDetected(true);
     }, []);
 
     const scrollToBottom = () => {
@@ -232,8 +227,8 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
                         friendlyMsg = `⚠️ **Access Denied (403)**\nAPI Key นี้อาจถูกจำกัดโดเมนไว้ (Referrer Restriction) ทำให้ใช้งานบนเว็บนี้ไม่ได้\n\nError: ${errorMsgStr}`;
                     } else if (errorMsgStr.includes("400") || errorMsgStr.includes("INVALID_ARGUMENT")) {
                         friendlyMsg = `⚠️ **Bad Request (400)**\nข้อมูลที่ส่งไปอาจมีรูปแบบผิดพลาด หรือ API Key ผิด\n\nError: ${errorMsgStr}`;
-                    } else if (errorMsgStr.includes("fetch") || errorMsgStr.includes("Network")) {
-                        friendlyMsg = `⚠️ **Connection Error**\nไม่สามารถเชื่อมต่อ Google API ได้ กรุณาเช็คอินเทอร์เน็ต\n\nError: ${errorMsgStr}`;
+                    } else if (errorMsgStr.includes("fetch") || errorMsgStr.includes("Network") || errorMsgStr.includes("xhr error") || errorMsgStr.includes("Rpc failed")) {
+                        friendlyMsg = `⚠️ **Network/Domain Blocked**\nการเชื่อมต่อถูกปฏิเสธ (xhr error) สาเหตุที่เป็นไปได้:\n1. API Key ถูกจำกัดโดเมน (Referrer) ไว้ไม่ให้ใช้บนเว็บนี้\n2. อินเทอร์เน็ตมีปัญหา\n\nError: ${errorMsgStr}`;
                     } else {
                         friendlyMsg = `⚠️ **Error**\n${errorMsgStr}`;
                     }
@@ -289,6 +284,8 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
         setMessages(prev => [...prev, { role: 'model', text: 'ลบ Custom Key แล้ว ระบบกลับมาใช้ Default API Key (AIza...)' }]);
     };
 
+    const currentKey = getSystemApiKey();
+    const maskedKey = currentKey.length > 8 ? `${currentKey.substring(0, 4)}...${currentKey.substring(currentKey.length - 4)}` : '****';
     const usingKeyType = customKey && customKey.length > 5 ? 'Custom (LocalStorage)' : 'Default (Hardcoded)';
 
     return (
@@ -366,18 +363,23 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
                             
                             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-4">
                                 <p className="text-xs font-semibold text-slate-500 uppercase mb-2">สถานะปัจจุบัน</p>
-                                <div className="flex items-center justify-between">
-                                    <span className="text-sm text-slate-700 font-medium">{usingKeyType}</span>
-                                    <span className="text-xs px-2 py-1 rounded-full font-bold bg-blue-100 text-blue-700">
-                                        ACTIVE
-                                    </span>
+                                <div className="space-y-2">
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="text-slate-600">Source:</span>
+                                        <span className="font-medium text-emerald-700">{usingKeyType}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="text-slate-600">Key:</span>
+                                        <span className="font-mono bg-slate-100 px-2 rounded text-slate-700">{maskedKey}</span>
+                                    </div>
                                 </div>
                             </div>
 
                             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
                                 <p className="text-xs font-semibold text-slate-500 uppercase mb-2">Custom API Key</p>
-                                <p className="text-xs text-slate-600 mb-3">
-                                    ใส่คีย์ที่นี่หากต้องการใช้คีย์ส่วนตัว หรือถ้าคีย์หลักมีปัญหา (กดถังขยะเพื่อล้างค่าและกลับไปใช้คีย์หลัก)
+                                <p className="text-xs text-slate-600 mb-3 leading-relaxed">
+                                    หากคีย์หลักใช้งานไม่ได้ (เช่น ติด Referrer Restriction) ให้ใส่คีย์ใหม่ที่นี่ 
+                                    <br/><span className="text-red-500">*กดปุ่มถังขยะเพื่อล้างค่าและกลับไปใช้คีย์หลัก</span>
                                 </p>
                                 <input 
                                     type="password"
@@ -389,14 +391,14 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
                                 <div className="flex gap-2">
                                     <button 
                                         onClick={handleSaveKey}
-                                        className="flex-1 bg-emerald-600 text-white py-2 rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors"
+                                        className="flex-1 bg-emerald-600 text-white py-2 rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors shadow-sm"
                                     >
-                                        บันทึก (Use This)
+                                        บันทึก
                                     </button>
                                     <button 
                                         onClick={handleClearKey}
-                                        className="px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors"
-                                        title="Clear & Use Default"
+                                        className="px-3 py-2 bg-white border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors shadow-sm flex items-center justify-center"
+                                        title="Reset to Default"
                                     >
                                         <TrashIcon className="w-4 h-4" />
                                     </button>
@@ -431,7 +433,7 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
                                                         onClick={() => setView('settings')}
                                                         className="self-start px-3 py-1 bg-white border border-slate-200 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-50 transition-colors shadow-sm"
                                                     >
-                                                        ตั้งค่า Key
+                                                        ตรวจสอบ Key
                                                     </button>
                                                 </div>
                                             )}

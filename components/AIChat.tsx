@@ -1,7 +1,6 @@
-
 import React, { useState, useRef, useEffect } from 'react';
-import { GoogleGenAI, Chat } from "@google/genai";
-import { SparklesIcon, XIcon, RefreshIcon, SendIcon, SettingsIcon, TrashIcon } from './icons';
+import { GoogleGenAI, Chat, FunctionDeclaration, Type } from "@google/genai";
+import { SparklesIcon, XIcon, RefreshIcon, SendIcon, SettingsIcon, TrashIcon, ActivityIcon } from './icons';
 import { Patient, MedicalEventType } from '../types';
 import { calculateAge, calculatePatientStatus } from './utils';
 
@@ -13,97 +12,54 @@ interface Message {
     role: 'user' | 'model';
     text: string;
     isError?: boolean;
+    action?: {
+        label: string;
+        onClick: () => void;
+    };
 }
 
-// User requested to remove the limit.
-const preparePatientDataForAI = (patients: Patient[]) => {
-    // Send ALL patients
-    const slicedPatients = [...patients].sort((a, b) => {
-        const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
-        const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
-        return dateB - dateA;
-    });
-
-    return slicedPatients.map(p => {
-        const data: any = {
-            s: p.sex === 'ชาย' ? 'M' : 'F',
-            a: calculateAge(p.dob),
-            st: calculatePatientStatus(p),
-        };
-
-        if (p.riskBehavior) {
-            const r = p.riskBehavior;
-            if (r.includes('MSM')) data.r = 'MSM';
-            else if (r.includes('Hetero')) data.r = 'HET';
-            else data.r = 'OTH';
+// --- Tool Definition ---
+const filterPatientsTool: FunctionDeclaration = {
+    name: "filter_patients",
+    description: "Search and count patients based on medical criteria. Use this tool whenever the user asks about patient statistics, counts, or lists with specific conditions.",
+    parameters: {
+        type: Type.OBJECT,
+        properties: {
+            has_hiv: { type: Type.BOOLEAN, description: "Filter for patients with HIV diagnosis" },
+            has_hbv: { type: Type.BOOLEAN, description: "Filter for patients with Hepatitis B (Positive HBsAg)" },
+            has_hcv: { type: Type.BOOLEAN, description: "Filter for patients with Hepatitis C (Positive Anti-HCV)" },
+            has_syphilis: { type: Type.BOOLEAN, description: "Filter for patients with history of Syphilis" },
+            has_tpt: { type: Type.BOOLEAN, description: "Filter for patients who received TPT" },
+            has_prep: { type: Type.BOOLEAN, description: "Filter for patients with PrEP history" },
+            has_pep: { type: Type.BOOLEAN, description: "Filter for patients with PEP history" },
+            infection_keyword: { type: Type.STRING, description: "Filter by specific opportunistic infection name (e.g., 'PJP', 'TB', 'CMV', 'Tuberculosis')" },
+            sex: { type: Type.STRING, description: "Filter by gender ('male' or 'female')" },
+            status: { type: Type.STRING, description: "Filter by status (Active, LTFU, Transferred, Expired, Restart)" },
+            min_age: { type: Type.INTEGER, description: "Minimum age" },
+            max_age: { type: Type.INTEGER, description: "Maximum age" }
         }
-
-        const isHiv = p.medicalHistory.some(e => e.type === MedicalEventType.DIAGNOSIS);
-        if (isHiv) data.hiv = 1;
-
-        // Current ARV
-        const arvEvents = p.medicalHistory
-            .filter(e => e.type === MedicalEventType.ART_START || e.type === MedicalEventType.ART_CHANGE)
-            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        
-        if (arvEvents.length > 0) {
-            const currentArv = arvEvents[0].details['สูตรยา'] || arvEvents[0].details['เป็น'];
-            if (currentArv) data.arv = currentArv;
-        }
-
-        // OIs
-        const infections = new Set<string>();
-        p.medicalHistory
-            .filter(e => e.type === MedicalEventType.OPPORTUNISTIC_INFECTION)
-            .forEach(e => {
-                const list = e.details.infections || [];
-                if (e.details.โรค) list.push(e.details.โรค);
-                list.forEach((i: string) => infections.add(i));
-            });
-        if (infections.size > 0) data.oi = Array.from(infections);
-
-        const tpt = p.medicalHistory.some(e => e.type === MedicalEventType.PROPHYLAXIS && e.details.TPT);
-        if (tpt) data.tpt = 1;
-
-        // STDs
-        const stds = new Set<string>();
-        p.stdInfo?.records?.forEach(r => r.diseases.forEach(d => stds.add(d)));
-        if (stds.size > 0) data.std = Array.from(stds);
-
-        if ((p.prepInfo?.records || []).length > 0) data.prep = 1;
-        if ((p.pepInfo?.records || []).length > 0) data.pep = 1;
-        if (p.hbvInfo?.hbsAgTests?.some(t => t.result === 'Positive')) data.hbv = 1;
-        if (p.hcvInfo?.hcvTests?.some(t => t.result === 'Positive')) data.hcv = 1;
-
-        if (p.underlyingDiseases && p.underlyingDiseases.length > 0) {
-            data.dx = p.underlyingDiseases;
-        }
-
-        return data;
-    });
+    }
 };
 
 export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [view, setView] = useState<'chat' | 'settings'>('chat');
     const [messages, setMessages] = useState<Message[]>([
-        { role: 'model', text: 'สวัสดีครับ ผมคือ AI ผู้ช่วยวิเคราะห์ข้อมูลคลินิก มีอะไรให้ผมช่วยตรวจสอบไหมครับ?' }
+        { role: 'model', text: 'สวัสดีครับ ผมคือ AI ผู้ช่วยวิเคราะห์ข้อมูล ผมเชื่อมต่อกับฐานข้อมูลเรียบร้อยแล้ว คุณสามารถถามสถิติหรือค้นหาข้อมูลคนไข้ได้เลยครับ (เช่น "มีคนไข้ HIV ที่เป็น Syphilis กี่ราย")' }
     ]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [retryStatus, setRetryStatus] = useState('');
     
     // Key Management
     const [customKey, setCustomKey] = useState('');
-    const [tempCustomKey, setTempCustomKey] = useState(''); // For input field
+    const [tempCustomKey, setTempCustomKey] = useState(''); 
     
     const chatSessionRef = useRef<Chat | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
-    // Hardcoded Key provided by user
+    // Hardcoded Key
     const HARDCODED_KEY = 'AIzaSyDiDK-iWaT3QU7ejIsOyH_26qXYZeiZ8hQ';
 
-    // Initial Load
     useEffect(() => {
         const storedKey = localStorage.getItem('ID_CLINIC_AI_KEY');
         if (storedKey) {
@@ -120,128 +76,205 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
         if (view === 'chat') {
             scrollToBottom();
         }
-    }, [messages, isOpen, retryStatus, view]);
+    }, [messages, isOpen, view]);
 
     useEffect(() => {
-        // Reset chat when patient list changes significantly or component remounts
+        // Reset chat when key changes
         chatSessionRef.current = null;
-    }, [patients]);
+    }, [customKey]);
 
     const handleReset = () => {
         setMessages([
             { role: 'model', text: 'รีเซ็ตระบบแล้วครับ เริ่มต้นวิเคราะห์ใหม่ได้เลย' }
         ]);
         chatSessionRef.current = null;
-        setRetryStatus('');
     };
 
     const getSystemApiKey = () => {
-        // Priority 1: User's manual custom key from localStorage (ONLY if explicitly set)
         if (customKey && customKey.trim().length > 5) return customKey.trim();
-        
-        // Priority 2: Hardcoded Key (User Request)
         return HARDCODED_KEY;
     };
 
-    const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+    // --- TOOL EXECUTION LOGIC ---
+    const executeFilterPatients = (args: any) => {
+        console.log("Executing Tool with args:", args);
+        
+        const results = patients.filter(p => {
+            // 1. HIV
+            if (args.has_hiv !== undefined) {
+                const isHiv = p.medicalHistory.some(e => e.type === MedicalEventType.DIAGNOSIS);
+                if (isHiv !== args.has_hiv) return false;
+            }
+
+            // 2. HBV
+            if (args.has_hbv !== undefined) {
+                const isHbv = p.hbvInfo?.hbsAgTests?.some(t => t.result === 'Positive');
+                if (!!isHbv !== args.has_hbv) return false;
+            }
+
+            // 3. HCV
+            if (args.has_hcv !== undefined) {
+                // Simplified HCV logic for filter
+                const isHcv = p.hcvInfo?.hcvTests?.some(t => t.result === 'Positive');
+                if (!!isHcv !== args.has_hcv) return false;
+            }
+
+            // 4. Syphilis
+            if (args.has_syphilis !== undefined) {
+                const hasSyphilis = p.stdInfo?.records?.some(r => 
+                    r.diseases.some(d => d.toLowerCase().includes('syphilis'))
+                );
+                if (!!hasSyphilis !== args.has_syphilis) return false;
+            }
+
+            // 5. TPT
+            if (args.has_tpt !== undefined) {
+                const hasTpt = p.medicalHistory.some(e => e.type === MedicalEventType.PROPHYLAXIS && e.details.TPT);
+                if (!!hasTpt !== args.has_tpt) return false;
+            }
+
+            // 6. PrEP/PEP
+            if (args.has_prep !== undefined) {
+                const has = (p.prepInfo?.records || []).length > 0;
+                if (!!has !== args.has_prep) return false;
+            }
+            if (args.has_pep !== undefined) {
+                const has = (p.pepInfo?.records || []).length > 0;
+                if (!!has !== args.has_pep) return false;
+            }
+
+            // 7. Sex
+            if (args.sex) {
+                const targetSex = args.sex.toLowerCase() === 'male' ? 'ชาย' : 'หญิง';
+                if (p.sex !== targetSex) return false;
+            }
+
+            // 8. Status
+            if (args.status) {
+                const currentStatus = calculatePatientStatus(p);
+                // Simple partial match
+                if (!currentStatus || !currentStatus.toLowerCase().includes(args.status.toLowerCase())) return false;
+            }
+
+            // 9. Age
+            if (args.min_age !== undefined || args.max_age !== undefined) {
+                const age = calculateAge(p.dob);
+                if (age === '-') return false; // Skip if no age
+                if (args.min_age !== undefined && (age as number) < args.min_age) return false;
+                if (args.max_age !== undefined && (age as number) > args.max_age) return false;
+            }
+
+            // 10. Specific Infection (OI)
+            if (args.infection_keyword) {
+                const keyword = args.infection_keyword.toLowerCase();
+                const hasInfection = p.medicalHistory.some(e => {
+                    if (e.type !== MedicalEventType.OPPORTUNISTIC_INFECTION) return false;
+                    const details = e.details || {};
+                    // Check list
+                    if (details.infections && Array.isArray(details.infections)) {
+                        if (details.infections.some((i: string) => i.toLowerCase().includes(keyword))) return true;
+                    }
+                    // Check legacy string fields
+                    if (details.โรค && String(details.โรค).toLowerCase().includes(keyword)) return true;
+                    if (details['การติดเชื้ออื่นๆ'] && String(details['การติดเชื้ออื่นๆ']).toLowerCase().includes(keyword)) return true;
+                    
+                    return false;
+                });
+                if (!hasInfection) return false;
+            }
+
+            return true;
+        });
+
+        return {
+            count: results.length,
+            patients: results.map(p => ({
+                hn: p.hn,
+                name: `${p.firstName} ${p.lastName}`,
+                status: calculatePatientStatus(p),
+                sex: p.sex,
+                age: calculateAge(p.dob)
+            })),
+            summary: `Found ${results.length} patients matching criteria.`
+        };
+    };
 
     const processMessage = async (userMessage: string) => {
         setIsLoading(true);
-        setRetryStatus('');
         
-        let attempt = 0;
-        const maxRetries = 2;
-        let success = false;
+        try {
+            const apiKey = getSystemApiKey();
+            
+            if (!apiKey || apiKey.includes('placeholder')) {
+                throw new Error("API Key is missing.");
+            }
 
-        while (attempt < maxRetries && !success) {
-            try {
-                const apiKey = getSystemApiKey();
-                
-                // Safety check
-                if (!apiKey || apiKey.includes('placeholder')) {
-                    throw new Error("API Key is missing or invalid.");
-                }
+            if (!chatSessionRef.current) {
+                const ai = new GoogleGenAI({ apiKey });
+                // Note: We DO NOT put patient data in system instruction anymore.
+                // We let the tool retrieve it.
+                chatSessionRef.current = ai.chats.create({
+                    model: 'gemini-2.5-flash',
+                    config: {
+                        systemInstruction: `You are a helpful medical data analyst assistant for ID Clinic. 
+                        You have access to a database of patients via the 'filter_patients' tool.
+                        ALWAYS use the tool to query data when asked about statistics, counts, or patient lists.
+                        Do not guess numbers. 
+                        Reply in Thai language.
+                        If the result list is long, summarize the count and show only the first 5-10 names as examples.`,
+                        tools: [{ functionDeclarations: [filterPatientsTool] }]
+                    }
+                });
+            }
 
-                if (!chatSessionRef.current) {
-                    const ai = new GoogleGenAI({ apiKey });
-                    const simplifiedData = preparePatientDataForAI(patients);
-                    const contextString = JSON.stringify(simplifiedData);
+            // 1. Send User Message
+            let response = await chatSessionRef.current.sendMessage({ message: userMessage });
+            
+            // 2. Check for Function Calls (Loop until no more function calls)
+            // Note: Currently implementing simple single-turn tool use for stability
+            if (response.functionCalls && response.functionCalls.length > 0) {
+                const functionCall = response.functionCalls[0];
+                const { name, args, id } = functionCall; // Capture id if available
 
-                    const systemInstruction = `
-                        Role: Medical Data Analyst for an ID Clinic.
-                        Current Context: Analyzing ALL ${simplifiedData.length} patient records provided.
-                        
-                        Data Keys (Minified for token efficiency):
-                        - s: Sex (M/F)
-                        - a: Age
-                        - st: Status (Active, LTFU, etc.)
-                        - r: Risk
-                        - hiv: 1=Positive
-                        - arv: Regimen
-                        - oi: Opportunistic Infections
-                        - tpt: 1=Received TPT
-                        - std: STDs
-                        - prep: 1=PrEP History
-                        - pep: 1=PEP History
-                        - hbv: 1=HBV Positive
-                        - hcv: 1=HCV Positive
-                        - dx: Comorbidities
-                        
-                        Tasks:
-                        1. Count and filter based on the JSON data provided.
-                        2. If asking about a specific condition (e.g. Syphilis + PJP), filter the JSON strictly.
-                        3. Reply in Thai. Be concise and professional.
-                        
-                        Dataset: ${contextString}
-                    `;
-
-                    chatSessionRef.current = ai.chats.create({
-                        model: 'gemini-2.5-flash',
-                        config: { systemInstruction }
+                if (name === 'filter_patients') {
+                    // Execute Tool locally
+                    const toolResult = executeFilterPatients(args);
+                    
+                    // Send Result back to AI
+                    // use 'message' parameter correctly, constructing the function response part
+                    response = await chatSessionRef.current.sendMessage({
+                        message: [{
+                            functionResponse: {
+                                name: name,
+                                id: id, // Pass back the id if it exists (modern Gemini API)
+                                response: { result: toolResult }
+                            }
+                        }]
                     });
                 }
-
-                const response = await chatSessionRef.current.sendMessage({ message: userMessage });
-                const text = response.text || 'ไม่สามารถประมวลผลได้ (Empty Response)';
-                
-                setMessages(prev => [...prev, { role: 'model', text }]);
-                success = true;
-
-            } catch (error: any) {
-                console.error(`AI Error (Attempt ${attempt + 1}):`, error);
-                
-                const errorMsgStr = error.message || JSON.stringify(error);
-                const isRateLimit = errorMsgStr.includes('429') || errorMsgStr.includes('quota') || errorMsgStr.includes('Resource has been exhausted');
-                
-                if (isRateLimit && attempt < maxRetries - 1) {
-                    const waitTime = 4000;
-                    setRetryStatus(`ระบบกำลังยุ่ง (429/Quota)... กำลังลองใหม่ใน ${waitTime/1000} วินาที...`);
-                    await delay(waitTime);
-                    attempt++;
-                } else {
-                    let friendlyMsg = '';
-                    
-                    if (isRateLimit) {
-                        friendlyMsg = `⚠️ **โควต้าเต็ม (429)**\nระบบ Google Free Tier รับข้อมูลจำนวนมากพร้อมกันไม่ไหว กรุณารอสักครู่แล้วกดลองใหม่`;
-                    } else if (errorMsgStr.includes("403") || errorMsgStr.includes("permission")) {
-                        friendlyMsg = `⚠️ **Access Denied (403)**\nAPI Key นี้อาจถูกจำกัดโดเมนไว้ (Referrer Restriction) ทำให้ใช้งานบนเว็บนี้ไม่ได้\n\nError: ${errorMsgStr}`;
-                    } else if (errorMsgStr.includes("400") || errorMsgStr.includes("INVALID_ARGUMENT")) {
-                        friendlyMsg = `⚠️ **Bad Request (400)**\nข้อมูลที่ส่งไปอาจมีรูปแบบผิดพลาด หรือ API Key ผิด\n\nError: ${errorMsgStr}`;
-                    } else if (errorMsgStr.includes("fetch") || errorMsgStr.includes("Network") || errorMsgStr.includes("xhr error") || errorMsgStr.includes("Rpc failed")) {
-                        friendlyMsg = `⚠️ **Network/Domain Blocked**\nการเชื่อมต่อถูกปฏิเสธ (xhr error) สาเหตุที่เป็นไปได้:\n1. API Key ถูกจำกัดโดเมน (Referrer) ไว้ไม่ให้ใช้บนเว็บนี้\n2. อินเทอร์เน็ตมีปัญหา\n\nError: ${errorMsgStr}`;
-                    } else {
-                        friendlyMsg = `⚠️ **Error**\n${errorMsgStr}`;
-                    }
-
-                    setMessages(prev => [...prev, { role: 'model', text: friendlyMsg, isError: true }]);
-                    chatSessionRef.current = null; // Reset session
-                    break;
-                }
             }
+
+            const text = response.text || 'รับทราบครับ (No text response)';
+            setMessages(prev => [...prev, { role: 'model', text }]);
+
+        } catch (error: any) {
+            console.error(`AI Error:`, error);
+            let friendlyMsg = '';
+            const errorMsgStr = error.message || JSON.stringify(error);
+
+            if (errorMsgStr.includes('429')) {
+                friendlyMsg = `⚠️ **โควต้าเต็ม (429)**\nกรุณารอสักครู่แล้วลองใหม่`;
+            } else if (errorMsgStr.includes("403")) {
+                friendlyMsg = `⚠️ **Access Denied (403)**\nAPI Key อาจถูกจำกัดโดเมน`;
+            } else {
+                friendlyMsg = `⚠️ **Error**\n${errorMsgStr}`;
+            }
+
+            setMessages(prev => [...prev, { role: 'model', text: friendlyMsg, isError: true }]);
+            chatSessionRef.current = null;
+        } finally {
+            setIsLoading(false);
         }
-        
-        setRetryStatus('');
-        setIsLoading(false);
     };
 
     const handleSend = async (e: React.FormEvent) => {
@@ -270,10 +303,9 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
         }
         localStorage.setItem('ID_CLINIC_AI_KEY', tempCustomKey.trim());
         setCustomKey(tempCustomKey.trim());
-        // Reset chat to force new connection with new key
         chatSessionRef.current = null;
         setView('chat');
-        setMessages(prev => [...prev, { role: 'model', text: 'บันทึก Custom API Key แล้ว (ระบบจะใช้คีย์นี้แทนคีย์หลัก)' }]);
+        setMessages(prev => [...prev, { role: 'model', text: 'บันทึก Custom API Key แล้ว' }]);
     };
 
     const handleClearKey = () => {
@@ -281,12 +313,11 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
         setCustomKey('');
         setTempCustomKey('');
         chatSessionRef.current = null;
-        setMessages(prev => [...prev, { role: 'model', text: 'ลบ Custom Key แล้ว ระบบกลับมาใช้ Default API Key (AIza...)' }]);
+        setMessages(prev => [...prev, { role: 'model', text: 'ลบ Custom Key แล้ว ใช้ Default Key' }]);
     };
 
     const currentKey = getSystemApiKey();
     const maskedKey = currentKey.length > 8 ? `${currentKey.substring(0, 4)}...${currentKey.substring(currentKey.length - 4)}` : '****';
-    const usingKeyType = customKey && customKey.length > 5 ? 'Custom (LocalStorage)' : 'Default (Hardcoded)';
 
     return (
         <>
@@ -311,7 +342,7 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
                             </div>
                             <div>
                                 <h3 className="font-bold text-sm flex items-center gap-2">
-                                    AI Analyst
+                                    AI Analyst (Smart Tools)
                                     <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${isLoading ? 'bg-amber-400/80 text-amber-900 animate-pulse' : 'bg-green-500/20 text-green-100'}`}>
                                         {isLoading ? 'THINKING' : 'READY'}
                                     </span>
@@ -359,28 +390,20 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
                     {/* Content Area */}
                     {view === 'settings' ? (
                         <div className="flex-1 p-6 bg-slate-50 overflow-y-auto">
-                            <h4 className="font-bold text-slate-800 mb-4">ตั้งค่าการเชื่อมต่อ AI</h4>
+                            <h4 className="font-bold text-slate-800 mb-4">ตั้งค่า AI</h4>
                             
                             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-4">
-                                <p className="text-xs font-semibold text-slate-500 uppercase mb-2">สถานะปัจจุบัน</p>
+                                <p className="text-xs font-semibold text-slate-500 uppercase mb-2">API Key Status</p>
                                 <div className="space-y-2">
                                     <div className="flex justify-between items-center text-sm">
-                                        <span className="text-slate-600">Source:</span>
-                                        <span className="font-medium text-emerald-700">{usingKeyType}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center text-sm">
-                                        <span className="text-slate-600">Key:</span>
+                                        <span className="text-slate-600">Key ที่ใช้:</span>
                                         <span className="font-mono bg-slate-100 px-2 rounded text-slate-700">{maskedKey}</span>
                                     </div>
                                 </div>
                             </div>
 
                             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                                <p className="text-xs font-semibold text-slate-500 uppercase mb-2">Custom API Key</p>
-                                <p className="text-xs text-slate-600 mb-3 leading-relaxed">
-                                    หากคีย์หลักใช้งานไม่ได้ (เช่น ติด Referrer Restriction) ให้ใส่คีย์ใหม่ที่นี่ 
-                                    <br/><span className="text-red-500">*กดปุ่มถังขยะเพื่อล้างค่าและกลับไปใช้คีย์หลัก</span>
-                                </p>
+                                <p className="text-xs font-semibold text-slate-500 uppercase mb-2">เปลี่ยน API Key (ถ้าจำเป็น)</p>
                                 <input 
                                     type="password"
                                     value={tempCustomKey}
@@ -397,8 +420,7 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
                                     </button>
                                     <button 
                                         onClick={handleClearKey}
-                                        className="px-3 py-2 bg-white border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors shadow-sm flex items-center justify-center"
-                                        title="Reset to Default"
+                                        className="px-3 py-2 bg-white border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors shadow-sm"
                                     >
                                         <TrashIcon className="w-4 h-4" />
                                     </button>
@@ -418,8 +440,9 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
                                                 ? 'bg-red-50 text-red-600 border border-red-200 rounded-bl-none'
                                                 : 'bg-white text-slate-700 border border-slate-100 rounded-bl-none'
                                         }`}>
-                                            {/* Render Error messages with line breaks nicely */}
                                             <span className="whitespace-pre-wrap">{msg.text}</span>
+                                            
+                                            {/* Standard Retry Logic for Errors */}
                                             {msg.isError && (
                                                 <div className="flex gap-2 mt-2 pt-2 border-t border-red-200/50">
                                                     <button 
@@ -428,12 +451,6 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
                                                     >
                                                         <RefreshIcon className="w-3 h-3" />
                                                         ลองใหม่
-                                                    </button>
-                                                    <button 
-                                                        onClick={() => setView('settings')}
-                                                        className="self-start px-3 py-1 bg-white border border-slate-200 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-50 transition-colors shadow-sm"
-                                                    >
-                                                        ตรวจสอบ Key
                                                     </button>
                                                 </div>
                                             )}
@@ -448,9 +465,7 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
                                                 <span className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce delay-75"></span>
                                                 <span className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce delay-150"></span>
                                             </div>
-                                            {retryStatus && (
-                                                <span className="text-xs text-amber-600 font-medium animate-pulse">{retryStatus}</span>
-                                            )}
+                                            <span className="text-xs text-gray-400">กำลังค้นหาข้อมูล...</span>
                                         </div>
                                     </div>
                                 )}
@@ -463,7 +478,7 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
                                         type="text"
                                         value={input}
                                         onChange={(e) => setInput(e.target.value)}
-                                        placeholder="ถามข้อมูลผู้ป่วย..."
+                                        placeholder="ถามข้อมูล เช่น 'คนไข้ HIV ชาย มีกี่คน'"
                                         className="w-full pl-4 pr-12 py-3 bg-slate-100 border-transparent focus:bg-white focus:border-emerald-500 focus:ring-0 rounded-xl text-sm transition-all"
                                         disabled={isLoading}
                                     />

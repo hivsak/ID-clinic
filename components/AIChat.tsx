@@ -42,6 +42,12 @@ const filterPatientsTool: FunctionDeclaration = {
     }
 };
 
+const AVAILABLE_MODELS = [
+    { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (Standard)' },
+    { id: 'gemini-flash-lite-latest', label: 'Gemini Flash Lite (Saver)' },
+    { id: 'gemini-2.0-flash-exp', label: 'Gemini 2.0 Flash (Experimental)' },
+];
+
 export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [view, setView] = useState<'chat' | 'settings'>('chat');
@@ -55,6 +61,9 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
     const [customKey, setCustomKey] = useState('');
     const [tempCustomKey, setTempCustomKey] = useState(''); 
     
+    // Model Management
+    const [selectedModel, setSelectedModel] = useState(AVAILABLE_MODELS[0].id);
+
     // Diagnostics State
     const [connectionStatus, setConnectionStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
     const [connectionError, setConnectionError] = useState('');
@@ -62,7 +71,7 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
     const chatSessionRef = useRef<Chat | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
-    // Hardcoded Key
+    // Hardcoded Key - Warning: This key is likely exhausted/rate-limited by now
     const HARDCODED_KEY = 'AIzaSyDiDK-iWaT3QU7ejIsOyH_26qXYZeiZ8hQ';
 
     useEffect(() => {
@@ -70,6 +79,11 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
         if (storedKey) {
             setCustomKey(storedKey);
             setTempCustomKey(storedKey);
+        }
+        
+        const storedModel = localStorage.getItem('ID_CLINIC_AI_MODEL');
+        if (storedModel && AVAILABLE_MODELS.some(m => m.id === storedModel)) {
+            setSelectedModel(storedModel);
         }
     }, []);
 
@@ -83,10 +97,10 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
         }
     }, [messages, isOpen, view]);
 
+    // Reset chat when configuration changes
     useEffect(() => {
-        // Reset chat when key changes
         chatSessionRef.current = null;
-    }, [customKey]);
+    }, [customKey, selectedModel]);
 
     const handleReset = () => {
         setMessages([
@@ -216,10 +230,9 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
 
             if (!chatSessionRef.current) {
                 const ai = new GoogleGenAI({ apiKey });
-                // Note: We DO NOT put patient data in system instruction anymore.
-                // We let the tool retrieve it.
+                
                 chatSessionRef.current = ai.chats.create({
-                    model: 'gemini-2.5-flash',
+                    model: selectedModel,
                     config: {
                         systemInstruction: `You are a helpful medical data analyst assistant for ID Clinic. 
                         You have access to a database of patients via the 'filter_patients' tool.
@@ -236,22 +249,20 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
             let response = await chatSessionRef.current.sendMessage({ message: userMessage });
             
             // 2. Check for Function Calls (Loop until no more function calls)
-            // Note: Currently implementing simple single-turn tool use for stability
             if (response.functionCalls && response.functionCalls.length > 0) {
                 const functionCall = response.functionCalls[0];
-                const { name, args, id } = functionCall; // Capture id if available
+                const { name, args, id } = functionCall; 
 
                 if (name === 'filter_patients') {
                     // Execute Tool locally
                     const toolResult = executeFilterPatients(args);
                     
                     // Send Result back to AI
-                    // use 'message' parameter correctly, constructing the function response part
                     response = await chatSessionRef.current.sendMessage({
                         message: [{
                             functionResponse: {
                                 name: name,
-                                id: id, // Pass back the id if it exists (modern Gemini API)
+                                id: id, 
                                 response: { result: toolResult }
                             }
                         }]
@@ -266,17 +277,26 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
             console.error(`AI Error:`, error);
             let friendlyMsg = '';
             const errorMsgStr = error.message || JSON.stringify(error);
+            let action = undefined;
 
-            if (errorMsgStr.includes('429')) {
-                friendlyMsg = `⚠️ **โควต้าเต็ม (429)**\nกรุณารอสักครู่แล้วลองใหม่`;
+            if (errorMsgStr.includes('429') || errorMsgStr.includes('RESOURCE_EXHAUSTED')) {
+                friendlyMsg = `⚠️ **โควต้าเต็ม (Quota Limit Reached)**\nAPI Key นี้ใช้งานเกินขีดจำกัดแล้ว\n\nคำแนะนำ:\n1. ลองเปลี่ยน Model เป็นรุ่น Lite\n2. สร้าง API Key ใหม่จาก Google AI Studio (ใช้อีเมลอื่น)`;
+                action = {
+                    label: 'ไปที่ตั้งค่าเพื่อเปลี่ยน Key/Model',
+                    onClick: () => setView('settings')
+                };
             } else if (errorMsgStr.includes("403") || errorMsgStr.includes("xhr error")) {
-                friendlyMsg = `⚠️ **Access Denied (403)**\nAPI Key อาจถูกจำกัดโดเมน (Vercel URL blocked)`;
+                friendlyMsg = `⚠️ **Access Denied (403)**\nAPI Key อาจถูกจำกัดโดเมน (Vercel URL blocked) หรือ Key ไม่ถูกต้อง`;
+                action = {
+                    label: 'ตรวจสอบการตั้งค่า',
+                    onClick: () => setView('settings')
+                };
             } else {
                 friendlyMsg = `⚠️ **Error**\n${errorMsgStr}`;
             }
 
-            setMessages(prev => [...prev, { role: 'model', text: friendlyMsg, isError: true }]);
-            chatSessionRef.current = null;
+            setMessages(prev => [...prev, { role: 'model', text: friendlyMsg, isError: true, action }]);
+            chatSessionRef.current = null; // Force reset connection
         } finally {
             setIsLoading(false);
         }
@@ -301,16 +321,21 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
         }
     };
 
-    const handleSaveKey = () => {
-        if (!tempCustomKey.trim()) {
-            handleClearKey();
-            return;
+    const handleSaveSettings = () => {
+        localStorage.setItem('ID_CLINIC_AI_MODEL', selectedModel);
+        
+        if (tempCustomKey.trim()) {
+            localStorage.setItem('ID_CLINIC_AI_KEY', tempCustomKey.trim());
+            setCustomKey(tempCustomKey.trim());
+        } else if (tempCustomKey === '' && customKey !== '') {
+             // User cleared the key field manually, assume they want to clear it?
+             // Or if they left it empty, maybe keep existing? 
+             // Let's rely on explicit clear button for full removal.
         }
-        localStorage.setItem('ID_CLINIC_AI_KEY', tempCustomKey.trim());
-        setCustomKey(tempCustomKey.trim());
+        
         chatSessionRef.current = null;
         setView('chat');
-        setMessages(prev => [...prev, { role: 'model', text: 'บันทึก Custom API Key แล้ว' }]);
+        setMessages(prev => [...prev, { role: 'model', text: `บันทึกการตั้งค่าแล้ว (Model: ${selectedModel})` }]);
     };
 
     const handleClearKey = () => {
@@ -318,7 +343,6 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
         setCustomKey('');
         setTempCustomKey('');
         chatSessionRef.current = null;
-        setMessages(prev => [...prev, { role: 'model', text: 'ลบ Custom Key แล้ว ใช้ Default Key' }]);
     };
 
     const handleTestConnection = async () => {
@@ -329,7 +353,7 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
             const ai = new GoogleGenAI({ apiKey });
             // Simple generation call to test connection
             await ai.models.generateContent({
-                model: 'gemini-2.5-flash',
+                model: selectedModel,
                 contents: 'test connection',
             });
             setConnectionStatus('success');
@@ -357,7 +381,7 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
             )}
 
             {isOpen && (
-                <div className="fixed bottom-6 right-6 z-50 w-full max-w-sm md:max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col h-[500px] animate-fade-in-up">
+                <div className="fixed bottom-6 right-6 z-50 w-full max-w-sm md:max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col h-[550px] animate-fade-in-up">
                     {/* Header */}
                     <div className="bg-gradient-to-r from-emerald-600 to-teal-600 p-4 flex justify-between items-center text-white shrink-0">
                         <div className="flex items-center gap-2">
@@ -366,13 +390,13 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
                             </div>
                             <div>
                                 <h3 className="font-bold text-sm flex items-center gap-2">
-                                    AI Analyst (Smart Tools)
+                                    AI Analyst
                                     <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${isLoading ? 'bg-amber-400/80 text-amber-900 animate-pulse' : 'bg-green-500/20 text-green-100'}`}>
                                         {isLoading ? 'THINKING' : 'READY'}
                                     </span>
                                 </h3>
                                 <p className="text-[10px] opacity-80">
-                                    Gemini 2.5 Flash
+                                    {AVAILABLE_MODELS.find(m => m.id === selectedModel)?.label.split('(')[0] || 'Gemini'}
                                 </p>
                             </div>
                         </div>
@@ -414,59 +438,57 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
                     {/* Content Area */}
                     {view === 'settings' ? (
                         <div className="flex-1 p-6 bg-slate-50 overflow-y-auto">
-                            <h4 className="font-bold text-slate-800 mb-4">ตั้งค่า AI</h4>
+                            <h4 className="font-bold text-slate-800 mb-4">ตั้งค่า AI (Settings)</h4>
                             
+                            {/* Model Selection */}
                             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-4">
-                                <p className="text-xs font-semibold text-slate-500 uppercase mb-2">API Key Status</p>
-                                <div className="space-y-2">
-                                    <div className="flex justify-between items-center text-sm">
-                                        <span className="text-slate-600">Key ที่ใช้:</span>
-                                        <span className="font-mono bg-slate-100 px-2 rounded text-slate-700">{maskedKey}</span>
-                                    </div>
-                                </div>
+                                <p className="text-xs font-semibold text-slate-500 uppercase mb-2">เลือกโมเดล (Model)</p>
+                                <select 
+                                    value={selectedModel} 
+                                    onChange={(e) => setSelectedModel(e.target.value)}
+                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-emerald-500 outline-none"
+                                >
+                                    {AVAILABLE_MODELS.map(m => (
+                                        <option key={m.id} value={m.id}>{m.label}</option>
+                                    ))}
+                                </select>
+                                <p className="text-[10px] text-slate-400 mt-2">
+                                    * หากพบปัญหา Quota เต็ม ให้ลองเปลี่ยนเป็นรุ่น <strong>Lite</strong>
+                                </p>
                             </div>
 
-                            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                                <p className="text-xs font-semibold text-slate-500 uppercase mb-2">เปลี่ยน API Key (ถ้าจำเป็น)</p>
+                            {/* API Key */}
+                            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-4">
+                                <p className="text-xs font-semibold text-slate-500 uppercase mb-2">จัดการ API Key</p>
+                                <div className="flex justify-between items-center text-sm mb-2 p-2 bg-slate-50 rounded">
+                                    <span className="text-slate-600">สถานะ:</span>
+                                    <span className={`font-mono text-xs ${customKey ? 'text-emerald-600 font-bold' : 'text-slate-500'}`}>
+                                        {customKey ? 'Custom Key' : 'Default Key'}
+                                    </span>
+                                </div>
                                 <input 
                                     type="password"
                                     value={tempCustomKey}
                                     onChange={(e) => setTempCustomKey(e.target.value)}
-                                    placeholder="AIza..."
+                                    placeholder="วาง API Key ใหม่ที่นี่ (AIza...)"
                                     className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                                 />
                                 <div className="flex gap-2">
-                                    <button 
-                                        onClick={handleSaveKey}
-                                        className="flex-1 bg-emerald-600 text-white py-2 rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors shadow-sm"
-                                    >
-                                        บันทึก
-                                    </button>
-                                    <button 
-                                        onClick={handleClearKey}
-                                        className="px-3 py-2 bg-white border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors shadow-sm"
-                                    >
-                                        <TrashIcon className="w-4 h-4" />
-                                    </button>
+                                    {customKey && (
+                                        <button 
+                                            onClick={handleClearKey}
+                                            className="px-3 py-2 bg-white border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors shadow-sm text-sm"
+                                        >
+                                            <TrashIcon className="w-4 h-4 inline mr-1" /> ลบ
+                                        </button>
+                                    )}
                                 </div>
                             </div>
 
                             {/* Diagnostics Section */}
-                            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mt-4">
-                                <p className="text-xs font-semibold text-slate-500 uppercase mb-2">ตรวจสอบการเชื่อมต่อ (Diagnostics)</p>
+                            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-4">
+                                <p className="text-xs font-semibold text-slate-500 uppercase mb-2">ตรวจสอบการเชื่อมต่อ</p>
                                 
-                                <div className="mb-3">
-                                    <label className="block text-xs text-slate-400 mb-1">Domain ของคุณ (Referrer)</label>
-                                    <div className="flex items-center gap-2">
-                                        <code className="flex-1 bg-slate-100 px-2 py-1.5 rounded text-xs text-slate-700 font-mono break-all border border-slate-200">
-                                            {typeof window !== 'undefined' ? window.location.origin : 'Loading...'}
-                                        </code>
-                                    </div>
-                                    <p className="text-[10px] text-slate-400 mt-1 leading-tight">
-                                        * หากใช้งานไม่ได้บน Vercel กรุณานำ URL นี้ไปเพิ่มใน <strong>Google Cloud Console &gt; API Key &gt; Website restrictions</strong>
-                                    </p>
-                                </div>
-
                                 <button 
                                     onClick={handleTestConnection}
                                     disabled={connectionStatus === 'testing'}
@@ -477,18 +499,25 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
                                     }`}
                                 >
                                     {connectionStatus === 'testing' && <span className="animate-spin h-3 w-3 border-2 border-slate-500 border-t-transparent rounded-full"></span>}
-                                    {connectionStatus === 'idle' && 'ทดสอบการเชื่อมต่อ'}
+                                    {connectionStatus === 'idle' && 'ทดสอบยิง API'}
                                     {connectionStatus === 'testing' && 'กำลังทดสอบ...'}
-                                    {connectionStatus === 'success' && 'เชื่อมต่อสำเร็จ (Connected)'}
-                                    {connectionStatus === 'error' && 'การเชื่อมต่อล้มเหลว (Failed)'}
+                                    {connectionStatus === 'success' && 'เชื่อมต่อสำเร็จ!'}
+                                    {connectionStatus === 'error' && 'เชื่อมต่อล้มเหลว'}
                                 </button>
 
                                 {connectionStatus === 'error' && (
                                     <div className="mt-2 p-2 bg-red-50 rounded text-[10px] text-red-600 font-mono break-words border border-red-100">
-                                        Error: {connectionError}
+                                        {connectionError}
                                     </div>
                                 )}
                             </div>
+
+                            <button 
+                                onClick={handleSaveSettings}
+                                className="w-full bg-emerald-600 text-white py-3 rounded-xl text-sm font-bold hover:bg-emerald-700 transition-colors shadow-md transform active:scale-95"
+                            >
+                                บันทึกและกลับไปแชท
+                            </button>
                         </div>
                     ) : (
                         // Chat View
@@ -496,17 +525,27 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
                             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50">
                                 {messages.map((msg, idx) => (
                                     <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                        <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed shadow-sm flex flex-col ${
+                                        <div className={`max-w-[90%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm flex flex-col ${
                                             msg.role === 'user' 
                                             ? 'bg-emerald-600 text-white rounded-br-none' 
                                             : msg.isError 
-                                                ? 'bg-red-50 text-red-600 border border-red-200 rounded-bl-none'
+                                                ? 'bg-red-50 text-red-800 border border-red-200 rounded-bl-none'
                                                 : 'bg-white text-slate-700 border border-slate-100 rounded-bl-none'
                                         }`}>
                                             <span className="whitespace-pre-wrap">{msg.text}</span>
                                             
-                                            {/* Standard Retry Logic for Errors */}
-                                            {msg.isError && (
+                                            {/* Action Button for Errors */}
+                                            {msg.action && (
+                                                <button
+                                                    onClick={msg.action.onClick}
+                                                    className="mt-3 py-2 px-3 bg-white border border-red-300 text-red-600 rounded-lg text-xs font-bold hover:bg-red-50 transition-colors shadow-sm self-start"
+                                                >
+                                                    👉 {msg.action.label}
+                                                </button>
+                                            )}
+
+                                            {/* Standard Retry Logic for Errors (if no specific action) */}
+                                            {msg.isError && !msg.action && (
                                                 <div className="flex gap-2 mt-2 pt-2 border-t border-red-200/50">
                                                     <button 
                                                         onClick={() => handleRetry(idx)}

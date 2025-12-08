@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { GoogleGenAI, Chat, FunctionDeclaration, Type } from "@google/genai";
 import { SparklesIcon, XIcon, RefreshIcon, SendIcon, SettingsIcon, TrashIcon, ActivityIcon } from './icons';
@@ -53,6 +54,10 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
     // Key Management
     const [customKey, setCustomKey] = useState('');
     const [tempCustomKey, setTempCustomKey] = useState(''); 
+    
+    // Diagnostics State
+    const [connectionStatus, setConnectionStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
+    const [connectionError, setConnectionError] = useState('');
     
     const chatSessionRef = useRef<Chat | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -264,8 +269,8 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
 
             if (errorMsgStr.includes('429')) {
                 friendlyMsg = `⚠️ **โควต้าเต็ม (429)**\nกรุณารอสักครู่แล้วลองใหม่`;
-            } else if (errorMsgStr.includes("403")) {
-                friendlyMsg = `⚠️ **Access Denied (403)**\nAPI Key อาจถูกจำกัดโดเมน`;
+            } else if (errorMsgStr.includes("403") || errorMsgStr.includes("xhr error")) {
+                friendlyMsg = `⚠️ **Access Denied (403)**\nAPI Key อาจถูกจำกัดโดเมน (Vercel URL blocked)`;
             } else {
                 friendlyMsg = `⚠️ **Error**\n${errorMsgStr}`;
             }
@@ -314,6 +319,25 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
         setTempCustomKey('');
         chatSessionRef.current = null;
         setMessages(prev => [...prev, { role: 'model', text: 'ลบ Custom Key แล้ว ใช้ Default Key' }]);
+    };
+
+    const handleTestConnection = async () => {
+        setConnectionStatus('testing');
+        setConnectionError('');
+        try {
+            const apiKey = getSystemApiKey();
+            const ai = new GoogleGenAI({ apiKey });
+            // Simple generation call to test connection
+            await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: 'test connection',
+            });
+            setConnectionStatus('success');
+        } catch (error: any) {
+            console.error("Connection Test Error:", error);
+            setConnectionStatus('error');
+            setConnectionError(error.message || JSON.stringify(error));
+        }
     };
 
     const currentKey = getSystemApiKey();
@@ -425,6 +449,45 @@ export const AIChat: React.FC<AIChatProps> = ({ patients }) => {
                                         <TrashIcon className="w-4 h-4" />
                                     </button>
                                 </div>
+                            </div>
+
+                            {/* Diagnostics Section */}
+                            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mt-4">
+                                <p className="text-xs font-semibold text-slate-500 uppercase mb-2">ตรวจสอบการเชื่อมต่อ (Diagnostics)</p>
+                                
+                                <div className="mb-3">
+                                    <label className="block text-xs text-slate-400 mb-1">Domain ของคุณ (Referrer)</label>
+                                    <div className="flex items-center gap-2">
+                                        <code className="flex-1 bg-slate-100 px-2 py-1.5 rounded text-xs text-slate-700 font-mono break-all border border-slate-200">
+                                            {typeof window !== 'undefined' ? window.location.origin : 'Loading...'}
+                                        </code>
+                                    </div>
+                                    <p className="text-[10px] text-slate-400 mt-1 leading-tight">
+                                        * หากใช้งานไม่ได้บน Vercel กรุณานำ URL นี้ไปเพิ่มใน <strong>Google Cloud Console &gt; API Key &gt; Website restrictions</strong>
+                                    </p>
+                                </div>
+
+                                <button 
+                                    onClick={handleTestConnection}
+                                    disabled={connectionStatus === 'testing'}
+                                    className={`w-full py-2 rounded-lg text-sm font-semibold transition-all shadow-sm flex items-center justify-center gap-2 ${
+                                        connectionStatus === 'success' ? 'bg-green-100 text-green-700 border border-green-200' :
+                                        connectionStatus === 'error' ? 'bg-red-100 text-red-700 border border-red-200' :
+                                        'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200'
+                                    }`}
+                                >
+                                    {connectionStatus === 'testing' && <span className="animate-spin h-3 w-3 border-2 border-slate-500 border-t-transparent rounded-full"></span>}
+                                    {connectionStatus === 'idle' && 'ทดสอบการเชื่อมต่อ'}
+                                    {connectionStatus === 'testing' && 'กำลังทดสอบ...'}
+                                    {connectionStatus === 'success' && 'เชื่อมต่อสำเร็จ (Connected)'}
+                                    {connectionStatus === 'error' && 'การเชื่อมต่อล้มเหลว (Failed)'}
+                                </button>
+
+                                {connectionStatus === 'error' && (
+                                    <div className="mt-2 p-2 bg-red-50 rounded text-[10px] text-red-600 font-mono break-words border border-red-100">
+                                        Error: {connectionError}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     ) : (

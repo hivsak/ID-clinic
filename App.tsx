@@ -8,7 +8,6 @@ import { Dashboard } from './components/Dashboard';
 import { Reports } from './components/Reports';
 import { Settings } from './components/Settings';
 import { LoginPage } from './components/LoginPage';
-import { AIChat } from './components/AIChat';
 import { Patient, PatientStatus } from './types';
 import { BellIcon } from './components/icons';
 import { getPatients, createPatient, updatePatient, getPatientById, deletePatient } from './services/patientService';
@@ -287,9 +286,6 @@ const App: React.FC = () => {
             {renderContent()}
         </div>
       </main>
-      
-      {/* AI Assistant Chat - Always available when logged in */}
-      <AIChat patients={patients} />
     </div>
   );
 };

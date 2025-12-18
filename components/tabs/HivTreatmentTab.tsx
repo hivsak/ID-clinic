@@ -19,7 +19,7 @@ const ARV_DRUGS = [
 const ARV_SHORTCUTS = [
     { label: 'TLD', drugs: ['TDF', '3TC', 'DTG'] },
     { label: 'Kocitaf', drugs: ['TAF', 'FTC', 'DTG'] },
-    { label: 'Goivir-T', drugs: ['TDF', 'FTC', 'EFV'] },
+    { label: 'GPOvir-T', drugs: ['TDF', 'FTC', 'EFV'] },
     { label: 'Zilavir', drugs: ['AZT', '3TC'] },
     { label: 'Teno-EM', drugs: ['TDF', 'FTC'] },
 ];

@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { Patient, PatientStatus, MedicalEventType } from '../types';
 import { PlusIcon, SearchIcon, ChevronLeftIcon, ChevronRightIcon, TrashIcon } from './icons';
@@ -34,7 +35,7 @@ const getStatusBadge = (status: PatientStatus | null) => {
 // Common STDs for dropdown
 const STD_DISEASE_OPTIONS = [
     'Syphilis', 'Gonorrhea', 'Chlamydia', 'Non-Gonorrhea', 
-    'HSV', 'HPV', 'Trichomoniasis', 'PID', 'LGV', 'Chancroid'
+    'HSV', 'HPV', 'Trichomoniasis', 'PID', 'LGV', 'Chancroid', 'Monkey Pox'
 ];
 
 const HBV_STATUS_OPTIONS = ['ไม่เป็น HBV', 'เป็น HBV', 'รอตรวจเพิ่มเติม', 'ไม่มีข้อมูล'];

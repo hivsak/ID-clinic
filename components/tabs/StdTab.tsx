@@ -20,7 +20,8 @@ const STD_STANDALONE = [
     'Chancroid', 
     'LGV', 
     'Donovanosis', 
-    'HPV'
+    'HPV',
+    'Monkey Pox'
 ];
 
 // 2. Syphilis Options (Multiple Choice)

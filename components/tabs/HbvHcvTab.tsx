@@ -100,13 +100,13 @@ export const HbvHcvTab: React.FC<HbvHcvTabProps> = ({ patient, onUpdatePatient }
         onUpdatePatient({ ...patient, hcvInfo: newHcvInfo });
     };
 
-     const handleAddHcvTest = (newTestData: { date: string, result: string }) => {
+     const handleAddHcvTest = (newTestData: { date: string, result: string, type?: string }) => {
         const currentHcvInfo = patient.hcvInfo || { hcvTests: [] };
         const newTest: HcvTest = {
             id: `hcv-test-${Date.now()}`,
             date: newTestData.date,
             result: newTestData.result as any,
-            type: 'Anti-HCV' // Default type
+            type: (newTestData.type as any) || 'Anti-HCV'
         };
         const updatedTests = [...(currentHcvInfo.hcvTests || []), newTest].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         onUpdatePatient({ ...patient, hcvInfo: { ...currentHcvInfo, hcvTests: updatedTests } });
@@ -287,13 +287,16 @@ export const HbvHcvTab: React.FC<HbvHcvTabProps> = ({ patient, onUpdatePatient }
                     <TestHistoryCard
                         title="Anti-HCV / HCV-Ab"
                         records={hcvInfo.hcvTests || []}
-                        onAdd={handleAddHcvTest}
+                        onAdd={(rec) => handleAddHcvTest(rec as any)}
                         onDelete={handleDeleteHcvTest}
                         onEdit={handleUpdateHcvTest}
                         recordKey="result"
                         resultLabel="Result"
                         resultInputType="select"
                         resultOptions={['Negative', 'Positive', 'Inconclusive']}
+                        secondaryKey="type"
+                        secondaryLabel="Type"
+                        secondaryOptions={['Anti-HCV', 'HCV-Ab']}
                     />
                     <TestHistoryCard
                         title="HCV viral load ก่อนการรักษา"

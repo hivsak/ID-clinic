@@ -1,12 +1,13 @@
+
 import React, { useState, useEffect } from 'react';
 import { PlusIcon, TrashIcon, EditIcon } from './icons';
 import { inputClass, formatThaiDateBE, toLocalISOString } from './utils';
 import { DateInput } from './DateInput';
 
-interface TestHistoryCardProps<T extends {id: string; date: string} & Record<K, any>, K extends string> {
+interface TestHistoryCardProps<T extends {id: string; date: string} & Record<K, any> & Record<S, any>, K extends string, S extends string> {
     title: string;
     records: T[];
-    onAdd: (newRecord: { date: string } & Record<K, string>) => void;
+    onAdd: (newRecord: { date: string } & Record<K, string> & Partial<Record<S, string>>) => void;
     onDelete: (id: string) => void;
     onEdit?: (updatedRecord: T) => void;
     recordKey: K;
@@ -14,6 +15,10 @@ interface TestHistoryCardProps<T extends {id: string; date: string} & Record<K, 
     resultInputType: 'text' | 'select';
     resultOptions?: string[];
     resultPlaceholder?: string;
+    // Secondary field support (e.g. for HCV Type)
+    secondaryKey?: S;
+    secondaryLabel?: string;
+    secondaryOptions?: string[];
 }
 
 interface EditModalProps {
@@ -26,26 +31,34 @@ interface EditModalProps {
     resultInputType: 'text' | 'select';
     resultOptions?: string[];
     resultPlaceholder?: string;
+    secondaryKey?: string;
+    secondaryLabel?: string;
+    secondaryOptions?: string[];
 }
 
 const EditModal: React.FC<EditModalProps> = ({ 
-    isOpen, record, onClose, onSave, recordKey, resultLabel, resultInputType, resultOptions, resultPlaceholder 
+    isOpen, record, onClose, onSave, recordKey, resultLabel, resultInputType, resultOptions, resultPlaceholder,
+    secondaryKey, secondaryLabel, secondaryOptions
 }) => {
     const [date, setDate] = useState('');
     const [result, setResult] = useState('');
+    const [secondary, setSecondary] = useState('');
 
     useEffect(() => {
         if (record) {
             setDate(record.date);
             setResult(record[recordKey]);
+            if (secondaryKey) setSecondary(record[secondaryKey]);
         }
-    }, [record, recordKey]);
+    }, [record, recordKey, secondaryKey]);
 
     if (!isOpen || !record) return null;
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        onSave({ ...record, date, [recordKey]: result });
+        const updatedData = { ...record, date, [recordKey]: result };
+        if (secondaryKey) updatedData[secondaryKey] = secondary;
+        onSave(updatedData);
     };
 
     return (
@@ -53,13 +66,21 @@ const EditModal: React.FC<EditModalProps> = ({
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md transform transition-all scale-100" onClick={e => e.stopPropagation()}>
                 <div className="p-5 border-b border-slate-100 flex justify-between items-center">
                     <h3 className="font-bold text-slate-800 text-lg">แก้ไขข้อมูล</h3>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition-colors">&times;</button>
+                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition-colors text-2xl">&times;</button>
                 </div>
                 <form onSubmit={handleSubmit} className="p-6 space-y-5">
                     <div>
                         <label className="block text-sm font-semibold text-slate-700 mb-1">วันที่</label>
                         <DateInput value={date} onChange={e => setDate(e.target.value)} />
                     </div>
+                    {secondaryKey && (
+                        <div>
+                            <label className="block text-sm font-semibold text-slate-700 mb-1">{secondaryLabel}</label>
+                            <select value={secondary} onChange={e => setSecondary(e.target.value)} className={inputClass}>
+                                {secondaryOptions?.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                            </select>
+                        </div>
+                    )}
                     <div>
                         <label className="block text-sm font-semibold text-slate-700 mb-1">{resultLabel}</label>
                         {resultInputType === 'select' ? (
@@ -80,24 +101,31 @@ const EditModal: React.FC<EditModalProps> = ({
     );
 };
 
-export const TestHistoryCard = <T extends {id: string; date: string} & Record<K, any>, K extends string>({
-    title, records, onAdd, onDelete, onEdit, recordKey, resultLabel, resultInputType, resultOptions = [], resultPlaceholder
-}: TestHistoryCardProps<T, K>) => {
+export const TestHistoryCard = <T extends {id: string; date: string} & Record<K, any> & Record<S, any>, K extends string, S extends string>({
+    title, records, onAdd, onDelete, onEdit, recordKey, resultLabel, resultInputType, resultOptions = [], resultPlaceholder,
+    secondaryKey, secondaryLabel, secondaryOptions = []
+}: TestHistoryCardProps<T, K, S>) => {
 
     const [isAdding, setIsAdding] = useState(false);
     const [newDate, setNewDate] = useState(toLocalISOString(new Date()));
     const [newResult, setNewResult] = useState(resultInputType === 'select' ? (resultOptions[0] || '') : '');
+    const [newSecondary, setNewSecondary] = useState(secondaryOptions[0] || '');
     
     const [editingRecord, setEditingRecord] = useState<T | null>(null);
 
     const handleAddClick = () => {
         if (!newDate || !newResult) return;
-        const recordPart = { [recordKey]: newResult } as Record<K, string>;
-        const newRecord = { date: newDate, ...recordPart };
-        onAdd(newRecord);
-        // Reset form and close it
+        const recordPart = { 
+            [recordKey]: newResult,
+            ...(secondaryKey ? { [secondaryKey]: newSecondary } : {})
+        } as Record<K, string> & Record<S, string>;
+        
+        onAdd({ date: newDate, ...recordPart });
+        
+        // Reset
         setNewDate(toLocalISOString(new Date()));
         setNewResult(resultInputType === 'select' ? (resultOptions[0] || '') : '');
+        setNewSecondary(secondaryOptions[0] || '');
         setIsAdding(false);
     };
 
@@ -122,7 +150,9 @@ export const TestHistoryCard = <T extends {id: string; date: string} & Record<K,
                     <div key={rec.id} className="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-transparent hover:border-slate-200 transition-colors group">
                         <div className="flex flex-col">
                             <span className="text-xs font-semibold text-slate-400">{formatThaiDateBE(rec.date)}</span>
-                            <span className="text-sm font-medium text-slate-800">{rec[recordKey]}</span>
+                            <span className="text-sm font-medium text-slate-800">
+                                {secondaryKey ? <><span className="text-slate-500 font-normal">{rec[secondaryKey]}: </span>{rec[recordKey]}</> : rec[recordKey]}
+                            </span>
                         </div>
                         <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
                             {onEdit && (
@@ -155,12 +185,20 @@ export const TestHistoryCard = <T extends {id: string; date: string} & Record<K,
             {isAdding && (
                 <div className="mt-4 pt-4 border-t border-slate-100 animate-in slide-in-from-top-2 duration-200">
                     <div className="flex flex-col gap-3">
+                        <div>
+                            <label className="text-xs font-medium text-slate-500 mb-1 block">วันที่</label>
+                            <DateInput value={newDate} onChange={e => setNewDate(e.target.value)} className="text-sm py-1" />
+                        </div>
                         <div className="grid grid-cols-2 gap-3">
-                            <div>
-                                <label className="text-xs font-medium text-slate-500 mb-1 block">Date</label>
-                                <DateInput value={newDate} onChange={e => setNewDate(e.target.value)} className="text-sm py-1" />
-                            </div>
-                            <div>
+                            {secondaryKey && (
+                                <div>
+                                    <label className="text-xs font-medium text-slate-500 mb-1 block">{secondaryLabel}</label>
+                                    <select value={newSecondary} onChange={e => setNewSecondary(e.target.value)} className={inputClass + " text-sm py-2"}>
+                                        {secondaryOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                    </select>
+                                </div>
+                            )}
+                            <div className={secondaryKey ? "" : "col-span-2"}>
                                  <label className="text-xs font-medium text-slate-500 mb-1 block">{resultLabel}</label>
                                 {resultInputType === 'select' ? (
                                     <select value={newResult} onChange={e => setNewResult(e.target.value)} className={inputClass + " text-sm py-2"}>
@@ -191,6 +229,9 @@ export const TestHistoryCard = <T extends {id: string; date: string} & Record<K,
                 resultInputType={resultInputType}
                 resultOptions={resultOptions}
                 resultPlaceholder={resultPlaceholder}
+                secondaryKey={secondaryKey}
+                secondaryLabel={secondaryLabel}
+                secondaryOptions={secondaryOptions}
             />
         </div>
     );

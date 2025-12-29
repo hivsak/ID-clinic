@@ -11,132 +11,6 @@ interface HbvHcvTabProps {
     onUpdatePatient: (patient: Patient) => void;
 }
 
-// Specific HcvTestHistoryCard (Local component) updated to support Edit Modal
-const HcvTestHistoryCard: React.FC<{
-    records: HcvTest[];
-    onAdd: (newRecord: HcvTest) => void;
-    onDelete: (id: string) => void;
-    onEdit: (updatedRecord: HcvTest) => void;
-}> = ({ records, onAdd, onDelete, onEdit }) => {
-    const [isAdding, setIsAdding] = useState(false);
-    const [newTest, setNewTest] = useState<{date: string; type: 'Anti-HCV' | 'HCV-Ab'; result: 'Positive' | 'Negative' | 'Inconclusive'}>({
-        date: toLocalISOString(new Date()),
-        type: 'HCV-Ab',
-        result: 'Negative',
-    });
-    const [editingRecord, setEditingRecord] = useState<HcvTest | null>(null);
-
-    const handleAddClick = () => {
-        if (!newTest.date) return;
-        onAdd({ ...newTest, id: `hcv-test-${Date.now()}` });
-        setNewTest({ date: toLocalISOString(new Date()), type: 'HCV-Ab', result: 'Negative' });
-        setIsAdding(false);
-    };
-    
-    const sortedRecords = [...records].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-    return (
-         <div className="bg-white p-4 rounded-lg shadow-sm border flex flex-col">
-            <div className="flex justify-between items-center pb-2">
-                <h4 className="font-semibold text-gray-800">Anti-HCV / HCV-Ab</h4>
-                <button 
-                    type="button"
-                    onClick={() => setIsAdding(!isAdding)}
-                    className="flex items-center gap-x-1 px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 rounded-lg hover:bg-emerald-100 border border-emerald-200"
-                >
-                    <PlusIcon className="h-3 w-3" />
-                    {isAdding ? 'ยกเลิก' : 'เพิ่มผล'}
-                </button>
-            </div>
-            <div className="flex-grow mt-3 space-y-2 overflow-y-auto max-h-36 pr-2">
-                {sortedRecords.length > 0 ? sortedRecords.map(rec => (
-                     <div key={rec.id} className="flex justify-between items-center bg-gray-50 p-2 rounded-md text-sm group relative">
-                        <div className="truncate flex-1">
-                           <span className="text-gray-500">{formatThaiDateBE(rec.date)}: </span>
-                           <span className="text-gray-800 font-medium">{rec.type}</span>
-                        </div>
-                        <div className="flex items-center">
-                            <span className={`font-semibold px-2 ${rec.result === 'Positive' ? 'text-red-600' : rec.result === 'Negative' ? 'text-green-600' : 'text-amber-600'}`}>{rec.result}</span>
-                            <button 
-                                type="button"
-                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditingRecord(rec); }} 
-                                className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-full transition-colors ml-2"
-                                title="แก้ไข"
-                            >
-                                <EditIcon className="h-4 w-4"/>
-                            </button>
-                            <button 
-                                type="button"
-                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(rec.id); }} 
-                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors ml-1 relative z-20"
-                                title="ลบข้อมูล"
-                            >
-                                <TrashIcon className="h-4 w-4 pointer-events-none"/>
-                            </button>
-                        </div>
-                    </div>
-                )) : (
-                     <div className="h-full flex items-center justify-center">
-                        <p className="text-sm text-gray-400 text-center py-4">No results recorded.</p>
-                    </div>
-                )}
-            </div>
-            {isAdding && (
-                <div className="mt-4 pt-4 border-t space-y-3">
-                    <div className="flex flex-col gap-2">
-                        <div><label className="text-xs text-gray-500">Date</label><DateInput value={newTest.date} onChange={e => setNewTest(p => ({...p, date: e.target.value}))} className="py-1.5 text-sm" /></div>
-                        <div className="grid grid-cols-2 gap-x-2">
-                            <div><label className="text-xs text-gray-500">Type</label><select value={newTest.type} onChange={e => setNewTest(p => ({...p, type: e.target.value as any}))} className={inputClass + " py-1.5 text-sm"}><option>HCV-Ab</option><option>Anti-HCV</option></select></div>
-                            <div><label className="text-xs text-gray-500">Result</label><select value={newTest.result} onChange={e => setNewTest(p => ({...p, result: e.target.value as any}))} className={inputClass + " py-1.5 text-sm"}><option>Negative</option><option>Positive</option><option>Inconclusive</option></select></div>
-                        </div>
-                    </div>
-                    <button type="button" onClick={handleAddClick} className="w-full flex items-center justify-center gap-x-2 px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700">
-                        <PlusIcon className="h-4 w-4" /> บันทึกผล
-                    </button>
-                </div>
-            )}
-
-            {/* Edit Modal for HcvTest */}
-            {editingRecord && (
-                 <div className="fixed inset-0 bg-black bg-opacity-50 z-[100] flex justify-center items-center p-4" onClick={() => setEditingRecord(null)}>
-                    <div className="bg-white rounded-lg shadow-xl w-full max-w-md" onClick={e => e.stopPropagation()}>
-                        <div className="p-4 border-b flex justify-between items-center">
-                            <h3 className="font-semibold text-gray-800">แก้ไขผลตรวจ HCV</h3>
-                            <button onClick={() => setEditingRecord(null)} className="text-gray-400 hover:text-gray-600">&times;</button>
-                        </div>
-                        <div className="p-4 space-y-4">
-                             <div>
-                                <label className="block text-sm font-medium text-gray-700">วันที่</label>
-                                <DateInput value={editingRecord.date} onChange={e => setEditingRecord({...editingRecord, date: e.target.value})} />
-                            </div>
-                             <div>
-                                <label className="block text-sm font-medium text-gray-700">ประเภทการตรวจ</label>
-                                <select value={editingRecord.type} onChange={e => setEditingRecord({...editingRecord, type: e.target.value as any})} className={inputClass}>
-                                    <option>HCV-Ab</option>
-                                    <option>Anti-HCV</option>
-                                </select>
-                            </div>
-                             <div>
-                                <label className="block text-sm font-medium text-gray-700">ผลตรวจ</label>
-                                <select value={editingRecord.result} onChange={e => setEditingRecord({...editingRecord, result: e.target.value as any})} className={inputClass}>
-                                    <option>Negative</option>
-                                    <option>Positive</option>
-                                    <option>Inconclusive</option>
-                                </select>
-                            </div>
-                            <div className="flex justify-end gap-2 pt-2">
-                                <button onClick={() => setEditingRecord(null)} className="px-4 py-2 text-sm text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">ยกเลิก</button>
-                                <button onClick={() => { onEdit(editingRecord); setEditingRecord(null); }} className="px-4 py-2 text-sm text-white bg-emerald-600 rounded-lg hover:bg-emerald-700">บันทึก</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-        </div>
-    );
-};
-
-
 export const HbvHcvTab: React.FC<HbvHcvTabProps> = ({ patient, onUpdatePatient }) => {
     // --- HBV Logic ---
     const [isEditingHbvSummary, setIsEditingHbvSummary] = useState(false);
@@ -176,7 +50,6 @@ export const HbvHcvTab: React.FC<HbvHcvTabProps> = ({ patient, onUpdatePatient }
     const hbvData = patient.hbvInfo || { hbsAgTests: [], viralLoads: [], ultrasounds: [], ctScans: [] };
     const latestHbsAgTest = [...(hbvData.hbsAgTests || [])].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
 
-    // Use shared logic
     const displaySummary = determineHbvStatus(patient);
     const manualSummaryOptions = ['ไม่เป็น HBV', 'เป็น HBV', 'รอตรวจเพิ่มเติม'];
 
@@ -227,8 +100,14 @@ export const HbvHcvTab: React.FC<HbvHcvTabProps> = ({ patient, onUpdatePatient }
         onUpdatePatient({ ...patient, hcvInfo: newHcvInfo });
     };
 
-     const handleAddHcvTest = (newTest: HcvTest) => {
+     const handleAddHcvTest = (newTestData: { date: string, result: string }) => {
         const currentHcvInfo = patient.hcvInfo || { hcvTests: [] };
+        const newTest: HcvTest = {
+            id: `hcv-test-${Date.now()}`,
+            date: newTestData.date,
+            result: newTestData.result as any,
+            type: 'Anti-HCV' // Default type
+        };
         const updatedTests = [...(currentHcvInfo.hcvTests || []), newTest].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         onUpdatePatient({ ...patient, hcvInfo: { ...currentHcvInfo, hcvTests: updatedTests } });
     };
@@ -248,11 +127,9 @@ export const HbvHcvTab: React.FC<HbvHcvTabProps> = ({ patient, onUpdatePatient }
         onUpdatePatient({ ...patient, hcvInfo: { ...currentHcvInfo, hcvTests: updatedTests } });
     };
     
-    // --- HCV Summary Logic ---
+    // --- Summary Data ---
     const hcvInfo = patient.hcvInfo || { hcvTests: [] };
     const latestHcvTest = [...(hcvInfo.hcvTests || [])].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
-    
-    // Use shared logic
     const hcvDiagnosticStatus = determineHcvDiagnosticStatus(hcvInfo.hcvTests || []);
     const hcvTreatmentStatus = determineHcvStatus(patient);
 
@@ -260,7 +137,6 @@ export const HbvHcvTab: React.FC<HbvHcvTabProps> = ({ patient, onUpdatePatient }
     const latestPostVl = [...(hcvInfo.postTreatmentVls || [])].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
     const latestTreatment = [...(hcvInfo.treatments || [])].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
 
-    // Helper to display correct date based on status
     let hcvDateText = 'ยังไม่เริ่มการรักษา';
     if (hcvTreatmentStatus.text === 'เคยเป็น HCV รักษาหายแล้ว' && latestPostVl) {
         hcvDateText = `ตรวจ VL ล่าสุด: ${formatThaiDateBE(latestPostVl.date)}`;
@@ -285,7 +161,6 @@ export const HbvHcvTab: React.FC<HbvHcvTabProps> = ({ patient, onUpdatePatient }
         <div className="space-y-6">
             {/* Top Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {/* HBV Test Result Card */}
                 <div className="bg-white p-6 rounded-lg shadow-sm flex flex-col h-full">
                     <h3 className="text-lg font-semibold text-gray-600">ผลตรวจ HBV</h3>
                     <div className="flex-grow mt-2">
@@ -301,23 +176,14 @@ export const HbvHcvTab: React.FC<HbvHcvTabProps> = ({ patient, onUpdatePatient }
                             <p className="text-lg font-semibold text-gray-400">No Data</p>
                         )}
                     </div>
-                    {latestHbsAgTest ? (
-                         <p className="text-sm text-gray-500 mt-2">ตรวจล่าสุด: {formatThaiDateBE(latestHbsAgTest.date)}</p>
-                    ) : (
-                        <div className="h-5"></div> 
-                    )}
+                    {latestHbsAgTest ? <p className="text-sm text-gray-500 mt-2">ตรวจล่าสุด: {formatThaiDateBE(latestHbsAgTest.date)}</p> : <div className="h-5"></div>}
                 </div>
 
-                {/* HBV Treatment Summary Card */}
                 <div className="bg-white p-6 rounded-lg shadow-sm flex flex-col h-full">
                     {isEditingHbvSummary ? (
                         <div>
                             <h3 className="text-lg font-semibold text-gray-600 mb-2">แก้ไขสรุปผล HBV</h3>
-                            <select 
-                                value={editedHbvSummary} 
-                                onChange={e => setEditedHbvSummary(e.target.value)}
-                                className={inputClass}
-                            >
+                            <select value={editedHbvSummary} onChange={e => setEditedHbvSummary(e.target.value)} className={inputClass}>
                                 <option value="automatic">Automatic Summary</option>
                                 {manualSummaryOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                             </select>
@@ -330,24 +196,17 @@ export const HbvHcvTab: React.FC<HbvHcvTabProps> = ({ patient, onUpdatePatient }
                         <>
                            <div className="flex justify-between items-start">
                                 <h3 className="text-lg font-semibold text-gray-600">สรุปผลการรักษา HBV</h3>
-                                <button onClick={handleEditHbvSummary} className="text-gray-400 hover:text-emerald-600">
-                                    <EditIcon />
-                                </button>
+                                <button onClick={handleEditHbvSummary} className="text-gray-400 hover:text-emerald-600"><EditIcon /></button>
                             </div>
                             <div className="flex-grow mt-2">
-                                <span className={`px-3 py-1 text-base font-bold rounded-full ${displaySummary.color}`}>
-                                    {displaySummary.text}
-                                </span>
-                                {patient.hbvInfo?.manualSummary && (
-                                     <span className="ml-2 text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded-md">Edited</span>
-                                )}
+                                <span className={`px-3 py-1 text-base font-bold rounded-full ${displaySummary.color}`}>{displaySummary.text}</span>
+                                {patient.hbvInfo?.manualSummary && <span className="ml-2 text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded-md">Edited</span>}
                             </div>
                             <div className="h-5 mt-2"></div>
                         </>
                     )}
                 </div>
 
-                {/* HCV Diagnostic Summary Card */}
                 <div className="bg-white p-6 rounded-lg shadow-sm flex flex-col h-full">
                     <h3 className="text-lg font-semibold text-gray-600">ผลตรวจ HCV</h3>
                     <div className="flex-grow mt-2">
@@ -356,31 +215,20 @@ export const HbvHcvTab: React.FC<HbvHcvTabProps> = ({ patient, onUpdatePatient }
                                 hcvDiagnosticStatus === 'POSITIVE' ? 'bg-red-100 text-red-800' :
                                 hcvDiagnosticStatus === 'NEGATIVE' ? 'bg-emerald-100 text-emerald-800' :
                                 'bg-amber-100 text-amber-800'
-                            }`}>
-                                {hcvDiagnosticStatus}
-                            </span>
+                            }`}>{hcvDiagnosticStatus}</span>
                         ) : (
                             <p className="text-lg font-semibold text-gray-400">No Data</p>
                         )}
                     </div>
-                    {latestHcvTest ? (
-                         <p className="text-sm text-gray-500 mt-2">ตรวจล่าสุด: {formatThaiDateBE(latestHcvTest.date)}</p>
-                    ) : (
-                        <div className="h-5"></div>
-                    )}
+                    {latestHcvTest ? <p className="text-sm text-gray-500 mt-2">ตรวจล่าสุด: {formatThaiDateBE(latestHcvTest.date)}</p> : <div className="h-5"></div>}
                 </div>
                  
-                 {/* HCV Treatment Summary Card */}
                 <div className="bg-white p-6 rounded-lg shadow-sm flex flex-col h-full">
                     <h3 className="text-lg font-semibold text-gray-600">สรุปผลการรักษา HCV</h3>
                     <div className="flex-grow mt-2">
-                        <span className={`px-3 py-1 text-base font-bold rounded-full ${hcvTreatmentStatus.color}`}>
-                            {hcvTreatmentStatus.text}
-                        </span>
+                        <span className={`px-3 py-1 text-base font-bold rounded-full ${hcvTreatmentStatus.color}`}>{hcvTreatmentStatus.text}</span>
                     </div>
-                     <p className="text-sm text-gray-500 mt-2">
-                        {hcvDateText}
-                    </p>
+                     <p className="text-sm text-gray-500 mt-2">{hcvDateText}</p>
                 </div>
             </div>
 
@@ -436,11 +284,16 @@ export const HbvHcvTab: React.FC<HbvHcvTabProps> = ({ patient, onUpdatePatient }
                 
                 {/* Right Column: HCV */}
                 <div className="space-y-4">
-                    <HcvTestHistoryCard
+                    <TestHistoryCard
+                        title="Anti-HCV / HCV-Ab"
                         records={hcvInfo.hcvTests || []}
                         onAdd={handleAddHcvTest}
                         onDelete={handleDeleteHcvTest}
                         onEdit={handleUpdateHcvTest}
+                        recordKey="result"
+                        resultLabel="Result"
+                        resultInputType="select"
+                        resultOptions={['Negative', 'Positive', 'Inconclusive']}
                     />
                     <TestHistoryCard
                         title="HCV viral load ก่อนการรักษา"

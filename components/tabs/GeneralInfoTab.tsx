@@ -5,6 +5,8 @@ import { DisplayField, calculateAgeBreakdown, calculateDobFromAge, calculatePati
 import { EditIcon } from '../icons';
 import { ThaiAddressSelector } from '../ThaiAddressSelector';
 import { DateInput } from '../DateInput';
+import { HospitalSearchableSelect } from '../HospitalSearchableSelect';
+import { HealthcareSchemeSearchableSelect } from '../HealthcareSchemeSearchableSelect';
 
 interface GeneralInfoTabProps {
   patient: Patient;
@@ -20,11 +22,9 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, onUpdat
     const [isDeceased, setIsDeceased] = useState(false);
     
     useEffect(() => {
-        // Reset form data when edit section is closed or patient changes
         if (editSection === null) {
             setFormData(patient);
         } else {
-             // Initialize local state when entering edit mode
             if (!formData.referralType) {
                 setFormData(prev => ({ ...prev, referralType: 'มหาสารคาม' }));
             }
@@ -49,13 +49,11 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, onUpdat
         
         let updates: Partial<Patient> = { [name]: value };
 
-        // National ID input masking (digits only, max 13)
         if (name === 'cid') {
             const numericValue = value.replace(/\D/g, '').slice(0, 13);
             updates.cid = numericValue;
         }
 
-        // Auto-link Title and Sex
         if (name === 'title') {
             if (value === 'นาย') {
                 updates.sex = 'ชาย';
@@ -66,18 +64,24 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, onUpdat
             if (value === 'ชาย') {
                 updates.title = 'นาย';
             } else if (value === 'หญิง') {
-                // If current title is Male, switch to Miss default. 
-                // If already Mrs/Miss/Other, keep it.
                 if (formData.title === 'นาย') {
                     updates.title = 'นางสาว';
                 }
             }
         } else if (name === 'referralType' && value === 'มหาสารคาม') {
             updates.referredFrom = '';
-            updates.referralDate = '';
+            updates.referralDate = undefined;
         }
 
         setFormData(prev => ({ ...prev, ...updates }));
+    };
+
+    const handleHospitalSelect = (field: 'referredFrom' | 'referOutLocation', value: string) => {
+        setFormData(prev => ({ ...prev, [field]: value }));
+    };
+
+    const handleSchemeSelect = (value: string) => {
+        setFormData(prev => ({ ...prev, healthcareScheme: value }));
     };
 
     const handleAddressSelectorChange = (key: 'subdistrict' | 'district' | 'province', value: string) => {
@@ -107,13 +111,10 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, onUpdat
 
     const handleSave = (e: React.FormEvent) => {
         e.preventDefault();
-        
-        // Validation for CID length if provided
         if (formData.cid && formData.cid.length !== 13) {
             alert("เลขบัตรประชาชนต้องมี 13 หลัก");
             return;
         }
-
         onUpdate(formData);
         setEditSection(null);
     };
@@ -372,17 +373,11 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, onUpdat
                                     <input type="tel" name="phone" id="phone" value={formData.phone} onChange={handleChange} className={inputClass} />
                                 </div>
                                 <div>
-                                    <label htmlFor="healthcareScheme" className={labelClass}>สิทธิการรักษา</label>
-                                     <select name="healthcareScheme" id="healthcareScheme" value={formData.healthcareScheme} onChange={handleChange} className={inputClass}>
-                                        <option value="">-- เลือก --</option>
-                                        <option>บัตรทอง นอกเขต</option>
-                                        <option>บัตรทอง ในเขต</option>
-                                        <option>ประกันสังคม นอกเขต</option>
-                                        <option>ประกันสังคม ในเขต</option>
-                                        <option>จ่ายตรง กรมบัญชีกลาง</option>
-                                        <option>จ่ายตรง ท้องถิ่น</option>
-                                        <option>ชำระเงินเอง</option>
-                                    </select>
+                                    <HealthcareSchemeSearchableSelect 
+                                        label="สิทธิการรักษา" 
+                                        selectedValue={formData.healthcareScheme || ''} 
+                                        onSelect={handleSchemeSelect} 
+                                    />
                                 </div>
                                  <div>
                                     <label htmlFor="nextAppointmentDate" className={labelClass}>วันนัดหมายครั้งถัดไป</label>
@@ -454,8 +449,11 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, onUpdat
                                         <DateInput name="referralDate" id="referralDate" value={formData.referralDate || ''} onChange={handleChange} />
                                     </div>
                                     <div>
-                                        <label htmlFor="referredFrom" className={labelClass}>ส่งตัวมาจาก</label>
-                                        <input type="text" name="referredFrom" id="referredFrom" value={formData.referredFrom || ''} onChange={handleChange} className={inputClass} />
+                                        <HospitalSearchableSelect 
+                                            label="ส่งตัวมาจาก" 
+                                            selectedValue={formData.referredFrom || ''} 
+                                            onSelect={(val) => handleHospitalSelect('referredFrom', val)} 
+                                        />
                                     </div>
                                 </>
                             )}
@@ -471,8 +469,11 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, onUpdat
                                 <DateInput name="referOutDate" id="referOutDate" value={formData.referOutDate || ''} onChange={handleChange} />
                             </div>
                              <div>
-                                <label htmlFor="referOutLocation" className={labelClass}>ส่งตัวไปที่</label>
-                                <input type="text" name="referOutLocation" id="referOutLocation" value={formData.referOutLocation || ''} onChange={handleChange} className={inputClass} />
+                                <HospitalSearchableSelect 
+                                    label="ส่งตัวไปที่" 
+                                    selectedValue={formData.referOutLocation || ''} 
+                                    onSelect={(val) => handleHospitalSelect('referOutLocation', val)} 
+                                />
                             </div>
                          </div>
 

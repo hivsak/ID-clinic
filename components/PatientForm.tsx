@@ -4,6 +4,8 @@ import { Patient, PatientStatus } from '../types';
 import { calculateAgeBreakdown, calculateDobFromAge, calculatePatientStatus, inputClass, labelClass } from './utils';
 import { ThaiAddressSelector } from './ThaiAddressSelector';
 import { DateInput } from './DateInput';
+import { HospitalSearchableSelect } from './HospitalSearchableSelect';
+import { HealthcareSchemeSearchableSelect } from './HealthcareSchemeSearchableSelect';
 
 export type NewPatientData = Omit<Patient, 'id' | 'medicalHistory' | 'registrationDate'>;
 
@@ -15,18 +17,18 @@ interface PatientFormProps {
 export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) => {
     const [formData, setFormData] = useState<NewPatientData>({
         hn: '',
-        cid: '', // Initialize cid
+        cid: '', 
         napId: '',
         title: '',
         firstName: '',
         lastName: '',
         dob: '',
         sex: '',
-        riskBehavior: '', // Changed to empty default
-        status: PatientStatus.ACTIVE, // Default initial
+        riskBehavior: '', 
+        status: PatientStatus.ACTIVE, 
         occupation: '',
-        partnerStatus: '', // Changed to empty default
-        partnerHivStatus: '', // Changed to empty default
+        partnerStatus: '', 
+        partnerHivStatus: '', 
         address: '',
         subdistrict: '',
         district: '',
@@ -49,8 +51,6 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
     // Auto-calculate status when relevant dates change
     useEffect(() => {
         const computedStatus = calculatePatientStatus(formData);
-        // If computedStatus is null (dash), we default to ACTIVE for the DB status to be safe,
-        // or we can leave it as is. Let's default to ACTIVE if null for new patients.
         const newStatus = computedStatus || PatientStatus.ACTIVE;
         if (formData.status !== newStatus) {
             setFormData(prev => ({ ...prev, status: newStatus }));
@@ -63,13 +63,11 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
         
         let updates: Partial<NewPatientData> = { [name]: value };
 
-        // National ID input masking (digits only, max 13)
         if (name === 'cid') {
             const numericValue = value.replace(/\D/g, '').slice(0, 13);
             updates.cid = numericValue;
         }
 
-        // Auto-link Title and Sex
         if (name === 'title') {
             if (value === 'นาย') {
                 updates.sex = 'ชาย';
@@ -80,8 +78,6 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
             if (value === 'ชาย') {
                 updates.title = 'นาย';
             } else if (value === 'หญิง') {
-                // If current title is Male, switch to Miss default. 
-                // If already Mrs/Miss/Other, keep it.
                 if (formData.title === 'นาย') {
                     updates.title = 'นางสาว';
                 }
@@ -92,6 +88,14 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
         }
 
         setFormData(prev => ({ ...prev, ...updates }));
+    };
+
+    const handleHospitalSelect = (field: 'referredFrom' | 'referOutLocation', value: string) => {
+        setFormData(prev => ({ ...prev, [field]: value }));
+    };
+
+    const handleSchemeSelect = (value: string) => {
+        setFormData(prev => ({ ...prev, healthcareScheme: value }));
     };
 
     const handleAddressSelectorChange = (key: 'subdistrict' | 'district' | 'province', value: string) => {
@@ -122,13 +126,10 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        
-        // Validation for CID length if provided
         if (formData.cid && formData.cid.length !== 13) {
             alert("เลขบัตรประชาชนต้องมี 13 หลัก");
             return;
         }
-
         onSave(formData);
     };
 
@@ -300,7 +301,6 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
                 <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
                     <h3 className="text-lg font-semibold text-gray-800 mb-6">ข้อมูลการติดต่อและสิทธิ์ (Contact & Eligibility)</h3>
                     <div className="grid grid-cols-1 gap-6">
-                        {/* Thai Address Selector (Spans 3 columns in its own grid) */}
                         <ThaiAddressSelector 
                             province={formData.province || ''}
                             district={formData.district || ''}
@@ -318,17 +318,11 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
                                 <input type="tel" name="phone" id="phone" value={formData.phone} onChange={handleChange} className={inputClass} />
                             </div>
                             <div>
-                                <label htmlFor="healthcareScheme" className={labelClass}>สิทธิการรักษา</label>
-                                 <select name="healthcareScheme" id="healthcareScheme" value={formData.healthcareScheme} onChange={handleChange} className={inputClass}>
-                                    <option value="">-- เลือก --</option>
-                                    <option>บัตรทอง นอกเขต</option>
-                                    <option>บัตรทอง ในเขต</option>
-                                    <option>ประกันสังคม นอกเขต</option>
-                                    <option>ประกันสังคม ในเขต</option>
-                                    <option>จ่ายตรง กรมบัญชีกลาง</option>
-                                    <option>จ่ายตรง ท้องถิ่น</option>
-                                    <option>ชำระเงินเอง</option>
-                                </select>
+                                <HealthcareSchemeSearchableSelect 
+                                    label="สิทธิการรักษา" 
+                                    selectedValue={formData.healthcareScheme || ''} 
+                                    onSelect={handleSchemeSelect} 
+                                />
                             </div>
                              <div>
                                 <label htmlFor="nextAppointmentDate" className={labelClass}>วันนัดหมายครั้งถัดไป</label>
@@ -383,8 +377,11 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
                                     <DateInput name="referralDate" id="referralDate" value={formData.referralDate} onChange={handleChange} />
                                 </div>
                                 <div>
-                                    <label htmlFor="referredFrom" className={labelClass}>ส่งตัวมาจาก</label>
-                                    <input type="text" name="referredFrom" id="referredFrom" value={formData.referredFrom} onChange={handleChange} className={inputClass} />
+                                    <HospitalSearchableSelect 
+                                        label="ส่งตัวมาจาก" 
+                                        selectedValue={formData.referredFrom || ''} 
+                                        onSelect={(val) => handleHospitalSelect('referredFrom', val)} 
+                                    />
                                 </div>
                             </>
                         )}
@@ -400,8 +397,11 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
                             <DateInput name="referOutDate" id="referOutDate" value={formData.referOutDate} onChange={handleChange} />
                         </div>
                          <div>
-                            <label htmlFor="referOutLocation" className={labelClass}>ส่งตัวไปที่</label>
-                            <input type="text" name="referOutLocation" id="referOutLocation" value={formData.referOutLocation} onChange={handleChange} className={inputClass} />
+                            <HospitalSearchableSelect 
+                                label="ส่งตัวไปที่" 
+                                selectedValue={formData.referOutLocation || ''} 
+                                onSelect={(val) => handleHospitalSelect('referOutLocation', val)} 
+                            />
                         </div>
                      </div>
 

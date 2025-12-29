@@ -19,6 +19,8 @@ interface TestHistoryCardProps<T extends {id: string; date: string} & Record<K, 
     secondaryKey?: S;
     secondaryLabel?: string;
     secondaryOptions?: string[];
+    // Other option support
+    otherOptionLabel?: string;
 }
 
 interface EditModalProps {
@@ -34,31 +36,58 @@ interface EditModalProps {
     secondaryKey?: string;
     secondaryLabel?: string;
     secondaryOptions?: string[];
+    otherOptionLabel?: string;
 }
 
 const EditModal: React.FC<EditModalProps> = ({ 
-    isOpen, record, onClose, onSave, recordKey, resultLabel, resultInputType, resultOptions, resultPlaceholder,
-    secondaryKey, secondaryLabel, secondaryOptions
+    isOpen, record, onClose, onSave, recordKey, resultLabel, resultInputType, resultOptions = [], resultPlaceholder,
+    secondaryKey, secondaryLabel, secondaryOptions, otherOptionLabel
 }) => {
     const [date, setDate] = useState('');
     const [result, setResult] = useState('');
     const [secondary, setSecondary] = useState('');
+    const [manualValue, setManualValue] = useState('');
+    const [isOtherSelected, setIsOtherSelected] = useState(false);
 
     useEffect(() => {
         if (record) {
             setDate(record.date);
-            setResult(record[recordKey]);
+            const val = record[recordKey] || '';
+            
+            if (otherOptionLabel) {
+                const isKnown = resultOptions.includes(val);
+                if (val && !isKnown) {
+                    setIsOtherSelected(true);
+                    setResult(otherOptionLabel);
+                    setManualValue(val);
+                } else {
+                    setIsOtherSelected(val === otherOptionLabel);
+                    setResult(val);
+                    setManualValue('');
+                }
+            } else {
+                setResult(val);
+            }
+
             if (secondaryKey) setSecondary(record[secondaryKey]);
         }
-    }, [record, recordKey, secondaryKey]);
+    }, [record, recordKey, secondaryKey, otherOptionLabel, resultOptions]);
 
     if (!isOpen || !record) return null;
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        const updatedData = { ...record, date, [recordKey]: result };
+        const finalResult = (otherOptionLabel && result === otherOptionLabel) ? manualValue : result;
+        const updatedData = { ...record, date, [recordKey]: finalResult };
         if (secondaryKey) updatedData[secondaryKey] = secondary;
         onSave(updatedData);
+    };
+
+    const handleSelectChange = (val: string) => {
+        setResult(val);
+        if (otherOptionLabel) {
+            setIsOtherSelected(val === otherOptionLabel);
+        }
     };
 
     return (
@@ -84,9 +113,22 @@ const EditModal: React.FC<EditModalProps> = ({
                     <div>
                         <label className="block text-sm font-semibold text-slate-700 mb-1">{resultLabel}</label>
                         {resultInputType === 'select' ? (
-                            <select value={result} onChange={e => setResult(e.target.value)} className={inputClass}>
-                                {resultOptions?.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                            </select>
+                            <div className="space-y-2">
+                                <select value={result} onChange={e => handleSelectChange(e.target.value)} className={inputClass}>
+                                    <option value="" disabled>-- เลือก --</option>
+                                    {resultOptions?.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                </select>
+                                {isOtherSelected && (
+                                    <input 
+                                        type="text" 
+                                        value={manualValue} 
+                                        onChange={e => setManualValue(e.target.value)} 
+                                        placeholder="ระบุข้อมูลเพิ่มเติม..." 
+                                        className={inputClass + " animate-in slide-in-from-top-1 duration-200"}
+                                        autoFocus
+                                    />
+                                )}
+                            </div>
                         ) : (
                             <input type="text" value={result} onChange={e => setResult(e.target.value)} placeholder={resultPlaceholder} className={inputClass} />
                         )}
@@ -103,20 +145,31 @@ const EditModal: React.FC<EditModalProps> = ({
 
 export const TestHistoryCard = <T extends {id: string; date: string} & Record<K, any> & Record<S, any>, K extends string, S extends string>({
     title, records, onAdd, onDelete, onEdit, recordKey, resultLabel, resultInputType, resultOptions = [], resultPlaceholder,
-    secondaryKey, secondaryLabel, secondaryOptions = []
+    secondaryKey, secondaryLabel, secondaryOptions = [], otherOptionLabel
 }: TestHistoryCardProps<T, K, S>) => {
 
     const [isAdding, setIsAdding] = useState(false);
     const [newDate, setNewDate] = useState(toLocalISOString(new Date()));
-    const [newResult, setNewResult] = useState(resultInputType === 'select' ? (resultOptions[0] || '') : '');
+    const [newResult, setNewResult] = useState('');
+    const [manualResult, setManualResult] = useState('');
     const [newSecondary, setNewSecondary] = useState(secondaryOptions[0] || '');
     
     const [editingRecord, setEditingRecord] = useState<T | null>(null);
 
+    // Sync default result for adding
+    useEffect(() => {
+        if (isAdding && resultInputType === 'select' && !newResult) {
+            setNewResult(resultOptions[0] || '');
+        }
+    }, [isAdding, resultInputType, resultOptions, newResult]);
+
     const handleAddClick = () => {
-        if (!newDate || !newResult) return;
+        if (!newDate || (!newResult && !manualResult)) return;
+        
+        const finalResultValue = (otherOptionLabel && newResult === otherOptionLabel) ? manualResult : newResult;
+        
         const recordPart = { 
-            [recordKey]: newResult,
+            [recordKey]: finalResultValue,
             ...(secondaryKey ? { [secondaryKey]: newSecondary } : {})
         } as Record<K, string> & Record<S, string>;
         
@@ -124,7 +177,8 @@ export const TestHistoryCard = <T extends {id: string; date: string} & Record<K,
         
         // Reset
         setNewDate(toLocalISOString(new Date()));
-        setNewResult(resultInputType === 'select' ? (resultOptions[0] || '') : '');
+        setNewResult('');
+        setManualResult('');
         setNewSecondary(secondaryOptions[0] || '');
         setIsAdding(false);
     };
@@ -201,9 +255,22 @@ export const TestHistoryCard = <T extends {id: string; date: string} & Record<K,
                             <div className={secondaryKey ? "" : "col-span-2"}>
                                  <label className="text-xs font-medium text-slate-500 mb-1 block">{resultLabel}</label>
                                 {resultInputType === 'select' ? (
-                                    <select value={newResult} onChange={e => setNewResult(e.target.value)} className={inputClass + " text-sm py-2"}>
-                                        {resultOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                    </select>
+                                    <div className="space-y-2">
+                                        <select value={newResult} onChange={e => setNewResult(e.target.value)} className={inputClass + " text-sm py-2"}>
+                                            <option value="" disabled>-- เลือก --</option>
+                                            {resultOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                        </select>
+                                        {otherOptionLabel && newResult === otherOptionLabel && (
+                                            <input 
+                                                type="text" 
+                                                value={manualResult} 
+                                                onChange={e => setManualResult(e.target.value)} 
+                                                placeholder="ระบุเองที่นี่..." 
+                                                className={inputClass + " text-sm py-2 animate-in slide-in-from-top-1 duration-200"}
+                                                autoFocus
+                                            />
+                                        )}
+                                    </div>
                                 ) : (
                                     <input type="text" value={newResult} onChange={e => setNewResult(e.target.value)} placeholder={resultPlaceholder} className={inputClass + " text-sm py-2"}/>
                                 )}
@@ -232,6 +299,7 @@ export const TestHistoryCard = <T extends {id: string; date: string} & Record<K,
                 secondaryKey={secondaryKey}
                 secondaryLabel={secondaryLabel}
                 secondaryOptions={secondaryOptions}
+                otherOptionLabel={otherOptionLabel}
             />
         </div>
     );

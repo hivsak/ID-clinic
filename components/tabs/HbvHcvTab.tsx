@@ -316,9 +316,10 @@ export const HbvHcvTab: React.FC<HbvHcvTabProps> = ({ patient, onUpdatePatient }
                         onDelete={(id) => handleDeleteHcvRecord('treatments', id)}
                         onEdit={(rec) => handleUpdateHcvRecord('treatments', rec)}
                         recordKey="regimen"
-                        resultLabel="Regimen"
-                        resultInputType="text"
-                        resultPlaceholder="e.g., Sofosbuvir/Velpatasvir"
+                        resultLabel="ตัวเลือกยา"
+                        resultInputType="select"
+                        resultOptions={['Sof-Vel', 'อื่นๆ ระบุ']}
+                        otherOptionLabel="อื่นๆ ระบุ"
                     />
                     <TestHistoryCard
                         title="HCV viral load หลังการรักษา"

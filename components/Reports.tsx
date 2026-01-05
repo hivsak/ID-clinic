@@ -149,10 +149,10 @@ const GeneralTrendChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
 
     const { years, dataByYear } = useMemo(() => {
         const yrs = new Set<number>();
-        // Always include current year and next year (2569)
         const currentY = new Date().getFullYear();
         yrs.add(currentY);
-        yrs.add(currentY + 1); // 2026 / 2569
+        yrs.add(2025);
+        yrs.add(2026); // Ensure 2569 BE is present
 
         const db: Record<number, Record<number, Record<string, number>>> = {};
         const add = (dateStr: string | undefined, category: string) => {
@@ -226,11 +226,11 @@ const GeneralTrendChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
                 <h3 className="text-lg font-bold text-gray-800">แนวโน้มรายเดือน (Monthly Trends)</h3>
                 {years.length > 0 && (
                     <div className="relative mt-2 sm:mt-0 flex items-center gap-2">
-                        <span className="text-sm font-medium text-gray-500">ปี พ.ศ.</span>
-                         <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))} className="appearance-none bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-full p-2.5 pr-8">
+                        <span className="text-sm font-medium text-gray-500 whitespace-nowrap">ปี พ.ศ.</span>
+                         <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))} className="appearance-none bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-full p-2.5 pr-8 min-w-[100px]">
                             {years.map(y => <option key={y} value={y}>{y + 543}</option>)}
                         </select>
-                        <div className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 flex items-center px-2 text-gray-700 mt-3.5 sm:mt-0"><ChevronDownIcon /></div>
+                        <div className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 flex items-center px-2 text-gray-700 mt-3 sm:mt-0"><ChevronDownIcon /></div>
                     </div>
                 )}
             </div>
@@ -280,13 +280,15 @@ const StdLineChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
     const [hoveredMonth, setHoveredMonth] = useState<number | null>(null);
     const [visibleDiseases, setVisibleDiseases] = useState<Set<string>>(new Set());
 
-    const { years, dataByYear } = useMemo(() => {
+    const { years, dataByYear, allFoundDiseases } = useMemo(() => {
         const yrs = new Set<number>();
         const currentY = new Date().getFullYear();
         yrs.add(currentY);
-        yrs.add(currentY + 1); // 2026 / 2569
+        yrs.add(2025);
+        yrs.add(2026); // Ensure 2569 BE is present
 
         const db: Record<number, Record<number, Record<string, number>>> = {};
+        const diseaseSet = new Set<string>();
 
         patients.forEach(p => {
             p.stdInfo?.records?.forEach(r => {
@@ -301,35 +303,36 @@ const StdLineChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
                     let dName = disease;
                     if (SYPHILIS_SUBTYPES.includes(disease)) dName = 'Syphilis';
                     db[y][m][dName] = (db[y][m][dName] || 0) + 1;
+                    diseaseSet.add(dName);
                 });
             });
         });
-        return { years: Array.from(yrs).sort((a, b) => b - a), dataByYear: db };
+        return { 
+            years: Array.from(yrs).sort((a, b) => b - a), 
+            dataByYear: db,
+            allFoundDiseases: Array.from(diseaseSet).sort()
+        };
     }, [patients]);
 
-    const { monthlyData, activeDiseases } = useMemo(() => {
+    const { monthlyData } = useMemo(() => {
         const currentYearData = dataByYear[selectedYear] || {};
-        const diseasesSet = new Set<string>();
         const mData = Array.from({ length: 12 }, (_, i) => {
-            const monthRecs = currentYearData[i] || {};
-            Object.keys(monthRecs).forEach(d => diseasesSet.add(d));
-            return { monthIndex: i, details: monthRecs };
+            return { monthIndex: i, details: currentYearData[i] || {} };
         });
-        const sortedDiseases = Array.from(diseasesSet).sort();
         
-        // Initial state: show all diseases if none selected yet
-        if (visibleDiseases.size === 0 && sortedDiseases.length > 0) {
-            setVisibleDiseases(new Set(sortedDiseases));
+        // Initial setup: Show all diseases by default if none are hidden yet
+        if (visibleDiseases.size === 0 && allFoundDiseases.length > 0) {
+            setVisibleDiseases(new Set(allFoundDiseases));
         }
 
-        return { monthlyData: mData, activeDiseases: sortedDiseases };
-    }, [selectedYear, dataByYear]);
+        return { monthlyData: mData };
+    }, [selectedYear, dataByYear, allFoundDiseases]);
 
-    const toggleDiseaseVisibility = (disease: string) => {
+    const toggleDisease = (d: string) => {
         setVisibleDiseases(prev => {
             const next = new Set(prev);
-            if (next.has(disease)) next.delete(disease);
-            else next.add(disease);
+            if (next.has(d)) next.delete(d);
+            else next.add(d);
             return next;
         });
     };
@@ -337,7 +340,7 @@ const StdLineChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
     const maxCount = useMemo(() => {
         let max = 0;
         monthlyData.forEach(m => {
-             activeDiseases.forEach(d => {
+             allFoundDiseases.forEach(d => {
                  if (visibleDiseases.has(d)) {
                     const count = m.details[d] || 0;
                     if (count > max) max = count;
@@ -345,7 +348,7 @@ const StdLineChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
              });
         });
         return Math.max(max, 4);
-    }, [monthlyData, activeDiseases, visibleDiseases]);
+    }, [monthlyData, allFoundDiseases, visibleDiseases]);
 
     const svgHeight = 320;
     const svgWidth = 800;
@@ -362,24 +365,24 @@ const StdLineChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
                 <h3 className="text-lg font-bold text-gray-800">แนวโน้มโรคติดต่อทางเพศสัมพันธ์ (STD Trend)</h3>
                 {years.length > 0 && (
                     <div className="relative mt-2 sm:mt-0 flex items-center gap-2">
-                        <span className="text-sm font-medium text-gray-500">ปี พ.ศ.</span>
-                         <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))} className="appearance-none bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-full p-2.5 pr-8">
+                         <span className="text-sm font-medium text-gray-500 whitespace-nowrap">ปี พ.ศ.</span>
+                         <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))} className="appearance-none bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-full p-2.5 pr-8 min-w-[100px]">
                             {years.map(y => <option key={y} value={y}>{y + 543}</option>)}
                         </select>
-                        <div className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 flex items-center px-2 text-gray-700 mt-3.5 sm:mt-0"><ChevronDownIcon /></div>
+                        <div className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 flex items-center px-2 text-gray-700 mt-3 sm:mt-0"><ChevronDownIcon /></div>
                     </div>
                 )}
             </div>
 
-            {activeDiseases.length > 0 && (
+            {allFoundDiseases.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-6">
-                    {activeDiseases.map((d, idx) => {
+                    {allFoundDiseases.map((d, idx) => {
                         const color = STD_COLORS[idx % STD_COLORS.length];
                         const isActive = visibleDiseases.has(d);
                         return (
                             <button 
                                 key={d} 
-                                onClick={() => toggleDiseaseVisibility(d)} 
+                                onClick={() => toggleDisease(d)} 
                                 className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border shadow-sm flex items-center gap-2 ${isActive ? `text-white border-transparent` : 'bg-white text-gray-400 border-gray-200 hover:bg-gray-50'}`} 
                                 style={{ backgroundColor: isActive ? color : undefined, borderColor: isActive ? color : undefined }}
                             >
@@ -390,16 +393,16 @@ const StdLineChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
                 </div>
             )}
 
-            {years.length === 0 ? <div className="h-64 flex items-center justify-center text-gray-400 italic bg-gray-50 rounded-xl border border-dashed">ไม่มีข้อมูล STD</div> : (
+            {allFoundDiseases.length === 0 ? <div className="h-64 flex items-center justify-center text-gray-400 italic bg-gray-50 rounded-xl border border-dashed">ไม่มีข้อมูล STD ในฐานข้อมูล</div> : (
                 <div className="relative overflow-hidden">
                     {hoveredMonth !== null && (
                          <div className="absolute z-10 bg-white border border-gray-200 shadow-lg rounded-lg p-3 text-xs min-w-[120px] pointer-events-none" style={{ left: `${(hoveredMonth / 11) * 80}%`, top: '10%', transform: hoveredMonth > 8 ? 'translateX(-100%)' : 'translateX(0)' }}>
                              <p className="font-bold text-gray-800 mb-2 border-b pb-1">{THAI_MONTHS[hoveredMonth]} {selectedYear + 543}</p>
                              <ul className="space-y-1">
-                                 {activeDiseases.filter(d => visibleDiseases.has(d)).map((d, idx) => (
+                                 {allFoundDiseases.filter(d => visibleDiseases.has(d)).map((d, idx) => (
                                      <li key={d} className="flex justify-between items-center">
                                          <div className="flex items-center">
-                                             <span className="w-2 h-2 rounded-full mr-1.5" style={{ backgroundColor: STD_COLORS[activeDiseases.indexOf(d) % STD_COLORS.length] }}></span>
+                                             <span className="w-2 h-2 rounded-full mr-1.5" style={{ backgroundColor: STD_COLORS[allFoundDiseases.indexOf(d) % STD_COLORS.length] }}></span>
                                              <span className="text-gray-600">{d}</span>
                                          </div>
                                          <span className="font-bold text-gray-900 ml-2">{monthlyData[hoveredMonth].details[d] || 0}</span>
@@ -409,16 +412,33 @@ const StdLineChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
                          </div>
                      )}
                     <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className="w-full h-auto font-sans text-xs">
-                        {Array.from({ length: 6 }).map((_, i) => <g key={i}><line x1={padding.left} y1={getY((maxCount/5)*i)} x2={svgWidth - padding.right} y2={getY((maxCount/5)*i)} stroke="#e5e7eb" /><text x={padding.left - 10} y={getY((maxCount/5)*i) + 4} textAnchor="end" fill="#9ca3af">{Math.round((maxCount/5)*i)}</text></g>)}
+                        {Array.from({ length: 6 }).map((_, i) => {
+                             const val = (maxCount / 5) * i;
+                             const y = getY(val);
+                             return (
+                                <g key={i}>
+                                    <line x1={padding.left} y1={y} x2={svgWidth - padding.right} y2={y} stroke="#e5e7eb" strokeWidth="1" />
+                                    <text x={padding.left - 10} y={y + 4} textAnchor="end" fill="#9ca3af">{Math.round(val)}</text>
+                                </g>
+                             );
+                        })}
                         {THAI_MONTHS.map((m, i) => <text key={m} x={getX(i)} y={svgHeight - 10} textAnchor="middle" fill="#6b7280">{m}</text>)}
-                        {activeDiseases.map((disease, idx) => {
+                        {allFoundDiseases.map((disease, idx) => {
                             if (!visibleDiseases.has(disease)) return null;
                             const color = STD_COLORS[idx % STD_COLORS.length];
                             return (
                                 <g key={disease}>
-                                    <path d={monthlyData.map((m, i) => (i === 0 ? 'M' : 'L') + ` ${getX(i)} ${getY(m.details[disease] || 0)}`).join(' ')} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="transition-all duration-500" />
+                                    <path 
+                                        d={monthlyData.map((m, i) => (i === 0 ? 'M' : 'L') + ` ${getX(i)} ${getY(m.details[disease] || 0)}`).join(' ')} 
+                                        fill="none" 
+                                        stroke={color} 
+                                        strokeWidth="2.5" 
+                                        strokeLinecap="round" 
+                                        strokeLinejoin="round" 
+                                        className="transition-all duration-500" 
+                                    />
                                     {monthlyData.map((m, i) => m.details[disease] > 0 && (
-                                        <circle key={i} cx={getX(i)} cy={getY(m.details[disease])} r="3" fill={color} stroke="white" strokeWidth="1" />
+                                        <circle key={i} cx={getX(i)} cy={getY(m.details[disease])} r="3.5" fill={color} stroke="white" strokeWidth="1.5" />
                                     ))}
                                 </g>
                             );

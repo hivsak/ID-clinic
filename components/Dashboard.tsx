@@ -1,3 +1,4 @@
+
 import React, { useMemo } from 'react';
 import { Patient, PatientStatus } from '../types';
 import { PatientsIcon } from './icons';
@@ -5,19 +6,19 @@ import { calculatePatientStatus } from './utils';
 
 interface DashboardProps {
     patients: Patient[];
-    onNavigateToPatients: () => void;
+    onNavigateToPatients: (status?: string) => void;
 }
 
 const StatCard = ({ title, value, icon, colorClass, onClick, bgGradient, delay }: any) => (
     <div 
         onClick={onClick} 
         style={{ animationDelay: delay }}
-        className={`relative overflow-hidden bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center space-x-4 opacity-0 animate-fade-in-up ${onClick ? 'cursor-pointer hover:shadow-md hover:scale-[1.02] transition-all duration-300' : 'hover:-translate-y-1 transition-transform duration-300'}`}
+        className={`relative overflow-hidden bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center space-x-4 opacity-0 animate-fade-in-up ${onClick ? 'cursor-pointer hover:shadow-md hover:scale-[1.02] active:scale-95 transition-all duration-300' : 'hover:-translate-y-1 transition-transform duration-300'}`}
     >
         <div className={`p-4 rounded-xl shadow-inner ${colorClass} transition-transform duration-500 hover:rotate-12`}>
             {icon}
         </div>
-        <div className="relative z-10">
+        <div className="relative z-10 text-left">
             <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide">{title}</p>
             <p className="text-3xl font-bold text-slate-800 mt-1">{value}</p>
         </div>
@@ -42,7 +43,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ patients, onNavigateToPati
 
         patients.forEach(p => {
             // Use calculated status to ensure real-time accuracy. 
-            // If calculatePatientStatus returns null (no date), we treat it as No Data/Inactive.
             const status = calculatePatientStatus(p);
 
             if (status === PatientStatus.ACTIVE) s.active++;
@@ -77,7 +77,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ patients, onNavigateToPati
                     icon={<PatientsIcon className="h-6 w-6 text-blue-600" />} 
                     colorClass="bg-blue-50"
                     bgGradient="bg-blue-500"
-                    onClick={onNavigateToPatients}
+                    onClick={() => onNavigateToPatients()}
                     delay="0ms"
                 />
                 <StatCard 
@@ -86,6 +86,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ patients, onNavigateToPati
                     icon={<div className="h-6 w-6 rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/30" />} 
                     colorClass="bg-emerald-50"
                     bgGradient="bg-emerald-500"
+                    onClick={() => onNavigateToPatients(PatientStatus.ACTIVE)}
                     delay="100ms"
                 />
                 <StatCard 
@@ -94,6 +95,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ patients, onNavigateToPati
                     icon={<div className="h-6 w-6 rounded-full bg-red-500 shadow-lg shadow-red-500/30" />}
                     colorClass="bg-red-50"
                     bgGradient="bg-red-500"
+                    onClick={() => onNavigateToPatients(PatientStatus.LTFU)}
                     delay="200ms"
                 />
                 <StatCard 
@@ -102,6 +104,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ patients, onNavigateToPati
                     icon={<div className="h-6 w-6 rounded-full bg-slate-800 shadow-lg" />}
                     colorClass="bg-slate-100"
                     bgGradient="bg-slate-800"
+                    onClick={() => onNavigateToPatients(PatientStatus.EXPIRED)}
                     delay="300ms"
                 />
             </div>
@@ -114,15 +117,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ patients, onNavigateToPati
                     <h3 className="text-xl font-bold text-slate-800 mb-6">สถานะการรักษา</h3>
                     <div className="space-y-6">
                         {[
-                            { label: 'Active (กำลังรักษา)', value: stats.active, color: 'bg-emerald-500' },
-                            { label: 'Restart (เริ่มยาใหม่)', value: stats.restart, color: 'bg-emerald-400' },
-                            { label: 'LTFU (ขาดนัด)', value: stats.ltfu, color: 'bg-red-500' },
-                            { label: 'Transferred (ย้ายออก)', value: stats.transferred, color: 'bg-orange-400' },
-                            { label: 'Expired (เสียชีวิต)', value: stats.expired, color: 'bg-slate-600' },
+                            { label: 'Active (กำลังรักษา)', value: stats.active, color: 'bg-emerald-500', status: PatientStatus.ACTIVE },
+                            { label: 'Restart (เริ่มยาใหม่)', value: stats.restart, color: 'bg-emerald-400', status: PatientStatus.RESTART },
+                            { label: 'LTFU (ขาดนัด)', value: stats.ltfu, color: 'bg-red-500', status: PatientStatus.LTFU },
+                            { label: 'Transferred (ย้ายออก)', value: stats.transferred, color: 'bg-orange-400', status: PatientStatus.TRANSFERRED },
+                            { label: 'Expired (เสียชีวิต)', value: stats.expired, color: 'bg-slate-600', status: PatientStatus.EXPIRED },
                         ].map((item, idx) => (
-                            <div key={item.label} className="group">
+                            <div 
+                                key={item.label} 
+                                onClick={() => onNavigateToPatients(item.status)}
+                                className="group cursor-pointer p-2 -m-2 rounded-xl hover:bg-slate-50 transition-colors"
+                            >
                                 <div className="flex justify-between text-sm font-medium mb-2">
-                                    <span className="text-slate-600 group-hover:text-slate-900 transition-colors">{item.label}</span>
+                                    <span className="text-slate-600 group-hover:text-emerald-700 font-semibold transition-colors">{item.label}</span>
                                     <span className="text-slate-900">{item.value} <span className="text-slate-400 text-xs ml-1">({getPercent(item.value).toFixed(1)}%)</span></span>
                                 </div>
                                 <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">

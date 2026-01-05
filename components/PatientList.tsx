@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Patient, PatientStatus, MedicalEventType } from '../types';
 import { PlusIcon, SearchIcon, ChevronLeftIcon, ChevronRightIcon, TrashIcon } from './icons';
 import { calculateAge, calculatePatientStatus, determineHbvStatus, determineHcvStatus, formatThaiDateShort } from './utils';
@@ -10,6 +10,7 @@ interface PatientListProps {
   onSelectPatient: (id: number) => void;
   onAddNew: () => void;
   onDeletePatient: (id: number) => void;
+  initialStatusFilter?: string;
 }
 
 const getStatusBadge = (status: PatientStatus | null) => {
@@ -44,7 +45,7 @@ const HCV_STATUS_OPTIONS = [
     'เป็น HCV', 'กำลังรักษา HCV', 'เคยเป็น HCV รักษาหายแล้ว', 'เป็น HCV รักษาแล้วไม่หาย'
 ];
 
-export const PatientList: React.FC<PatientListProps> = ({ patients, onSelectPatient, onAddNew, onDeletePatient }) => {
+export const PatientList: React.FC<PatientListProps> = ({ patients, onSelectPatient, onAddNew, onDeletePatient, initialStatusFilter = '' }) => {
   // --- Filter States ---
   const [searchText, setSearchText] = useState('');
   
@@ -53,7 +54,7 @@ export const PatientList: React.FC<PatientListProps> = ({ patients, onSelectPati
   const [apptEndDate, setApptEndDate] = useState('');
   
   // Dropdown Filters
-  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>(initialStatusFilter);
   const [hbvFilter, setHbvFilter] = useState<string>('');
   const [hcvFilter, setHcvFilter] = useState<string>('');
   const [stdFilter, setStdFilter] = useState<string>('');
@@ -66,6 +67,11 @@ export const PatientList: React.FC<PatientListProps> = ({ patients, onSelectPati
   // --- Pagination States ---
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+
+  // Sync filter when prop changes (e.g. navigation from Dashboard)
+  useEffect(() => {
+      setStatusFilter(initialStatusFilter);
+  }, [initialStatusFilter]);
 
   // --- Filtering Logic ---
   const filteredPatients = useMemo(() => {

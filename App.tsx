@@ -48,6 +48,7 @@ const App: React.FC = () => {
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [patientListFilter, setPatientListFilter] = useState<string>('');
 
   // Define fetchPatients with useCallback to avoid stale closures
   const fetchPatients = useCallback(async () => {
@@ -156,7 +157,6 @@ const App: React.FC = () => {
             setView('detail');
 
             // Update local updatedAt timestamp to trigger "Viewed" sorting logic in PatientList
-            // This ensures the patient jumps to the top of the list when going back
             setPatients(prev => prev.map(p => 
                 p.id === id ? { ...p, updatedAt: new Date().toISOString() } : p
             ));
@@ -173,15 +173,22 @@ const App: React.FC = () => {
   const handleChangeView = useCallback((newView: 'dashboard' | 'list' | 'reports' | 'settings') => {
     setView(newView);
     setSelectedPatient(null);
-    fetchPatients(); // Refresh data on main navigation changes
+    if (newView === 'list') {
+        setPatientListFilter(''); // Reset filter when navigating normally to List
+    }
+    fetchPatients(); 
+  }, [fetchPatients]);
+
+  const handleNavigateWithFilter = useCallback((status: string = '') => {
+      setPatientListFilter(status);
+      setView('list');
+      setSelectedPatient(null);
+      fetchPatients();
   }, [fetchPatients]);
 
   const handleBackToList = useCallback(() => {
     setSelectedPatient(null);
     setView('list');
-    // Do NOT refresh fetchPatients() here immediately if we want to preserve the 
-    // local "viewed" sorting we just applied in handleSelectPatient. 
-    // The list is already in memory.
   }, []);
 
   const handleAddNew = useCallback(() => {
@@ -208,16 +215,13 @@ const App: React.FC = () => {
   }, [fetchPatients]);
   
   const handleUpdatePatient = useCallback(async (updatedPatient: Patient) => {
-    // Optimistic UI update (optional, but keeping it makes UI snappy)
     setSelectedPatient(updatedPatient);
     
     try {
         await updatePatient(updatedPatient);
-        // We can re-fetch detailed data to ensure everything is synced (e.g. generated IDs)
         const refreshedPatient = await getPatientById(updatedPatient.id);
         if (refreshedPatient) {
              setSelectedPatient(refreshedPatient);
-             // Update list in background
              setPatients(prev => prev.map(p => p.id === refreshedPatient.id ? refreshedPatient : p));
         }
     } catch (err: any) {
@@ -257,7 +261,7 @@ const App: React.FC = () => {
         return <PatientForm onSave={handleSavePatient} onCancel={handleCancelAdd} />;
     }
     if (view === 'dashboard') {
-        return <Dashboard patients={patients} onNavigateToPatients={() => handleChangeView('list')} />;
+        return <Dashboard patients={patients} onNavigateToPatients={handleNavigateWithFilter} />;
     }
     if (view === 'reports') {
         return <Reports patients={patients} />;
@@ -265,7 +269,15 @@ const App: React.FC = () => {
     if (view === 'settings') {
         return <Settings />;
     }
-    return <PatientList patients={patients} onSelectPatient={handleSelectPatient} onAddNew={handleAddNew} onDeletePatient={handleDeletePatient} />;
+    return (
+        <PatientList 
+            patients={patients} 
+            onSelectPatient={handleSelectPatient} 
+            onAddNew={handleAddNew} 
+            onDeletePatient={handleDeletePatient} 
+            initialStatusFilter={patientListFilter}
+        />
+    );
   };
 
   if (!isLoggedIn) {

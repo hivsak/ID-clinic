@@ -12,11 +12,11 @@ interface ReportsProps {
 const Card: React.FC<{ title: string; value: number | string; subtitle?: string; className?: string; onClick?: () => void }> = ({ title, value, subtitle, className = "bg-white", onClick }) => (
     <div 
         onClick={onClick}
-        className={`p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-center items-center text-center transition-all ${onClick ? 'cursor-pointer hover:shadow-md hover:scale-[1.02]' : ''} ${className}`}
+        className={`p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-center items-center text-center transition-all ${onClick ? 'cursor-pointer hover:shadow-md hover:scale-[1.02] active:scale-95' : ''} ${className}`}
     >
-        <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">{title}</h3>
-        <p className="text-3xl font-bold text-gray-800 mt-2">{value}</p>
-        {subtitle && <p className="text-xs text-gray-400 mt-1">{subtitle}</p>}
+        <h3 className="text-sm font-medium opacity-80 uppercase tracking-wider">{title}</h3>
+        <p className="text-3xl font-bold mt-2">{value}</p>
+        {subtitle && <p className="text-xs opacity-60 mt-1">{subtitle}</p>}
     </div>
 );
 
@@ -452,7 +452,7 @@ const StdLineChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
 };
 
 // --- Patient List View for Reports ---
-const PatientGroupList: React.FC<{ title: string; patients: any[]; onBack: () => void }> = ({ title, patients, onBack }) => (
+const PatientGroupList: React.FC<{ title: string; patients: any[]; onBack: () => void; type?: string }> = ({ title, patients, onBack, type }) => (
     <div className="space-y-6 animate-fade-in-up">
         <div className="flex items-center justify-between bg-white p-4 rounded-xl shadow-sm border border-gray-100">
              <div className="flex items-center gap-3">
@@ -469,10 +469,34 @@ const PatientGroupList: React.FC<{ title: string; patients: any[]; onBack: () =>
                     <tr>
                         <th className="px-6 py-4">HN</th>
                         <th className="px-6 py-4">ชื่อ-นามสกุล</th>
-                        <th className="px-6 py-4">วันวินิจฉัย HIV</th>
-                        <th className="px-6 py-4">วันเริ่มยา ART</th>
-                        <th className="px-6 py-4 text-center">ระยะเวลา (วัน)</th>
-                        <th className="px-6 py-4">สถานะ OI</th>
+                        {type === 'HBV' ? (
+                            <>
+                                <th className="px-6 py-4">วันตรวจ HBsAg</th>
+                                <th className="px-6 py-4 text-center">ผลตรวจ</th>
+                            </>
+                        ) : type === 'TPT' ? (
+                            <>
+                                <th className="px-6 py-4">วันเริ่ม TPT</th>
+                                <th className="px-6 py-4">สูตรยา</th>
+                            </>
+                        ) : type === 'STD' ? (
+                            <>
+                                <th className="px-6 py-4">วันที่วินิจฉัย</th>
+                                <th className="px-6 py-4">โรคที่พบ</th>
+                            </>
+                        ) : type === 'PREP' || type === 'PEP' ? (
+                            <>
+                                <th className="px-6 py-4">วันที่รับบริการ</th>
+                                <th className="px-6 py-4">ประเภท/รายละเอียด</th>
+                            </>
+                        ) : (
+                            <>
+                                <th className="px-6 py-4">วันวินิจฉัย HIV</th>
+                                <th className="px-6 py-4">วันเริ่มยา ART</th>
+                                <th className="px-6 py-4 text-center">ระยะเวลา (วัน)</th>
+                                <th className="px-6 py-4">สถานะ OI</th>
+                            </>
+                        )}
                     </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
@@ -480,16 +504,40 @@ const PatientGroupList: React.FC<{ title: string; patients: any[]; onBack: () =>
                         <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
                             <td className="px-6 py-4 font-medium text-emerald-700">{p.hn}</td>
                             <td className="px-6 py-4 font-semibold text-gray-800">{p.name}</td>
-                            <td className="px-6 py-4 text-gray-600">{formatThaiDateBE(p.diagDate)}</td>
-                            <td className="px-6 py-4 text-gray-600">{formatThaiDateBE(p.startDate)}</td>
-                            <td className="px-6 py-4 text-center font-bold text-gray-900 bg-gray-50/50">{p.diffDays}</td>
-                            <td className="px-6 py-4">
-                                {p.hasOi ? (
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">มีประวัติ OI</span>
-                                ) : (
-                                    <span className="text-gray-400 text-xs">ไม่มี OI</span>
-                                )}
-                            </td>
+                            {type === 'HBV' ? (
+                                <>
+                                    <td className="px-6 py-4 text-gray-600">{formatThaiDateBE(p.date)}</td>
+                                    <td className="px-6 py-4 text-center"><span className="px-2 py-1 rounded bg-red-50 text-red-700 font-bold text-xs">{p.result}</span></td>
+                                </>
+                            ) : type === 'TPT' ? (
+                                <>
+                                    <td className="px-6 py-4 text-gray-600">{formatThaiDateBE(p.date)}</td>
+                                    <td className="px-6 py-4 font-medium text-blue-700">{p.regimen}</td>
+                                </>
+                            ) : type === 'STD' ? (
+                                <>
+                                    <td className="px-6 py-4 text-gray-600">{formatThaiDateBE(p.date)}</td>
+                                    <td className="px-6 py-4 text-gray-800">{p.diseases?.join(', ')}</td>
+                                </>
+                            ) : type === 'PREP' || type === 'PEP' ? (
+                                <>
+                                    <td className="px-6 py-4 text-gray-600">{formatThaiDateBE(p.date)}</td>
+                                    <td className="px-6 py-4 font-medium text-indigo-700">{p.detail}</td>
+                                </>
+                            ) : (
+                                <>
+                                    <td className="px-6 py-4 text-gray-600">{formatThaiDateBE(p.diagDate)}</td>
+                                    <td className="px-6 py-4 text-gray-600">{formatThaiDateBE(p.startDate)}</td>
+                                    <td className="px-6 py-4 text-center font-bold text-gray-900 bg-gray-50/50">{p.diffDays}</td>
+                                    <td className="px-6 py-4">
+                                        {p.hasOi ? (
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">มีประวัติ OI</span>
+                                        ) : (
+                                            <span className="text-gray-400 text-xs">ไม่มี OI</span>
+                                        )}
+                                    </td>
+                                </>
+                            )}
                         </tr>
                     ))}
                 </tbody>
@@ -502,11 +550,19 @@ const PatientGroupList: React.FC<{ title: string; patients: any[]; onBack: () =>
 export const Reports: React.FC<ReportsProps> = ({ patients }) => {
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
-    const [activeGroup, setActiveGroup] = useState<{ title: string; patients: any[] } | null>(null);
+    const [activeGroup, setActiveGroup] = useState<{ title: string; patients: any[]; type?: string } | null>(null);
 
     const stats = useMemo(() => {
         const s = {
             totalPatients: patients.length,
+            lists: {
+                hivNew: [] as any[],
+                hbv: [] as any[],
+                tpt: [] as any[],
+                prep: [] as any[],
+                pep: [] as any[],
+                std: [] as any[]
+            },
             totalHiv: 0,
             hbv: { positive: 0 },
             hcv: { waitForTest: 0, clearedSpontaneously: 0, treating: 0, treatmentFailed: 0, cured: 0, activeHcv: 0, totalPositiveDiagnostic: 0 },
@@ -547,16 +603,17 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
 
             if (hivDiagEvent && isInRange(hivDiagEvent.date)) {
                 s.totalHiv++;
+                const pData = { hn: p.hn, name: `${p.firstName} ${p.lastName}`, diagDate: hivDiagEvent.date, startDate: firstArtEvent?.date || '', diffDays: '-', hasOi: hasOiHistory };
+                
                 if (firstArtEvent) {
                     const diagDate = new Date(hivDiagEvent.date), startDateObj = new Date(firstArtEvent.date);
                     const diffTime = startDateObj.getTime() - diagDate.getTime();
                     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                    pData.diffDays = diffDays.toString();
 
                     if (diffDays >= 0) {
                         s.earlyArt.totalDays += diffDays;
                         s.earlyArt.validCount++;
-                        const pData = { hn: p.hn, name: `${p.firstName} ${p.lastName}`, diagDate: hivDiagEvent.date, startDate: firstArtEvent.date, diffDays, hasOi: hasOiHistory };
-                        
                         if (diffDays <= 7) {
                             s.earlyArt.groups.early.push(pData);
                             s.earlyArt.sums.earlyDays += diffDays;
@@ -571,14 +628,20 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
                         }
                     }
                 }
+                s.lists.hivNew.push(pData);
             }
 
-            if (determineHbvStatus(p).text === 'เป็น HBV' && (p.hbvInfo?.hbsAgTests?.some(t => t.result === 'Positive' && isInRange(t.date)) || (!startDate && !endDate))) s.hbv.positive++;
-            const hcvInfo = p.hcvInfo || { hcvTests: [] };
+            const hbvTestsInRange = p.hbvInfo?.hbsAgTests?.filter(t => t.result === 'Positive' && isInRange(t.date)) || [];
+            if (determineHbvStatus(p).text === 'เป็น HBV' && (hbvTestsInRange.length > 0 || (!startDate && !endDate))) {
+                s.hbv.positive++;
+                const latestTest = [...(p.hbvInfo?.hbsAgTests || [])].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+                s.lists.hbv.push({ hn: p.hn, name: `${p.firstName} ${p.lastName}`, date: latestTest?.date || '', result: latestTest?.result || 'Positive' });
+            }
+            
             const hcvStatus = determineHcvStatus(p);
             let countThisHcv = !startDate && !endDate;
             if (!countThisHcv) {
-                const latestTest = [...(hcvInfo.hcvTests || [])].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+                const latestTest = [...(p.hcvInfo?.hcvTests || [])].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
                 if (latestTest && isInRange(latestTest.date)) countThisHcv = true;
             }
             if (countThisHcv && hcvStatus.text !== 'ไม่มีข้อมูล' && hcvStatus.text !== 'ไม่เป็น HCV') {
@@ -590,7 +653,15 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
                 else if (hcvStatus.text === 'เคยเป็น HCV รักษาหายแล้ว') s.hcv.cured++;
                 else if (hcvStatus.text === 'เป็น HCV') s.hcv.activeHcv++;
             }
-            if (p.medicalHistory.some(e => e.type === MedicalEventType.PROPHYLAXIS && e.details.TPT && isInRange(e.date))) s.tpt++;
+
+            const tptEventsInRange = p.medicalHistory.filter(e => e.type === MedicalEventType.PROPHYLAXIS && e.details.TPT && isInRange(e.date));
+            if (tptEventsInRange.length > 0) {
+                s.tpt += tptEventsInRange.length;
+                tptEventsInRange.forEach(e => {
+                    s.lists.tpt.push({ hn: p.hn, name: `${p.firstName} ${p.lastName}`, date: e.date, regimen: e.details['สูตร TPT'] || 'ได้รับ TPT' });
+                });
+            }
+
             p.medicalHistory.filter(e => e.type === MedicalEventType.OPPORTUNISTIC_INFECTION && isInRange(e.date)).forEach(e => {
                 const infections = e.details.infections || []; if (e.details.โรค) infections.push(e.details.โรค);
                 const uniqueInfs = new Set(infections);
@@ -600,9 +671,27 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
                     else s.oiBreakdown[inf] = (s.oiBreakdown[inf] || 0) + 1;
                 });
             });
-            p.stdInfo?.records?.forEach(rec => { if (isInRange(rec.date)) rec.diseases.forEach(d => { s.std.totalDiagnoses++; if (SYPHILIS_SUBTYPES.includes(d)) s.std.syphilisBreakdown[d] = (s.std.syphilisBreakdown[d] || 0) + 1; }); });
-            if (p.prepInfo?.records?.some(r => isInRange(r.dateStart))) s.prep++;
-            if (p.pepInfo?.records?.some(r => isInRange(r.date))) s.pep++;
+
+            const stdRecordsInRange = p.stdInfo?.records?.filter(rec => isInRange(rec.date)) || [];
+            if (stdRecordsInRange.length > 0) {
+                stdRecordsInRange.forEach(rec => {
+                    s.std.totalDiagnoses += rec.diseases.length;
+                    rec.diseases.forEach(d => { if (SYPHILIS_SUBTYPES.includes(d)) s.std.syphilisBreakdown[d] = (s.std.syphilisBreakdown[d] || 0) + 1; });
+                    s.lists.std.push({ hn: p.hn, name: `${p.firstName} ${p.lastName}`, date: rec.date, diseases: rec.diseases });
+                });
+            }
+
+            const prepInRange = p.prepInfo?.records?.filter(r => isInRange(r.dateStart)) || [];
+            if (prepInRange.length > 0) {
+                s.prep += prepInRange.length;
+                prepInRange.forEach(r => s.lists.prep.push({ hn: p.hn, name: `${p.firstName} ${p.lastName}`, date: r.dateStart, detail: 'เริ่มรับ PrEP' }));
+            }
+
+            const pepInRange = p.pepInfo?.records?.filter(r => isInRange(r.date)) || [];
+            if (pepInRange.length > 0) {
+                s.pep += pepInRange.length;
+                pepInRange.forEach(r => s.lists.pep.push({ hn: p.hn, name: `${p.firstName} ${p.lastName}`, date: r.date, detail: `ได้รับ PEP (${r.type || 'N/A'})` }));
+            }
         });
 
         return s;
@@ -635,7 +724,11 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
         setActiveGroup({ title: groupTitle, patients: patientsList });
     };
 
-    if (activeGroup) return <div className="p-6 md:p-8"><PatientGroupList title={activeGroup.title} patients={activeGroup.patients} onBack={() => setActiveGroup(null)} /></div>;
+    const handleCardClick = (type: string, title: string, list: any[]) => {
+        setActiveGroup({ title, patients: list, type });
+    };
+
+    if (activeGroup) return <div className="p-6 md:p-8"><PatientGroupList title={activeGroup.title} patients={activeGroup.patients} type={activeGroup.type} onBack={() => setActiveGroup(null)} /></div>;
 
     return (
         <div className="p-6 md:p-8 space-y-8 animate-fade-in-up">
@@ -654,12 +747,12 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                <Card title="ผู้ป่วย HIV ใหม่" value={stats.totalHiv} className="bg-blue-50 border-blue-100 text-blue-900" />
-                <Card title="ตรวจพบ HBV" value={stats.hbv.positive} className="bg-emerald-50 border-emerald-100 text-emerald-900" />
-                <Card title="ได้รับ TPT" value={stats.tpt} className="bg-orange-50 border-orange-100 text-orange-900" />
-                <Card title="เริ่ม PrEP" value={stats.prep} className="bg-indigo-50 border-indigo-100 text-indigo-900" />
-                <Card title="ได้รับ PEP" value={stats.pep} className="bg-purple-50 border-purple-100 text-purple-900" />
-                <Card title="วินิจฉัย STD" value={stats.std.totalDiagnoses} className="bg-pink-50 border-pink-100 text-pink-900" />
+                <Card title="ผู้ป่วย HIV ใหม่" value={stats.totalHiv} onClick={() => handleCardClick('HIV_NEW', 'รายชื่อผู้ป่วย HIV ใหม่', stats.lists.hivNew)} className="bg-blue-50 border-blue-100 text-blue-900" />
+                <Card title="ตรวจพบ HBV" value={stats.hbv.positive} onClick={() => handleCardClick('HBV', 'รายชื่อผู้ป่วยตรวจพบ HBV', stats.lists.hbv)} className="bg-emerald-50 border-emerald-100 text-emerald-900" />
+                <Card title="ได้รับ TPT" value={stats.tpt} onClick={() => handleCardClick('TPT', 'รายชื่อผู้ป่วยได้รับ TPT', stats.lists.tpt)} className="bg-orange-50 border-orange-100 text-orange-900" />
+                <Card title="เริ่ม PrEP" value={stats.prep} onClick={() => handleCardClick('PREP', 'รายชื่อผู้ป่วยเริ่ม PrEP', stats.lists.prep)} className="bg-indigo-50 border-indigo-100 text-indigo-900" />
+                <Card title="ได้รับ PEP" value={stats.pep} onClick={() => handleCardClick('PEP', 'รายชื่อผู้ป่วยได้รับ PEP', stats.lists.pep)} className="bg-purple-50 border-purple-100 text-purple-900" />
+                <Card title="วินิจฉัย STD" value={stats.std.totalDiagnoses} onClick={() => handleCardClick('STD', 'รายชื่อการวินิจฉัย STD', stats.lists.std)} className="bg-pink-50 border-pink-100 text-pink-900" />
             </div>
 
             <div className="space-y-6">
@@ -697,7 +790,7 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
                             <span>สัดส่วนระยะเวลาเริ่มยา (Early vs Late)</span>
                             <span className="text-xs font-normal text-gray-400 italic">คลิกที่กราฟเพื่อดูรายชื่อ</span>
                         </h3>
-                        <DonutChart data={earlyArtChartData} onSliceClick={handleSliceClick} />
+                        < DonutChart data={earlyArtChartData} onSliceClick={handleSliceClick} />
                      </div>
                      <div className="bg-emerald-600 text-white p-8 rounded-2xl shadow-lg flex flex-col items-start justify-between">
                         <div>

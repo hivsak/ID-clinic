@@ -28,38 +28,46 @@ export const HealthcareSchemeSearchableSelect: React.FC<HealthcareSchemeSearchab
 }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    const [isManualMode, setIsManualMode] = useState(false);
     const wrapperRef = useRef<HTMLDivElement>(null);
 
-    // Determine if the current value is one of the predefined ones or "Other"
-    const isOtherSelected = selectedValue !== '' && !HEALTHCARE_SCHEMES.includes(selectedValue);
-    const displayValue = isOtherSelected ? 'อื่นๆ ระบุ' : selectedValue;
+    // ตรวจสอบว่าค่าปัจจุบันคือค่าที่มีในรายการหรือไม่
+    const isInList = useMemo(() => HEALTHCARE_SCHEMES.includes(selectedValue), [selectedValue]);
 
     useEffect(() => {
-        setSearchTerm(displayValue);
-    }, [displayValue]);
+        if (selectedValue !== '' && !isInList) {
+            setIsManualMode(true);
+            setSearchTerm('อื่นๆ ระบุ');
+        } else {
+            setSearchTerm(selectedValue);
+            if (selectedValue !== '') setIsManualMode(false);
+        }
+    }, [selectedValue, isInList]);
 
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
             if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
                 setIsOpen(false);
-                setSearchTerm(displayValue);
+                setSearchTerm(isManualMode ? 'อื่นๆ ระบุ' : selectedValue);
             }
         }
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, [displayValue]);
+    }, [selectedValue, isManualMode]);
 
     const options = useMemo(() => [...HEALTHCARE_SCHEMES, 'อื่นๆ ระบุ'], []);
 
     const filteredOptions = useMemo(() => {
-        if (!searchTerm || searchTerm === displayValue) return options;
+        if (!searchTerm || searchTerm === selectedValue || (isManualMode && searchTerm === 'อื่นๆ ระบุ')) return options;
         return options.filter(opt => opt.toLowerCase().includes(searchTerm.toLowerCase()));
-    }, [options, searchTerm, displayValue]);
+    }, [options, searchTerm, selectedValue, isManualMode]);
 
     const handleOptionClick = (opt: string) => {
         if (opt === 'อื่นๆ ระบุ') {
-            onSelect(''); // Clear to let user type in the manual text field
+            setIsManualMode(true);
+            onSelect('');
         } else {
+            setIsManualMode(false);
             onSelect(opt);
         }
         setIsOpen(false);
@@ -95,7 +103,7 @@ export const HealthcareSchemeSearchableSelect: React.FC<HealthcareSchemeSearchab
                             filteredOptions.map((opt, idx) => (
                                 <li
                                     key={`${opt}-${idx}`}
-                                    className={`cursor-pointer select-none relative py-2.5 px-4 hover:bg-emerald-50 transition-colors ${opt === displayValue ? 'bg-emerald-50 text-emerald-700 font-bold' : 'text-slate-700'}`}
+                                    className={`cursor-pointer select-none relative py-2.5 px-4 hover:bg-emerald-50 transition-colors ${((opt === 'อื่นๆ ระบุ' && isManualMode) || (opt === selectedValue && !isManualMode)) ? 'bg-emerald-50 text-emerald-700 font-bold' : 'text-slate-700'}`}
                                     onClick={() => handleOptionClick(opt)}
                                 >
                                     {opt}
@@ -106,15 +114,14 @@ export const HealthcareSchemeSearchableSelect: React.FC<HealthcareSchemeSearchab
                 )}
             </div>
 
-            {/* Manual entry if "Other" is active */}
-            {(isOtherSelected || (searchTerm === 'อื่นๆ ระบุ' && !isOpen)) && (
-                <div className="animate-in fade-in slide-in-from-top-1 duration-200">
-                    <label className="text-[10px] font-bold text-emerald-600 uppercase mb-1 block px-1">โปรดระบุชื่อสิทธิการรักษาอื่นๆ</label>
+            {isManualMode && (
+                <div className="animate-in fade-in slide-in-from-top-1 duration-200 p-3 bg-emerald-50/50 rounded-xl border border-emerald-100 ring-1 ring-emerald-500/10">
+                    <label className="text-[10px] font-bold text-emerald-600 uppercase mb-1.5 block px-1 tracking-wider">โปรดระบุสิทธิการรักษา</label>
                     <input
                         type="text"
-                        className={inputClass}
-                        placeholder="พิมพ์ชื่อสิทธิ..."
-                        value={isOtherSelected ? selectedValue : ''}
+                        className={inputClass + " border-emerald-200 focus:ring-emerald-500/30 focus:border-emerald-500 bg-white"}
+                        placeholder="ระบุสิทธิการรักษาที่นี่..."
+                        value={selectedValue}
                         onChange={(e) => onSelect(e.target.value)}
                         autoFocus
                     />

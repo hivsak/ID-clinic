@@ -37,38 +37,47 @@ export const HospitalSearchableSelect: React.FC<HospitalSearchableSelectProps> =
 }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    const [isManualMode, setIsManualMode] = useState(false);
     const wrapperRef = useRef<HTMLDivElement>(null);
 
-    // Determine UI mode: Predefined, Other, or Empty
-    const isOtherSelected = selectedValue !== '' && !HOSPITALS.includes(selectedValue);
-    const displayValue = isOtherSelected ? 'อื่นๆ ระบุ' : selectedValue;
+    // ตรวจสอบว่าค่าปัจจุบันคือค่าที่มีในรายการหรือไม่
+    const isInList = useMemo(() => HOSPITALS.includes(selectedValue), [selectedValue]);
 
     useEffect(() => {
-        setSearchTerm(displayValue);
-    }, [displayValue]);
+        if (selectedValue !== '' && !isInList) {
+            setIsManualMode(true);
+            setSearchTerm('อื่นๆ ระบุ');
+        } else {
+            setSearchTerm(selectedValue);
+            if (selectedValue !== '') setIsManualMode(false);
+        }
+    }, [selectedValue, isInList]);
 
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
             if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
                 setIsOpen(false);
-                setSearchTerm(displayValue);
+                // คืนค่า searchTerm ให้ตรงกับสิ่งที่เลือกอยู่
+                setSearchTerm(isManualMode ? 'อื่นๆ ระบุ' : selectedValue);
             }
         }
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, [displayValue]);
+    }, [selectedValue, isManualMode]);
 
     const options = useMemo(() => [...HOSPITALS, 'อื่นๆ ระบุ'], []);
 
     const filteredOptions = useMemo(() => {
-        if (!searchTerm || searchTerm === displayValue) return options;
+        if (!searchTerm || searchTerm === selectedValue || (isManualMode && searchTerm === 'อื่นๆ ระบุ')) return options;
         return options.filter(opt => opt.toLowerCase().includes(searchTerm.toLowerCase()));
-    }, [options, searchTerm, displayValue]);
+    }, [options, searchTerm, selectedValue, isManualMode]);
 
     const handleOptionClick = (opt: string) => {
         if (opt === 'อื่นๆ ระบุ') {
-            onSelect(''); // Clear to let user type in the text field
+            setIsManualMode(true);
+            onSelect(''); // ล้างค่าเดิมเพื่อให้เริ่มกรอกใหม่
         } else {
+            setIsManualMode(false);
             onSelect(opt);
         }
         setIsOpen(false);
@@ -104,7 +113,7 @@ export const HospitalSearchableSelect: React.FC<HospitalSearchableSelectProps> =
                             filteredOptions.map((opt, idx) => (
                                 <li
                                     key={`${opt}-${idx}`}
-                                    className={`cursor-pointer select-none relative py-2.5 px-4 hover:bg-emerald-50 transition-colors ${opt === displayValue ? 'bg-emerald-50 text-emerald-700 font-bold' : 'text-slate-700'}`}
+                                    className={`cursor-pointer select-none relative py-2.5 px-4 hover:bg-emerald-50 transition-colors ${((opt === 'อื่นๆ ระบุ' && isManualMode) || (opt === selectedValue && !isManualMode)) ? 'bg-emerald-50 text-emerald-700 font-bold' : 'text-slate-700'}`}
                                     onClick={() => handleOptionClick(opt)}
                                 >
                                     {opt}
@@ -115,15 +124,14 @@ export const HospitalSearchableSelect: React.FC<HospitalSearchableSelectProps> =
                 )}
             </div>
 
-            {/* If "Other" is active (either selected explicitly or current value isn't in list) */}
-            {(isOtherSelected || (searchTerm === 'อื่นๆ ระบุ' && !isOpen)) && (
-                <div className="animate-in fade-in slide-in-from-top-1 duration-200">
-                    <label className="text-[10px] font-bold text-emerald-600 uppercase mb-1 block px-1">โปรดระบุชื่อโรงพยาบาลอื่นๆ</label>
+            {isManualMode && (
+                <div className="animate-in fade-in slide-in-from-top-1 duration-200 p-3 bg-emerald-50/50 rounded-xl border border-emerald-100 ring-1 ring-emerald-500/10">
+                    <label className="text-[10px] font-bold text-emerald-600 uppercase mb-1.5 block px-1 tracking-wider">โปรดระบุชื่อโรงพยาบาล</label>
                     <input
                         type="text"
-                        className={inputClass}
-                        placeholder="พิมพ์ชื่อโรงพยาบาล..."
-                        value={isOtherSelected ? selectedValue : ''}
+                        className={inputClass + " border-emerald-200 focus:ring-emerald-500/30 focus:border-emerald-500 bg-white"}
+                        placeholder="ระบุชื่อโรงพยาบาลที่นี่..."
+                        value={selectedValue}
                         onChange={(e) => onSelect(e.target.value)}
                         autoFocus
                     />

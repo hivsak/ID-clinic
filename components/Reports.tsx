@@ -1,16 +1,19 @@
 
 import React, { useMemo, useState } from 'react';
 import { Patient, MedicalEventType } from '../types';
-import { determineHbvStatus, determineHcvStatus } from './utils';
-import { SearchIcon, ChevronDownIcon } from './icons';
+import { determineHbvStatus, determineHcvStatus, formatThaiDateBE } from './utils';
+import { SearchIcon, ChevronDownIcon, ChevronLeftIcon } from './icons';
 import { DateInput } from './DateInput';
 
 interface ReportsProps {
     patients: Patient[];
 }
 
-const Card: React.FC<{ title: string; value: number | string; subtitle?: string; className?: string }> = ({ title, value, subtitle, className = "bg-white" }) => (
-    <div className={`p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-center items-center text-center ${className}`}>
+const Card: React.FC<{ title: string; value: number | string; subtitle?: string; className?: string; onClick?: () => void }> = ({ title, value, subtitle, className = "bg-white", onClick }) => (
+    <div 
+        onClick={onClick}
+        className={`p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-center items-center text-center transition-all ${onClick ? 'cursor-pointer hover:shadow-md hover:scale-[1.02]' : ''} ${className}`}
+    >
         <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">{title}</h3>
         <p className="text-3xl font-bold text-gray-800 mt-2">{value}</p>
         {subtitle && <p className="text-xs text-gray-400 mt-1">{subtitle}</p>}
@@ -18,7 +21,7 @@ const Card: React.FC<{ title: string; value: number | string; subtitle?: string;
 );
 
 // --- Donut Chart Component ---
-const DonutChart: React.FC<{ data: { label: string; count: number; color: string }[] }> = ({ data }) => {
+const DonutChart: React.FC<{ data: { label: string; count: number; color: string; id?: string }[]; onSliceClick?: (id: string) => void }> = ({ data, onSliceClick }) => {
     const total = data.reduce((acc, cur) => acc + cur.count, 0);
     const radius = 70;
     const innerRadius = 50;
@@ -27,13 +30,13 @@ const DonutChart: React.FC<{ data: { label: string; count: number; color: string
 
     if (total === 0) {
         return (
-            <div className="flex items-center justify-center h-64 text-gray-400">
-                ไม่มีข้อมูล
+            <div className="flex items-center justify-center h-64 text-gray-400 italic">
+                ไม่มีข้อมูลในช่วงเวลาที่เลือก
             </div>
         );
     }
 
-    const slices = data.map((item, index) => {
+    const slices = data.map((item) => {
         if (item.count === 0) return null;
         
         const percentage = item.count / total;
@@ -41,7 +44,6 @@ const DonutChart: React.FC<{ data: { label: string; count: number; color: string
         const endAngle = accumulatedAngle + percentage;
         accumulatedAngle += percentage;
 
-        // Handle single item taking up 100% (360 degrees)
         if (percentage > 0.999) {
              return (
                 <circle
@@ -52,6 +54,8 @@ const DonutChart: React.FC<{ data: { label: string; count: number; color: string
                     fill="none"
                     stroke={item.color}
                     strokeWidth={radius - innerRadius}
+                    onClick={() => item.id && onSliceClick?.(item.id)}
+                    className="cursor-pointer transition-opacity hover:opacity-80"
                 />
             );
         }
@@ -82,7 +86,8 @@ const DonutChart: React.FC<{ data: { label: string; count: number; color: string
                 key={item.label}
                 d={pathData}
                 fill={item.color}
-                className="transition-all duration-300 hover:opacity-80"
+                onClick={() => item.id && onSliceClick?.(item.id)}
+                className="transition-all duration-300 hover:opacity-80 cursor-pointer"
             >
                 <title>{`${item.label}: ${item.count} (${(percentage * 100).toFixed(1)}%)`}</title>
             </path>
@@ -100,67 +105,34 @@ const DonutChart: React.FC<{ data: { label: string; count: number; color: string
                     <span className="text-xs text-gray-500">Cases</span>
                 </div>
             </div>
-            <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 w-full">
+            <div className="mt-6 grid grid-cols-1 gap-y-2 w-full max-w-xs mx-auto">
                 {data.map((item) => (
-                    <div key={item.label} className="flex justify-between items-center text-sm">
+                    <button 
+                        key={item.label} 
+                        onClick={() => item.id && onSliceClick?.(item.id)}
+                        className={`flex justify-between items-center text-sm p-1.5 rounded-lg hover:bg-gray-50 transition-colors ${item.count === 0 ? 'opacity-40 grayscale' : ''}`}
+                    >
                         <div className="flex items-center overflow-hidden">
                             <span className="w-3 h-3 rounded-full mr-2 flex-shrink-0" style={{ backgroundColor: item.color }}></span>
                             <span className="text-gray-600 truncate" title={item.label}>{item.label}</span>
                         </div>
                         <span className="font-semibold text-gray-800 ml-2">{item.count}</span>
-                    </div>
+                    </button>
                 ))}
             </div>
         </div>
     );
 };
 
-// --- Charts Commons ---
-
+// --- Constants & Utils ---
 const THAI_MONTHS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
-
 const GENERAL_LABELS = ['HIV', 'HBV', 'TPT', 'PrEP', 'PEP'];
-const GENERAL_COLORS = {
-    HIV: '#3b82f6', // Blue
-    HBV: '#10b981', // Emerald
-    TPT: '#f97316', // Orange
-    PrEP: '#6366f1', // Indigo
-    PEP: '#a855f7', // Purple
-};
-
-const SYPHILIS_SUBTYPES = [
-    'Primary Syphilis',
-    'Secondary Syphilis',
-    'Early Syphilis',
-    'Late Latent Syphilis',
-    'Neuro Syphilis',
-    'Cardiovascular Syphilis',
-    'Congenital Syphilis',
-    'Syphilis (ไม่ทราบ)'
-];
-
-const TB_SUBTYPES = [
-    "Disemminated TB",
-    "TB lung",
-    "TB larynx",
-    "TB lymphadinitis",
-    "TB pleuritis",
-    "TB pericarditis",
-    "TB peritonitis",
-    "Tb colitis",
-    "TB meningitis",
-    "Tuberculoma",
-    "TB spine",
-    "TB arthritis",
-    "TB endophthalmitis",
-    "TB Liver abscess",
-    "TB splenic abscess",
-    "TB muscle abscess",
-    "TB Nephritis"
-];
+const GENERAL_COLORS = { HIV: '#3b82f6', HBV: '#10b981', TPT: '#f97316', PrEP: '#6366f1', PEP: '#a855f7' };
+const SYPHILIS_SUBTYPES = ['Primary Syphilis', 'Secondary Syphilis', 'Early Syphilis', 'Late Latent Syphilis', 'Neuro Syphilis', 'Cardiovascular Syphilis', 'Congenital Syphilis', 'Syphilis (ไม่ทราบ)'];
+const TB_SUBTYPES = ["Disemminated TB", "TB lung", "TB larynx", "TB lymphadinitis", "TB pleuritis", "TB pericarditis", "TB peritonitis", "Tb colitis", "TB meningitis", "Tuberculoma", "TB spine", "TB arthritis", "TB endophthalmitis", "TB Liver abscess", "TB splenic abscess", "TB muscle abscess", "TB Nephritis"];
+const STD_COLORS = ['#ef4444', '#f97316', '#f59e0b', '#84cc16', '#10b981', '#06b6d4', '#3b82f6', '#6366f1', '#8b5cf6', '#d946ef', '#f43f5e', '#881337'];
 
 // --- General Trend Chart ---
-
 const GeneralTrendChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
     const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
     const [hoveredMonth, setHoveredMonth] = useState<number | null>(null);
@@ -169,20 +141,15 @@ const GeneralTrendChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
     const toggleCategory = (cat: string) => {
         setVisibleCategories(prev => {
             const newSet = new Set(prev);
-            if (newSet.has(cat)) {
-                newSet.delete(cat);
-            } else {
-                newSet.add(cat);
-            }
+            if (newSet.has(cat)) newSet.delete(cat);
+            else newSet.add(cat);
             return newSet;
         });
     };
 
     const { years, dataByYear } = useMemo(() => {
         const yrs = new Set<number>();
-        // Structure: Year -> Month -> Category -> Count
         const db: Record<number, Record<number, Record<string, number>>> = {};
-
         const add = (dateStr: string | undefined, category: string) => {
             if (!dateStr) return;
             const parts = dateStr.split('-');
@@ -196,7 +163,6 @@ const GeneralTrendChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
                 m = d.getMonth();
             }
             if (isNaN(y) || isNaN(m)) return;
-
             yrs.add(y);
             if (!db[y]) db[y] = {};
             if (!db[y][m]) db[y][m] = {};
@@ -204,50 +170,22 @@ const GeneralTrendChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
         };
 
         patients.forEach(p => {
-            // HIV
             const hivDiag = p.medicalHistory.find(e => e.type === MedicalEventType.DIAGNOSIS);
             if (hivDiag) add(hivDiag.date, 'HIV');
-
-            // HBV (Positive tests)
-            p.hbvInfo?.hbsAgTests?.forEach(t => {
-                if (t.result === 'Positive') add(t.date, 'HBV');
-            });
-
-            // TPT
-            p.medicalHistory.forEach(e => {
-                if (e.type === MedicalEventType.PROPHYLAXIS && e.details.TPT) {
-                    add(e.date, 'TPT');
-                }
-            });
-
-            // PrEP
-            p.prepInfo?.records?.forEach(r => {
-                add(r.dateStart, 'PrEP');
-            });
-
-            // PEP
-            p.pepInfo?.records?.forEach(r => {
-                add(r.date, 'PEP');
-            });
+            p.hbvInfo?.hbsAgTests?.forEach(t => { if (t.result === 'Positive') add(t.date, 'HBV'); });
+            p.medicalHistory.forEach(e => { if (e.type === MedicalEventType.PROPHYLAXIS && e.details.TPT) add(e.date, 'TPT'); });
+            p.prepInfo?.records?.forEach(r => add(r.dateStart, 'PrEP'));
+            p.pepInfo?.records?.forEach(r => add(r.date, 'PEP'));
         });
-
         return { years: Array.from(yrs).sort((a, b) => b - a), dataByYear: db };
     }, [patients]);
-
-    React.useEffect(() => {
-        if (years.length > 0 && !years.includes(selectedYear)) {
-            setSelectedYear(years[0]);
-        }
-    }, [years, selectedYear]);
 
     const { monthlyData, maxCount } = useMemo(() => {
         const currentYearData = dataByYear[selectedYear] || {};
         let max = 0;
-
         const mData = Array.from({ length: 12 }, (_, i) => {
             const counts = currentYearData[i] || {};
             GENERAL_LABELS.forEach(cat => {
-                // Only calculate max for visible categories
                 if (visibleCategories.has(cat)) {
                     const c = counts[cat] || 0;
                     if (c > max) max = c;
@@ -255,7 +193,6 @@ const GeneralTrendChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
             });
             return { monthIndex: i, counts };
         });
-
         return { monthlyData: mData, maxCount: Math.max(max, 4) };
     }, [selectedYear, dataByYear, visibleCategories]);
 
@@ -264,10 +201,8 @@ const GeneralTrendChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
     const padding = { top: 20, right: 20, bottom: 40, left: 40 };
     const chartWidth = svgWidth - padding.left - padding.right;
     const chartHeight = svgHeight - padding.top - padding.bottom;
-
     const getX = (monthIndex: number) => padding.left + (monthIndex * (chartWidth / 11));
     const getY = (count: number) => padding.top + chartHeight - ((count / maxCount) * chartHeight);
-
     const getPath = (category: string) => {
         let d = '';
         monthlyData.forEach((data, i) => {
@@ -286,288 +221,124 @@ const GeneralTrendChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
                 <h3 className="text-lg font-bold text-gray-800">แนวโน้มรายเดือน (Monthly Trends)</h3>
                 {years.length > 0 && (
                     <div className="relative mt-2 sm:mt-0">
-                         <select 
-                            value={selectedYear} 
-                            onChange={(e) => setSelectedYear(Number(e.target.value))}
-                            className="appearance-none bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-full p-2.5 pr-8"
-                        >
+                         <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))} className="appearance-none bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-full p-2.5 pr-8">
                             {years.map(y => <option key={y} value={y}>{y}</option>)}
                         </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                            <ChevronDownIcon />
-                        </div>
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700"><ChevronDownIcon /></div>
                     </div>
                 )}
             </div>
-
-            {/* Filter Controls */}
             <div className="flex flex-wrap gap-2 mb-6">
                 {GENERAL_LABELS.map(cat => {
                     const color = GENERAL_COLORS[cat as keyof typeof GENERAL_COLORS];
                     const isActive = visibleCategories.has(cat);
                     return (
-                        <button
-                            key={cat}
-                            onClick={() => toggleCategory(cat)}
-                            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border shadow-sm flex items-center gap-2 ${
-                                isActive 
-                                ? `text-white border-transparent` 
-                                : 'bg-white text-gray-400 border-gray-200 hover:bg-gray-50'
-                            }`}
-                            style={{ 
-                                backgroundColor: isActive ? color : undefined,
-                                borderColor: isActive ? color : undefined
-                            }}
-                        >
-                             <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-white' : 'bg-gray-300'}`}></span>
-                            {cat}
+                        <button key={cat} onClick={() => toggleCategory(cat)} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border shadow-sm flex items-center gap-2 ${isActive ? `text-white border-transparent` : 'bg-white text-gray-400 border-gray-200 hover:bg-gray-50'}`} style={{ backgroundColor: isActive ? color : undefined, borderColor: isActive ? color : undefined }}>
+                             <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-white' : 'bg-gray-300'}`}></span>{cat}
                         </button>
                     );
                 })}
             </div>
-
-            {years.length === 0 ? (
-                 <div className="flex flex-col items-center justify-center h-64 text-gray-400 bg-gray-50 rounded-lg border border-dashed border-gray-200">
-                    <p>ไม่มีข้อมูลประวัติในระบบ</p>
-                </div>
-            ) : (
-                 <div className="relative w-full overflow-hidden">
-                     {/* Tooltip */}
-                     {hoveredMonth !== null && (
-                         <div 
-                            className="absolute z-10 bg-white border border-gray-200 shadow-lg rounded-lg p-3 text-xs min-w-[120px] pointer-events-none"
-                            style={{ 
-                                left: `${(hoveredMonth / 11) * 80}%`, 
-                                top: '10%',
-                                transform: hoveredMonth > 8 ? 'translateX(-100%)' : 'translateX(0)' 
-                            }}
-                         >
-                             <p className="font-bold text-gray-800 mb-2 border-b pb-1">{THAI_MONTHS[hoveredMonth]} {selectedYear}</p>
-                             <ul className="space-y-1">
-                                 {GENERAL_LABELS.filter(c => visibleCategories.has(c)).map(cat => (
-                                     <li key={cat} className="flex justify-between items-center">
-                                          <div className="flex items-center">
-                                             <span className="w-2 h-2 rounded-full mr-1.5" style={{ backgroundColor: GENERAL_COLORS[cat as keyof typeof GENERAL_COLORS] }}></span>
-                                             <span className="text-gray-600">{cat}</span>
-                                         </div>
-                                         <span className="font-bold text-gray-900 ml-2">{monthlyData[hoveredMonth].counts[cat] || 0}</span>
-                                     </li>
-                                 ))}
-                                 {GENERAL_LABELS.filter(c => visibleCategories.has(c)).length === 0 && (
-                                     <li className="text-gray-400 italic">ไม่ได้เลือกกราฟ</li>
-                                 )}
-                             </ul>
-                         </div>
-                     )}
-                     
-                     <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className="w-full h-auto font-sans text-xs">
-                         {/* Grid & Y-Axis */}
-                        {Array.from({ length: 6 }).map((_, i) => {
-                            const val = (maxCount / 5) * i;
-                            const y = getY(val);
-                            return (
-                                <g key={i}>
-                                    <line x1={padding.left} y1={y} x2={svgWidth - padding.right} y2={y} stroke="#e5e7eb" strokeWidth="1" />
-                                    <text x={padding.left - 10} y={y + 4} textAnchor="end" fill="#9ca3af">{Math.round(val)}</text>
-                                </g>
-                            );
-                        })}
-
-                        {/* X-Axis */}
-                        {THAI_MONTHS.map((m, i) => {
-                            const x = getX(i);
-                            return <text key={m} x={x} y={svgHeight - 10} textAnchor="middle" fill="#6b7280">{m}</text>;
-                        })}
-
-                        {/* Lines */}
-                        {GENERAL_LABELS.map(cat => {
-                            if (!visibleCategories.has(cat)) return null;
-                            return (
-                                <path
-                                    key={cat}
-                                    d={getPath(cat)}
-                                    fill="none"
-                                    stroke={GENERAL_COLORS[cat as keyof typeof GENERAL_COLORS]}
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    className="transition-all duration-300"
-                                />
-                            );
-                        })}
-
-                        {/* Dots */}
-                        {GENERAL_LABELS.map(cat => {
-                            if (!visibleCategories.has(cat)) return null;
-                            return (
-                                <g key={`dots-${cat}`}>
-                                    {monthlyData.map((d, i) => {
-                                        const count = d.counts[cat];
-                                        if (count === undefined || count === 0) return null;
-                                        return (
-                                            <circle 
-                                                key={i} 
-                                                cx={getX(i)} 
-                                                cy={getY(count)} 
-                                                r="3" 
-                                                fill={GENERAL_COLORS[cat as keyof typeof GENERAL_COLORS]} 
-                                                stroke="white" 
-                                                strokeWidth="1"
-                                            />
-                                        );
-                                    })}
-                                </g>
-                            );
-                        })}
-
-                         {/* Interactive Area */}
-                        {monthlyData.map((_, i) => (
-                            <rect
-                                key={`overlay-${i}`}
-                                x={getX(i) - (chartWidth / 22)}
-                                y={padding.top}
-                                width={chartWidth / 11}
-                                height={chartHeight}
-                                fill="transparent"
-                                className="cursor-pointer hover:bg-gray-500 hover:bg-opacity-5 transition-colors"
-                                onMouseEnter={() => setHoveredMonth(i)}
-                                onMouseLeave={() => setHoveredMonth(null)}
-                            />
-                        ))}
-                     </svg>
-                 </div>
-            )}
+            <div className="relative w-full overflow-hidden">
+                {hoveredMonth !== null && (
+                    <div className="absolute z-10 bg-white border border-gray-200 shadow-lg rounded-lg p-3 text-xs min-w-[120px] pointer-events-none" style={{ left: `${(hoveredMonth / 11) * 80}%`, top: '10%', transform: hoveredMonth > 8 ? 'translateX(-100%)' : 'translateX(0)' }}>
+                        <p className="font-bold text-gray-800 mb-2 border-b pb-1">{THAI_MONTHS[hoveredMonth]} {selectedYear}</p>
+                        <ul className="space-y-1">
+                            {GENERAL_LABELS.filter(c => visibleCategories.has(c)).map(cat => (
+                                <li key={cat} className="flex justify-between items-center"><div className="flex items-center"><span className="w-2 h-2 rounded-full mr-1.5" style={{ backgroundColor: GENERAL_COLORS[cat as keyof typeof GENERAL_COLORS] }}></span><span className="text-gray-600">{cat}</span></div><span className="font-bold text-gray-900 ml-2">{monthlyData[hoveredMonth].counts[cat] || 0}</span></li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
+                <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className="w-full h-auto font-sans text-xs">
+                {Array.from({ length: 6 }).map((_, i) => {
+                    const val = (maxCount / 5) * i;
+                    const y = getY(val);
+                    return (
+                        <g key={i}><line x1={padding.left} y1={y} x2={svgWidth - padding.right} y2={y} stroke="#e5e7eb" strokeWidth="1" /><text x={padding.left - 10} y={y + 4} textAnchor="end" fill="#9ca3af">{Math.round(val)}</text></g>
+                    );
+                })}
+                {THAI_MONTHS.map((m, i) => <text key={m} x={getX(i)} y={svgHeight - 10} textAnchor="middle" fill="#6b7280">{m}</text>)}
+                {GENERAL_LABELS.map(cat => visibleCategories.has(cat) && <path key={cat} d={getPath(cat)} fill="none" stroke={GENERAL_COLORS[cat as keyof typeof GENERAL_COLORS]} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="transition-all duration-300" />)}
+                {GENERAL_LABELS.map(cat => visibleCategories.has(cat) && <g key={`dots-${cat}`}>{monthlyData.map((d, i) => d.counts[cat] && <circle key={i} cx={getX(i)} cy={getY(d.counts[cat])} r="3" fill={GENERAL_COLORS[cat as keyof typeof GENERAL_COLORS]} stroke="white" strokeWidth="1" />)}</g>)}
+                {monthlyData.map((_, i) => <rect key={`overlay-${i}`} x={getX(i) - (chartWidth / 22)} y={padding.top} width={chartWidth / 11} height={chartHeight} fill="transparent" className="cursor-pointer hover:bg-gray-500 hover:bg-opacity-5 transition-colors" onMouseEnter={() => setHoveredMonth(i)} onMouseLeave={() => setHoveredMonth(null)} />)}
+                </svg>
+            </div>
          </div>
     );
 };
 
 // --- STD Chart Component ---
-
-const STD_COLORS = [
-    '#ef4444', // Red
-    '#f97316', // Orange
-    '#f59e0b', // Amber
-    '#84cc16', // Lime
-    '#10b981', // Emerald
-    '#06b6d4', // Cyan
-    '#3b82f6', // Blue
-    '#6366f1', // Indigo
-    '#8b5cf6', // Violet
-    '#d946ef', // Fuchsia
-    '#f43f5e', // Rose
-    '#881337'  // Dark Red
-];
-
 const StdLineChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
     const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
     const [hoveredMonth, setHoveredMonth] = useState<number | null>(null);
-    // Use a hidden set so default is "Show All"
-    const [hiddenDiseases, setHiddenDiseases] = useState<Set<string>>(new Set());
+    const [visibleDiseases, setVisibleDiseases] = useState<Set<string>>(new Set());
 
-    // 1. Process Data
     const { years, dataByYear } = useMemo(() => {
         const yrs = new Set<number>();
-        // Structure: Year -> Month (0-11) -> Disease -> Count
         const db: Record<number, Record<number, Record<string, number>>> = {};
 
         patients.forEach(p => {
             p.stdInfo?.records?.forEach(r => {
                 if (!r.date) return;
-                
-                // Robust date parsing (YYYY-MM-DD) to avoid timezone issues
-                const parts = r.date.split('-');
-                let y: number, m: number;
-                
-                if (parts.length >= 2) {
-                    y = parseInt(parts[0], 10);
-                    m = parseInt(parts[1], 10) - 1; // Month is 0-indexed
-                } else {
-                    // Fallback if not standard YYYY-MM-DD
-                    const d = new Date(r.date);
-                    y = d.getFullYear();
-                    m = d.getMonth();
-                }
-
+                const d = new Date(r.date);
+                const y = d.getFullYear(), m = d.getMonth();
                 if (isNaN(y) || isNaN(m)) return;
-
                 yrs.add(y);
-
                 if (!db[y]) db[y] = {};
                 if (!db[y][m]) db[y][m] = {};
-
                 r.diseases.forEach(disease => {
                     let dName = disease;
-                    // Group Syphilis subtypes into one "Syphilis" category for the trend chart
-                    if (SYPHILIS_SUBTYPES.includes(disease)) {
-                        dName = 'Syphilis';
-                    }
+                    if (SYPHILIS_SUBTYPES.includes(disease)) dName = 'Syphilis';
                     db[y][m][dName] = (db[y][m][dName] || 0) + 1;
                 });
             });
         });
-
-        const sortedYears = Array.from(yrs).sort((a, b) => b - a);
-        return { years: sortedYears, dataByYear: db };
+        return { years: Array.from(yrs).sort((a, b) => b - a), dataByYear: db };
     }, [patients]);
 
-    // Ensure selected year is valid (or fallback to latest)
-    React.useEffect(() => {
-        if (years.length > 0 && !years.includes(selectedYear)) {
-            setSelectedYear(years[0]);
-        }
-    }, [years, selectedYear]);
-
-    // Reset filter when year changes
-    React.useEffect(() => {
-        setHiddenDiseases(new Set());
-    }, [selectedYear]);
-
-    // 2. Prepare Data for Selected Year
     const { monthlyData, activeDiseases } = useMemo(() => {
         const currentYearData = dataByYear[selectedYear] || {};
         const diseasesSet = new Set<string>();
-
-        // Initialize 12 months and collect all diseases
         const mData = Array.from({ length: 12 }, (_, i) => {
             const monthRecs = currentYearData[i] || {};
             Object.keys(monthRecs).forEach(d => diseasesSet.add(d));
             return { monthIndex: i, details: monthRecs };
         });
+        const sortedDiseases = Array.from(diseasesSet).sort();
+        
+        // Initial state: show all diseases if none selected yet
+        if (visibleDiseases.size === 0 && sortedDiseases.length > 0) {
+            setVisibleDiseases(new Set(sortedDiseases));
+        }
 
-        return { 
-            monthlyData: mData, 
-            activeDiseases: Array.from(diseasesSet).sort()
-        };
+        return { monthlyData: mData, activeDiseases: sortedDiseases };
     }, [selectedYear, dataByYear]);
 
-    // Filter visible
-    const visibleDiseases = activeDiseases.filter(d => !hiddenDiseases.has(d));
-
-    // Calculate dynamic max based on visible diseases
-    const maxCount = useMemo(() => {
-        let max = 0;
-        monthlyData.forEach(m => {
-             visibleDiseases.forEach(d => {
-                 const count = m.details[d] || 0;
-                 if (count > max) max = count;
-             });
-        });
-        return Math.max(max, 4);
-    }, [monthlyData, visibleDiseases]);
-
-    // Toggle visibility
-    const toggleDisease = (d: string) => {
-        setHiddenDiseases(prev => {
+    const toggleDiseaseVisibility = (disease: string) => {
+        setVisibleDiseases(prev => {
             const next = new Set(prev);
-            if (next.has(d)) next.delete(d);
-            else next.add(d);
+            if (next.has(disease)) next.delete(disease);
+            else next.add(disease);
             return next;
         });
     };
 
-    // 3. SVG Dimensions & Scales
+    const maxCount = useMemo(() => {
+        let max = 0;
+        monthlyData.forEach(m => {
+             activeDiseases.forEach(d => {
+                 if (visibleDiseases.has(d)) {
+                    const count = m.details[d] || 0;
+                    if (count > max) max = count;
+                 }
+             });
+        });
+        return Math.max(max, 4);
+    }, [monthlyData, activeDiseases, visibleDiseases]);
+
     const svgHeight = 320;
-    const svgWidth = 800; // Viewbox width
+    const svgWidth = 800;
     const padding = { top: 20, right: 20, bottom: 40, left: 40 };
     const chartWidth = svgWidth - padding.left - padding.right;
     const chartHeight = svgHeight - padding.top - padding.bottom;
@@ -575,335 +346,230 @@ const StdLineChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
     const getX = (monthIndex: number) => padding.left + (monthIndex * (chartWidth / 11));
     const getY = (count: number) => padding.top + chartHeight - ((count / maxCount) * chartHeight);
 
-    // Generate Path for a disease
-    const getPath = (disease: string) => {
-        let d = '';
-        monthlyData.forEach((data, i) => {
-            const count = data.details[disease] || 0;
-            const x = getX(i);
-            const y = getY(count);
-            if (i === 0) d += `M ${x} ${y}`;
-            else d += ` L ${x} ${y}`;
-        });
-        return d;
-    };
-
     return (
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
-                <h3 className="text-lg font-bold text-gray-800">สถิติโรคติดต่อทางเพศสัมพันธ์ (STD Trend)</h3>
-                
+                <h3 className="text-lg font-bold text-gray-800">แนวโน้มโรคติดต่อทางเพศสัมพันธ์ (STD Trend)</h3>
                 {years.length > 0 && (
                     <div className="relative mt-2 sm:mt-0">
-                         <select 
-                            value={selectedYear} 
-                            onChange={(e) => setSelectedYear(Number(e.target.value))}
-                            className="appearance-none bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-full p-2.5 pr-8"
-                        >
+                         <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))} className="appearance-none bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-full p-2.5 pr-8">
                             {years.map(y => <option key={y} value={y}>{y}</option>)}
                         </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                            <ChevronDownIcon />
-                        </div>
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700"><ChevronDownIcon /></div>
                     </div>
                 )}
             </div>
 
-            {/* Filter Controls */}
             {activeDiseases.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-6">
-                    {activeDiseases.map(disease => {
-                         const originalIndex = activeDiseases.indexOf(disease);
-                         const color = STD_COLORS[originalIndex % STD_COLORS.length];
-                         const isActive = !hiddenDiseases.has(disease);
-
-                         return (
-                            <button
-                                key={disease}
-                                onClick={() => toggleDisease(disease)}
-                                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border shadow-sm flex items-center gap-2 ${
-                                    isActive 
-                                    ? `text-white border-transparent` 
-                                    : 'bg-white text-gray-400 border-gray-200 hover:bg-gray-50'
-                                }`}
-                                style={{ 
-                                    backgroundColor: isActive ? color : undefined,
-                                    borderColor: isActive ? color : undefined
-                                }}
+                    {activeDiseases.map((d, idx) => {
+                        const color = STD_COLORS[idx % STD_COLORS.length];
+                        const isActive = visibleDiseases.has(d);
+                        return (
+                            <button 
+                                key={d} 
+                                onClick={() => toggleDiseaseVisibility(d)} 
+                                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border shadow-sm flex items-center gap-2 ${isActive ? `text-white border-transparent` : 'bg-white text-gray-400 border-gray-200 hover:bg-gray-50'}`} 
+                                style={{ backgroundColor: isActive ? color : undefined, borderColor: isActive ? color : undefined }}
                             >
-                                 <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-white' : 'bg-gray-300'}`}></span>
-                                {disease}
+                                <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-white' : 'bg-gray-300'}`}></span>{d}
                             </button>
-                         );
+                        );
                     })}
                 </div>
             )}
 
-            {years.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-64 text-gray-400 bg-gray-50 rounded-lg border border-dashed border-gray-200">
-                    <p>ไม่มีข้อมูลประวัติ STD ในระบบ</p>
+            {years.length === 0 ? <div className="h-64 flex items-center justify-center text-gray-400 italic bg-gray-50 rounded-xl border border-dashed">ไม่มีข้อมูล STD</div> : (
+                <div className="relative overflow-hidden">
+                    {hoveredMonth !== null && (
+                         <div className="absolute z-10 bg-white border border-gray-200 shadow-lg rounded-lg p-3 text-xs min-w-[120px] pointer-events-none" style={{ left: `${(hoveredMonth / 11) * 80}%`, top: '10%', transform: hoveredMonth > 8 ? 'translateX(-100%)' : 'translateX(0)' }}>
+                             <p className="font-bold text-gray-800 mb-2 border-b pb-1">{THAI_MONTHS[hoveredMonth]} {selectedYear}</p>
+                             <ul className="space-y-1">
+                                 {activeDiseases.filter(d => visibleDiseases.has(d)).map((d, idx) => (
+                                     <li key={d} className="flex justify-between items-center">
+                                         <div className="flex items-center">
+                                             <span className="w-2 h-2 rounded-full mr-1.5" style={{ backgroundColor: STD_COLORS[activeDiseases.indexOf(d) % STD_COLORS.length] }}></span>
+                                             <span className="text-gray-600">{d}</span>
+                                         </div>
+                                         <span className="font-bold text-gray-900 ml-2">{monthlyData[hoveredMonth].details[d] || 0}</span>
+                                     </li>
+                                 ))}
+                             </ul>
+                         </div>
+                     )}
+                    <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className="w-full h-auto font-sans text-xs">
+                        {Array.from({ length: 6 }).map((_, i) => <g key={i}><line x1={padding.left} y1={getY((maxCount/5)*i)} x2={svgWidth - padding.right} y2={getY((maxCount/5)*i)} stroke="#e5e7eb" /><text x={padding.left - 10} y={getY((maxCount/5)*i) + 4} textAnchor="end" fill="#9ca3af">{Math.round((maxCount/5)*i)}</text></g>)}
+                        {THAI_MONTHS.map((m, i) => <text key={m} x={getX(i)} y={svgHeight - 10} textAnchor="middle" fill="#6b7280">{m}</text>)}
+                        {activeDiseases.map((disease, idx) => {
+                            if (!visibleDiseases.has(disease)) return null;
+                            const color = STD_COLORS[idx % STD_COLORS.length];
+                            return (
+                                <g key={disease}>
+                                    <path d={monthlyData.map((m, i) => (i === 0 ? 'M' : 'L') + ` ${getX(i)} ${getY(m.details[disease] || 0)}`).join(' ')} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="transition-all duration-500" />
+                                    {monthlyData.map((m, i) => m.details[disease] > 0 && (
+                                        <circle key={i} cx={getX(i)} cy={getY(m.details[disease])} r="3" fill={color} stroke="white" strokeWidth="1" />
+                                    ))}
+                                </g>
+                            );
+                        })}
+                        {monthlyData.map((_, i) => <rect key={`overlay-${i}`} x={getX(i) - (chartWidth / 22)} y={padding.top} width={chartWidth / 11} height={chartHeight} fill="transparent" className="cursor-pointer hover:bg-gray-500 hover:bg-opacity-5 transition-colors" onMouseEnter={() => setHoveredMonth(i)} onMouseLeave={() => setHoveredMonth(null)} />)}
+                    </svg>
                 </div>
-            ) : (
-                <>
-                    <div className="relative w-full overflow-hidden">
-                         {/* Tooltip */}
-                         {hoveredMonth !== null && (
-                             <div 
-                                className="absolute z-10 bg-white border border-gray-200 shadow-lg rounded-lg p-3 text-xs min-w-[120px] pointer-events-none"
-                                style={{ 
-                                    left: `${(hoveredMonth / 11) * 80}%`, 
-                                    top: '10%',
-                                    transform: hoveredMonth > 8 ? 'translateX(-100%)' : 'translateX(0)' 
-                                }}
-                             >
-                                 <p className="font-bold text-gray-800 mb-2 border-b pb-1">{THAI_MONTHS[hoveredMonth]} {selectedYear}</p>
-                                 <ul className="space-y-1">
-                                     {visibleDiseases.map(dis => {
-                                         const originalIndex = activeDiseases.indexOf(dis);
-                                         const count = monthlyData[hoveredMonth].details[dis] || 0;
-                                         const color = STD_COLORS[originalIndex % STD_COLORS.length];
-                                         return (
-                                             <li key={dis} className="flex justify-between items-center">
-                                                 <div className="flex items-center">
-                                                     <span className="w-2 h-2 rounded-full mr-1.5" style={{ backgroundColor: color }}></span>
-                                                     <span className="text-gray-600">{dis}</span>
-                                                 </div>
-                                                 <span className="font-bold text-gray-900 ml-2">{count}</span>
-                                             </li>
-                                         );
-                                     })}
-                                     {visibleDiseases.length === 0 && (
-                                          <li className="text-gray-400 italic">ไม่ได้เลือกกราฟ</li>
-                                     )}
-                                 </ul>
-                             </div>
-                         )}
-
-                        <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className="w-full h-auto font-sans text-xs">
-                            {/* Grid Lines (Horizontal) */}
-                            {Array.from({ length: 6 }).map((_, i) => {
-                                const val = (maxCount / 5) * i;
-                                const y = getY(val);
-                                return (
-                                    <g key={i}>
-                                        <line x1={padding.left} y1={y} x2={svgWidth - padding.right} y2={y} stroke="#e5e7eb" strokeWidth="1" />
-                                        <text x={padding.left - 10} y={y + 4} textAnchor="end" fill="#9ca3af">{Math.round(val)}</text>
-                                    </g>
-                                );
-                            })}
-
-                            {/* X-Axis Labels */}
-                            {THAI_MONTHS.map((m, i) => {
-                                const x = getX(i);
-                                return (
-                                    <text key={m} x={x} y={svgHeight - 10} textAnchor="middle" fill="#6b7280">{m}</text>
-                                );
-                            })}
-
-                            {/* Data Lines */}
-                            {visibleDiseases.map((disease) => {
-                                const originalIndex = activeDiseases.indexOf(disease);
-                                const color = STD_COLORS[originalIndex % STD_COLORS.length];
-                                return (
-                                    <path
-                                        key={disease}
-                                        d={getPath(disease)}
-                                        fill="none"
-                                        stroke={color}
-                                        strokeWidth="2"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        className="transition-all duration-300 ease-in-out"
-                                    />
-                                );
-                            })}
-
-                            {/* Data Points (Dots) */}
-                            {visibleDiseases.map((disease) => {
-                                const originalIndex = activeDiseases.indexOf(disease);
-                                const color = STD_COLORS[originalIndex % STD_COLORS.length];
-                                return (
-                                    <g key={`dots-${disease}`}>
-                                        {monthlyData.map((d, i) => {
-                                            const count = d.details[disease];
-                                            if (count === undefined || count === 0) return null;
-                                            return (
-                                                <circle 
-                                                    key={i} 
-                                                    cx={getX(i)} 
-                                                    cy={getY(count)} 
-                                                    r="3" 
-                                                    fill={color} 
-                                                    stroke="white" 
-                                                    strokeWidth="1"
-                                                />
-                                            );
-                                        })}
-                                    </g>
-                                );
-                            })}
-
-                            {/* Interactive Overlay Columns */}
-                            {monthlyData.map((_, i) => (
-                                <rect
-                                    key={`overlay-${i}`}
-                                    x={getX(i) - (chartWidth / 22)} // Center the rect on the tick
-                                    y={padding.top}
-                                    width={chartWidth / 11}
-                                    height={chartHeight}
-                                    fill="transparent"
-                                    className="cursor-pointer hover:bg-gray-500 hover:bg-opacity-5 transition-colors"
-                                    onMouseEnter={() => setHoveredMonth(i)}
-                                    onMouseLeave={() => setHoveredMonth(null)}
-                                />
-                            ))}
-                        </svg>
-                    </div>
-                </>
             )}
         </div>
     );
 };
 
+// --- Patient List View for Reports ---
+const PatientGroupList: React.FC<{ title: string; patients: any[]; onBack: () => void }> = ({ title, patients, onBack }) => (
+    <div className="space-y-6 animate-fade-in-up">
+        <div className="flex items-center justify-between bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+             <div className="flex items-center gap-3">
+                <button onClick={onBack} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-500">
+                    <ChevronLeftIcon />
+                </button>
+                <h3 className="text-xl font-bold text-gray-800">{title} ({patients.length} ราย)</h3>
+            </div>
+        </div>
 
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <table className="w-full text-left text-sm">
+                <thead className="bg-gray-50 border-b border-gray-100 text-gray-500 uppercase font-semibold">
+                    <tr>
+                        <th className="px-6 py-4">HN</th>
+                        <th className="px-6 py-4">ชื่อ-นามสกุล</th>
+                        <th className="px-6 py-4">วันวินิจฉัย HIV</th>
+                        <th className="px-6 py-4">วันเริ่มยา ART</th>
+                        <th className="px-6 py-4 text-center">ระยะเวลา (วัน)</th>
+                        <th className="px-6 py-4">สถานะ OI</th>
+                    </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                    {patients.map((p, idx) => (
+                        <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
+                            <td className="px-6 py-4 font-medium text-emerald-700">{p.hn}</td>
+                            <td className="px-6 py-4 font-semibold text-gray-800">{p.name}</td>
+                            <td className="px-6 py-4 text-gray-600">{formatThaiDateBE(p.diagDate)}</td>
+                            <td className="px-6 py-4 text-gray-600">{formatThaiDateBE(p.startDate)}</td>
+                            <td className="px-6 py-4 text-center font-bold text-gray-900 bg-gray-50/50">{p.diffDays}</td>
+                            <td className="px-6 py-4">
+                                {p.hasOi ? (
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">มีประวัติ OI</span>
+                                ) : (
+                                    <span className="text-gray-400 text-xs">ไม่มี OI</span>
+                                )}
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    </div>
+);
+
+// --- MAIN COMPONENT ---
 export const Reports: React.FC<ReportsProps> = ({ patients }) => {
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
+    const [activeGroup, setActiveGroup] = useState<{ title: string; patients: any[] } | null>(null);
 
     const stats = useMemo(() => {
         const s = {
             totalPatients: patients.length,
             totalHiv: 0,
             hbv: { positive: 0 },
-            hcv: {
-                waitForTest: 0,
-                clearedSpontaneously: 0,
-                treating: 0,
-                treatmentFailed: 0,
-                cured: 0,
-                activeHcv: 0,
-                totalPositiveDiagnostic: 0
-            },
+            hcv: { waitForTest: 0, clearedSpontaneously: 0, treating: 0, treatmentFailed: 0, cured: 0, activeHcv: 0, totalPositiveDiagnostic: 0 },
             tpt: 0,
-            std: { 
-                totalDiagnoses: 0,
-                syphilisBreakdown: {} as Record<string, number>
-            },
+            std: { totalDiagnoses: 0, syphilisBreakdown: {} as Record<string, number> },
             tbBreakdown: {} as Record<string, number>,
-            oiBreakdown: {} as Record<string, number>, // General OI Breakdown
+            oiBreakdown: {} as Record<string, number>,
             prep: 0,
-            pep: 0
+            pep: 0,
+            earlyArt: {
+                totalDays: 0,
+                validCount: 0,
+                groups: {
+                    early: [] as any[],
+                    lateWithOi: [] as any[],
+                    lateTrue: [] as any[] // Late without OIs
+                },
+                sums: {
+                    earlyDays: 0,
+                    lateWithOiDays: 0,
+                    lateTrueDays: 0
+                }
+            }
         };
 
         const isInRange = (dateStr?: string) => {
             if (!dateStr) return false;
             const d = new Date(dateStr).getTime();
             const start = startDate ? new Date(startDate).getTime() : -Infinity;
-            const end = endDate ? new Date(endDate).setHours(23,59,59,999) : Infinity;
+            const endFinal = endDate ? new Date(endDate).setHours(23,59,59,999) : Infinity;
             return d >= start && d <= endFinal;
         };
-        
-        // Helper for endDate calculation in range check
-        const endFinal = endDate ? new Date(endDate).setHours(23,59,59,999) : Infinity;
 
         patients.forEach(p => {
-            // HIV
             const hivDiagEvent = p.medicalHistory.find(e => e.type === MedicalEventType.DIAGNOSIS);
-            if (hivDiagEvent && isInRange(hivDiagEvent.date)) s.totalHiv++;
+            const firstArtEvent = [...p.medicalHistory].filter(e => e.type === MedicalEventType.ART_START).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
+            const hasOiHistory = p.medicalHistory.some(e => e.type === MedicalEventType.OPPORTUNISTIC_INFECTION);
 
-            // HBV
-            const hbvStatus = determineHbvStatus(p);
-            if (hbvStatus.text === 'เป็น HBV') {
-                const positiveTestInRange = p.hbvInfo?.hbsAgTests?.some(t => t.result === 'Positive' && isInRange(t.date));
-                if (positiveTestInRange || (!startDate && !endDate)) s.hbv.positive++;
-            }
+            if (hivDiagEvent && isInRange(hivDiagEvent.date)) {
+                s.totalHiv++;
+                if (firstArtEvent) {
+                    const diagDate = new Date(hivDiagEvent.date), startDateObj = new Date(firstArtEvent.date);
+                    const diffTime = startDateObj.getTime() - diagDate.getTime();
+                    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
-            // HCV
-            const hcvStatus = determineHcvStatus(p);
-            const hcvInfo = p.hcvInfo || { hcvTests: [] };
-            const latestAntiHcv = [...(hcvInfo.hcvTests || [])].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
-            const latestPreVl = [...(hcvInfo.preTreatmentVls || [])].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
-            const latestPostVl = [...(hcvInfo.postTreatmentVls || [])].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
-            const latestTreatment = [...(hcvInfo.treatments || [])].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
-
-            let countThisHcv = false;
-            switch (hcvStatus.text) {
-                case 'รอการตรวจเพิ่มเติม': if (latestAntiHcv && isInRange(latestAntiHcv.date)) countThisHcv = true; break;
-                case 'เคยเป็น HCV หายเอง': if (latestPreVl && isInRange(latestPreVl.date)) countThisHcv = true; break;
-                case 'กำลังรักษา HCV': if (latestTreatment && isInRange(latestTreatment.date)) countThisHcv = true; break;
-                case 'เป็น HCV รักษาแล้วไม่หาย': 
-                case 'เคยเป็น HCV รักษาหายแล้ว': if (latestPostVl && isInRange(latestPostVl.date)) countThisHcv = true; break;
-                case 'เป็น HCV': if (latestPreVl && isInRange(latestPreVl.date)) countThisHcv = true; break;
-            }
-            if (!startDate && !endDate) countThisHcv = true;
-
-            if (countThisHcv) {
-                if (hcvStatus.text !== 'ไม่เป็น HCV' && hcvStatus.text !== 'ไม่มีข้อมูล') s.hcv.totalPositiveDiagnostic++; 
-                switch (hcvStatus.text) {
-                    case 'รอการตรวจเพิ่มเติม': s.hcv.waitForTest++; break;
-                    case 'เคยเป็น HCV หายเอง': s.hcv.clearedSpontaneously++; break;
-                    case 'กำลังรักษา HCV': s.hcv.treating++; break;
-                    case 'เป็น HCV รักษาแล้วไม่หาย': s.hcv.treatmentFailed++; break;
-                    case 'เคยเป็น HCV รักษาหายแล้ว': s.hcv.cured++; break;
-                    case 'เป็น HCV': s.hcv.activeHcv++; break;
+                    if (diffDays >= 0) {
+                        s.earlyArt.totalDays += diffDays;
+                        s.earlyArt.validCount++;
+                        const pData = { hn: p.hn, name: `${p.firstName} ${p.lastName}`, diagDate: hivDiagEvent.date, startDate: firstArtEvent.date, diffDays, hasOi: hasOiHistory };
+                        
+                        if (diffDays <= 7) {
+                            s.earlyArt.groups.early.push(pData);
+                            s.earlyArt.sums.earlyDays += diffDays;
+                        } else {
+                            if (hasOiHistory) {
+                                s.earlyArt.groups.lateWithOi.push(pData);
+                                s.earlyArt.sums.lateWithOiDays += diffDays;
+                            } else {
+                                s.earlyArt.groups.lateTrue.push(pData);
+                                s.earlyArt.sums.lateTrueDays += diffDays;
+                            }
+                        }
+                    }
                 }
             }
 
-            // TPT
-            const tptEvents = p.medicalHistory.filter(e => e.type === MedicalEventType.PROPHYLAXIS && e.details.TPT && isInRange(e.date));
-            if (tptEvents.length > 0) s.tpt++;
-
-            // --- TB Breakdown (Detailed) & OI Breakdown (General) ---
-            const uniquePatientTbTypes = new Set<string>();
-            const uniquePatientOIs = new Set<string>(); // General OI grouping (TB aggregated)
-
-            const oiEvents = p.medicalHistory.filter(e => e.type === MedicalEventType.OPPORTUNISTIC_INFECTION && isInRange(e.date));
-            
-            oiEvents.forEach(e => {
-                const infections = e.details.infections || [];
-                // Handle legacy single string format if present
-                if (e.details.โรค) infections.push(e.details.โรค);
-
-                infections.forEach((inf: string) => {
-                    // 1. Detailed TB Breakdown
-                    if (TB_SUBTYPES.includes(inf)) {
-                        uniquePatientTbTypes.add(inf);
-                    }
-
-                    // 2. General OI Breakdown (Grouping TB)
-                    if (TB_SUBTYPES.includes(inf) || inf === 'Tuberculosis') {
-                        uniquePatientOIs.add('Tuberculosis');
-                    } else {
-                        uniquePatientOIs.add(inf);
-                    }
-                });
-            });
-
-            // Add unique Detailed TB types for this patient to global stats
-            uniquePatientTbTypes.forEach(tbType => {
-                s.tbBreakdown[tbType] = (s.tbBreakdown[tbType] || 0) + 1;
-            });
-
-            // Add unique General OI types for this patient to global stats
-            uniquePatientOIs.forEach(oi => {
-                s.oiBreakdown[oi] = (s.oiBreakdown[oi] || 0) + 1;
-            });
-
-            // STD Total Count & Syphilis Breakdown
-            if (p.stdInfo?.records) {
-                p.stdInfo.records.forEach(rec => {
-                    if (isInRange(rec.date)) {
-                        rec.diseases.forEach(d => {
-                            s.std.totalDiagnoses++;
-                            if (SYPHILIS_SUBTYPES.includes(d)) {
-                                s.std.syphilisBreakdown[d] = (s.std.syphilisBreakdown[d] || 0) + 1;
-                            }
-                        });
-                    }
-                });
+            if (determineHbvStatus(p).text === 'เป็น HBV' && (p.hbvInfo?.hbsAgTests?.some(t => t.result === 'Positive' && isInRange(t.date)) || (!startDate && !endDate))) s.hbv.positive++;
+            const hcvInfo = p.hcvInfo || { hcvTests: [] };
+            const hcvStatus = determineHcvStatus(p);
+            let countThisHcv = !startDate && !endDate;
+            if (!countThisHcv) {
+                const latestTest = [...(hcvInfo.hcvTests || [])].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+                if (latestTest && isInRange(latestTest.date)) countThisHcv = true;
             }
-
-            // PrEP & PEP
+            if (countThisHcv && hcvStatus.text !== 'ไม่มีข้อมูล' && hcvStatus.text !== 'ไม่เป็น HCV') {
+                s.hcv.totalPositiveDiagnostic++;
+                if (hcvStatus.text === 'รอการตรวจเพิ่มเติม') s.hcv.waitForTest++;
+                else if (hcvStatus.text === 'เคยเป็น HCV หายเอง') s.hcv.clearedSpontaneously++;
+                else if (hcvStatus.text === 'กำลังรักษา HCV') s.hcv.treating++;
+                else if (hcvStatus.text === 'เป็น HCV รักษาแล้วไม่หาย') s.hcv.treatmentFailed++;
+                else if (hcvStatus.text === 'เคยเป็น HCV รักษาหายแล้ว') s.hcv.cured++;
+                else if (hcvStatus.text === 'เป็น HCV') s.hcv.activeHcv++;
+            }
+            if (p.medicalHistory.some(e => e.type === MedicalEventType.PROPHYLAXIS && e.details.TPT && isInRange(e.date))) s.tpt++;
+            p.medicalHistory.filter(e => e.type === MedicalEventType.OPPORTUNISTIC_INFECTION && isInRange(e.date)).forEach(e => {
+                const infections = e.details.infections || []; if (e.details.โรค) infections.push(e.details.โรค);
+                const uniqueInfs = new Set(infections);
+                uniqueInfs.forEach((inf: any) => {
+                    if (TB_SUBTYPES.includes(inf)) s.tbBreakdown[inf] = (s.tbBreakdown[inf] || 0) + 1;
+                    if (TB_SUBTYPES.includes(inf) || inf === 'Tuberculosis') s.oiBreakdown['Tuberculosis'] = (s.oiBreakdown['Tuberculosis'] || 0) + 1;
+                    else s.oiBreakdown[inf] = (s.oiBreakdown[inf] || 0) + 1;
+                });
+            });
+            p.stdInfo?.records?.forEach(rec => { if (isInRange(rec.date)) rec.diseases.forEach(d => { s.std.totalDiagnoses++; if (SYPHILIS_SUBTYPES.includes(d)) s.std.syphilisBreakdown[d] = (s.std.syphilisBreakdown[d] || 0) + 1; }); });
             if (p.prepInfo?.records?.some(r => isInRange(r.dateStart))) s.prep++;
             if (p.pepInfo?.records?.some(r => isInRange(r.date))) s.pep++;
         });
@@ -911,140 +577,123 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
         return s;
     }, [patients, startDate, endDate]);
 
-    const hcvChartData = [
-        { label: 'รอการตรวจเพิ่มเติม', count: stats.hcv.waitForTest, color: '#fbbf24' },
-        { label: 'หายเอง (Spontaneous)', count: stats.hcv.clearedSpontaneously, color: '#34d399' },
-        { label: 'กำลังรักษา (Treating)', count: stats.hcv.treating, color: '#3b82f6' },
-        { label: 'รักษาไม่หาย (Failed)', count: stats.hcv.treatmentFailed, color: '#ef4444' },
-        { label: 'รักษาหายแล้ว (Cured)', count: stats.hcv.cured, color: '#059669' },
-        { label: 'Active HCV (ยังไม่รักษา)', count: stats.hcv.activeHcv, color: '#f87171' },
-    ].filter(d => d.count > 0);
+    const clearFilter = () => { setStartDate(''); setEndDate(''); setActiveGroup(null); };
 
-    const syphilisChartData = Object.entries(stats.std.syphilisBreakdown)
-        .map(([label, count], index) => ({
-            label,
-            count: count as number,
-            color: STD_COLORS[index % STD_COLORS.length]
-        }))
-        .filter(d => d.count > 0)
-        .sort((a, b) => b.count - a.count);
-
-    const tbChartData = Object.entries(stats.tbBreakdown)
-        .map(([label, count], index) => ({
-            label,
-            count: count as number,
-            color: STD_COLORS[(index + 3) % STD_COLORS.length] // Offset colors slightly
-        }))
-        .filter(d => d.count > 0)
-        .sort((a, b) => b.count - a.count);
-
-    const oiChartData = Object.entries(stats.oiBreakdown)
-        .map(([label, count], index) => ({
-            label,
-            count: count as number,
-            color: STD_COLORS[(index + 5) % STD_COLORS.length] // Offset colors
-        }))
-        .filter(d => d.count > 0)
-        .sort((a, b) => b.count - a.count);
-
-    const clearFilter = () => {
-        setStartDate('');
-        setEndDate('');
+    const avg = {
+        total: stats.earlyArt.validCount > 0 ? (stats.earlyArt.totalDays / stats.earlyArt.validCount).toFixed(1) : '-',
+        early: stats.earlyArt.groups.early.length > 0 ? (stats.earlyArt.sums.earlyDays / stats.earlyArt.groups.early.length).toFixed(1) : '-',
+        lateWithOi: stats.earlyArt.groups.lateWithOi.length > 0 ? (stats.earlyArt.sums.lateWithOiDays / stats.earlyArt.groups.lateWithOi.length).toFixed(1) : '-',
+        lateTrue: stats.earlyArt.groups.lateTrue.length > 0 ? (stats.earlyArt.sums.lateTrueDays / stats.earlyArt.groups.lateTrue.length).toFixed(1) : '-',
     };
 
+    const adjustedDenominator = stats.earlyArt.groups.early.length + stats.earlyArt.groups.lateTrue.length;
+    const achievementRate = adjustedDenominator > 0 ? ((stats.earlyArt.groups.early.length / adjustedDenominator) * 100).toFixed(0) : 0;
+
+    const earlyArtChartData = [
+        { label: 'ภายใน 7 วัน (Early)', count: stats.earlyArt.groups.early.length, color: '#10b981', id: 'early' },
+        { label: 'เกิน 7 วัน (มี OIs)', count: stats.earlyArt.groups.lateWithOi.length, color: '#f97316', id: 'lateWithOi' },
+        { label: 'เกิน 7 วัน (Late จริง/ไม่มี OIs)', count: stats.earlyArt.groups.lateTrue.length, color: '#ef4444', id: 'lateTrue' },
+    ];
+
+    const handleSliceClick = (id: string) => {
+        let groupTitle = "";
+        let patientsList = [];
+        if (id === 'early') { groupTitle = "กลุ่มเริ่มยา ART ภายใน 7 วัน (Early)"; patientsList = stats.earlyArt.groups.early; }
+        else if (id === 'lateWithOi') { groupTitle = "กลุ่มเริ่มยา ART เกิน 7 วัน (เนื่องจากพบ OIs)"; patientsList = stats.earlyArt.groups.lateWithOi; }
+        else if (id === 'lateTrue') { groupTitle = "กลุ่มเริ่มยา ART เกิน 7 วัน (Late จริง/ไม่มี OIs)"; patientsList = stats.earlyArt.groups.lateTrue; }
+        setActiveGroup({ title: groupTitle, patients: patientsList });
+    };
+
+    if (activeGroup) return <div className="p-6 md:p-8"><PatientGroupList title={activeGroup.title} patients={activeGroup.patients} onBack={() => setActiveGroup(null)} /></div>;
+
     return (
-        <div className="p-6 md:p-8 space-y-8">
+        <div className="p-6 md:p-8 space-y-8 animate-fade-in-up">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-800">รายงานสรุป (Clinic Reports)</h1>
-                    <p className="text-gray-500">
-                        {startDate || endDate 
-                            ? `แสดงข้อมูลระหว่างวันที่ ${startDate || '...'} ถึง ${endDate || '...'}` 
-                            : 'แสดงข้อมูลทั้งหมด (Cumulative)'}
-                    </p>
+                    <p className="text-gray-500">{startDate || endDate ? `ข้อมูลวินิจฉัยระหว่างวันที่ ${startDate || '...'} ถึง ${endDate || '...'}` : 'ข้อมูลทั้งหมด (Cumulative)'}</p>
                 </div>
-                
                 <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200 w-full md:w-auto">
                      <div className="flex flex-row gap-2 items-end">
-                        <div className="flex-1 min-w-0">
-                            <label className="block text-xs font-medium text-gray-500 mb-1 truncate">ตั้งแต่วันที่</label>
-                            <DateInput 
-                                value={startDate} 
-                                onChange={(e) => setStartDate(e.target.value)} 
-                                className="w-full"
-                                placeholder="dd/mm/yyyy"
-                            />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <label className="block text-xs font-medium text-gray-500 mb-1 truncate">ถึงวันที่</label>
-                            <DateInput 
-                                value={endDate} 
-                                onChange={(e) => setEndDate(e.target.value)} 
-                                className="w-full"
-                                placeholder="dd/mm/yyyy"
-                            />
-                        </div>
-                        {(startDate || endDate) && (
-                             <div className="flex-none">
-                                <button onClick={clearFilter} className="px-3 py-1.5 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-md border border-red-200 transition-colors h-[38px] whitespace-nowrap">
-                                    ล้าง
-                                </button>
-                            </div>
-                        )}
+                        <div className="flex-1 min-w-0"><label className="block text-xs font-medium text-gray-500 mb-1 truncate">จากวันวินิจฉัย</label><DateInput value={startDate} onChange={(e) => setStartDate(e.target.value)} /></div>
+                        <div className="flex-1 min-w-0"><label className="block text-xs font-medium text-gray-500 mb-1 truncate">ถึงวันวินิจฉัย</label><DateInput value={endDate} onChange={(e) => setEndDate(e.target.value)} /></div>
+                        {(startDate || endDate) && <button onClick={clearFilter} className="px-3 py-1.5 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-md border border-red-200 h-[38px]">ล้าง</button>}
                     </div>
                 </div>
             </div>
 
-            {/* Top Level Overview */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                <Card title="ผู้ป่วย HIV (รายใหม่)" value={stats.totalHiv} subtitle={startDate ? "ในช่วงเวลาที่เลือก" : "ทั้งหมด"} className="bg-blue-50 border-blue-100 text-blue-900" />
+                <Card title="ผู้ป่วย HIV ใหม่" value={stats.totalHiv} className="bg-blue-50 border-blue-100 text-blue-900" />
                 <Card title="ตรวจพบ HBV" value={stats.hbv.positive} className="bg-emerald-50 border-emerald-100 text-emerald-900" />
                 <Card title="ได้รับ TPT" value={stats.tpt} className="bg-orange-50 border-orange-100 text-orange-900" />
                 <Card title="เริ่ม PrEP" value={stats.prep} className="bg-indigo-50 border-indigo-100 text-indigo-900" />
                 <Card title="ได้รับ PEP" value={stats.pep} className="bg-purple-50 border-purple-100 text-purple-900" />
-                <Card title="วินิจฉัย STD" value={stats.std.totalDiagnoses} subtitle="(จำนวนครั้ง)" className="bg-pink-50 border-pink-100 text-pink-900" />
+                <Card title="วินิจฉัย STD" value={stats.std.totalDiagnoses} className="bg-pink-50 border-pink-100 text-pink-900" />
             </div>
 
-            {/* General Monthly Trends */}
+            <div className="space-y-6">
+                <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full bg-emerald-500"></div>
+                    <h2 className="text-xl font-bold text-gray-800 tracking-tight">การเริ่มยาต้านไวรัส (Early ART Analysis)</h2>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+                    <div className="bg-slate-800 text-white p-6 rounded-2xl shadow-sm flex flex-col justify-center items-center text-center">
+                        <p className="text-xs uppercase tracking-widest opacity-60">เฉลี่ยรวมทั้งหมด</p>
+                        <p className="text-5xl font-bold mt-2">{avg.total}</p>
+                        <p className="text-sm mt-1 opacity-70">วัน</p>
+                    </div>
+                    <div onClick={() => handleSliceClick('early')} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-center items-center text-center cursor-pointer hover:bg-emerald-50 transition-colors">
+                        <p className="text-xs font-bold text-emerald-600 uppercase tracking-widest">เฉลี่ยกลุ่ม Early</p>
+                        <p className="text-4xl font-bold text-gray-800 mt-2">{avg.early}</p>
+                        <p className="text-sm text-gray-400 mt-1">วัน (≤ 7 วัน)</p>
+                    </div>
+                    <div onClick={() => handleSliceClick('lateWithOi')} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-center items-center text-center cursor-pointer hover:bg-orange-50 transition-colors">
+                        <p className="text-xs font-bold text-orange-600 uppercase tracking-widest">เฉลี่ยกลุ่ม Late (มี OIs)</p>
+                        <p className="text-4xl font-bold text-gray-800 mt-2">{avg.lateWithOi}</p>
+                        <p className="text-sm text-gray-400 mt-1">วัน (ความล่าช้าจากอาการ)</p>
+                    </div>
+                    <div onClick={() => handleSliceClick('lateTrue')} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-center items-center text-center cursor-pointer hover:bg-red-50 transition-colors">
+                        <p className="text-xs font-bold text-red-600 uppercase tracking-widest">เฉลี่ยกลุ่ม Late จริง</p>
+                        <p className="text-4xl font-bold text-gray-800 mt-2">{avg.lateTrue}</p>
+                        <p className="text-sm text-gray-400 mt-1">วัน (ไม่มี OIs)</p>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                     <div className="lg:col-span-2 bg-white p-8 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden">
+                        <h3 className="text-lg font-bold text-gray-800 mb-6 flex items-center justify-between">
+                            <span>สัดส่วนระยะเวลาเริ่มยา (Early vs Late)</span>
+                            <span className="text-xs font-normal text-gray-400 italic">คลิกที่กราฟเพื่อดูรายชื่อ</span>
+                        </h3>
+                        <DonutChart data={earlyArtChartData} onSliceClick={handleSliceClick} />
+                     </div>
+                     <div className="bg-emerald-600 text-white p-8 rounded-2xl shadow-lg flex flex-col items-start justify-between">
+                        <div>
+                             <h3 className="text-xl font-bold">Performance Goal</h3>
+                             <p className="mt-2 text-emerald-100 text-sm leading-relaxed">
+                                วัดประสิทธิภาพการเริ่มยาต้านไวรัสโดยเปรียบเทียบสัดส่วนระหว่างกลุ่ม Early กับกลุ่ม Late จริง 
+                                <br/><span className="text-xs font-bold opacity-80 underline">(ไม่นับรวมกลุ่มที่มี OIs)</span>
+                             </p>
+                        </div>
+                        <div className="w-full mt-8">
+                            <div className="flex justify-between text-xs font-bold mb-2"><span>ACHIEVEMENT RATE (Adjusted)</span><span>{achievementRate}%</span></div>
+                            <div className="w-full bg-emerald-700/50 rounded-full h-3"><div className="bg-white h-3 rounded-full transition-all duration-1000 shadow-sm" style={{ width: `${achievementRate}%` }}></div></div>
+                            <p className="text-[10px] mt-4 opacity-70 italic font-medium">* Achievement = Early / (Early + Late จริง)</p>
+                        </div>
+                     </div>
+                </div>
+            </div>
+
             <GeneralTrendChart patients={patients} />
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Row 1: HCV and Syphilis */}
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <h3 className="text-lg font-bold text-gray-800 mb-6 pb-2 border-b flex justify-between">
-                        <span>สรุปสถานการณ์ HCV</span>
-                        <span className="text-xs font-normal text-gray-500 self-end">อิงตามวันที่เกิดผล/การรักษา</span>
-                    </h3>
-                    <DonutChart data={hcvChartData} />
-                </div>
-
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <h3 className="text-lg font-bold text-gray-800 mb-6 pb-2 border-b flex justify-between">
-                        <span>สรุปสถานการณ์ Syphilis</span>
-                        <span className="text-xs font-normal text-gray-500 self-end">แยกตามประเภท</span>
-                    </h3>
-                    <DonutChart data={syphilisChartData} />
-                </div>
-
-                {/* Row 2: OI (General) and TB (Detailed) */}
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <h3 className="text-lg font-bold text-gray-800 mb-6 pb-2 border-b flex justify-between">
-                        <span>สรุปการติดเชื้อฉวยโอกาส (OI)</span>
-                        <span className="text-xs font-normal text-gray-500 self-end">นับจำนวนคน (TB รวมเป็นหนึ่ง)</span>
-                    </h3>
-                    <DonutChart data={oiChartData} />
-                </div>
-
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <h3 className="text-lg font-bold text-gray-800 mb-6 pb-2 border-b flex justify-between">
-                        <span>รายละเอียดประเภทวัณโรค (TB)</span>
-                        <span className="text-xs font-normal text-gray-500 self-end">แยกตามประเภท (นับจำนวนคน)</span>
-                    </h3>
-                    <DonutChart data={tbChartData} />
-                </div>
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100"><h3 className="text-lg font-bold text-gray-800 mb-6 pb-2 border-b"><span>สรุปสถานการณ์ HCV</span></h3><DonutChart data={[{ label: 'รอตรวจเพิ่ม', count: stats.hcv.waitForTest, color: '#fbbf24' }, { label: 'หายเอง', count: stats.hcv.clearedSpontaneously, color: '#34d399' }, { label: 'กำลังรักษา', count: stats.hcv.treating, color: '#3b82f6' }, { label: 'รักษาไม่หาย', count: stats.hcv.treatmentFailed, color: '#ef4444' }, { label: 'หายแล้ว', count: stats.hcv.cured, color: '#059669' }, { label: 'Active (ไม่รักษา)', count: stats.hcv.activeHcv, color: '#f87171' }].filter(d => d.count > 0)} /></div>
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100"><h3 className="text-lg font-bold text-gray-800 mb-6 pb-2 border-b"><span>สรุปสถานการณ์ Syphilis</span></h3><DonutChart data={Object.entries(stats.std.syphilisBreakdown).map(([label, count], index) => ({ label, count: count as number, color: STD_COLORS[index % STD_COLORS.length] })).filter(d => d.count > 0)} /></div>
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100"><h3 className="text-lg font-bold text-gray-800 mb-6 pb-2 border-b"><span>สรุปการติดเชื้อฉวยโอกาส (OI)</span></h3><DonutChart data={Object.entries(stats.oiBreakdown).map(([label, count], index) => ({ label, count: count as number, color: STD_COLORS[(index + 5) % STD_COLORS.length] })).filter(d => d.count > 0)} /></div>
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100"><h3 className="text-lg font-bold text-gray-800 mb-6 pb-2 border-b"><span>รายละเอียดประเภทวัณโรค (TB)</span></h3><DonutChart data={Object.entries(stats.tbBreakdown).map(([label, count], index) => ({ label, count: count as number, color: STD_COLORS[(index + 3) % STD_COLORS.length] })).filter(d => d.count > 0)} /></div>
             </div>
 
-            {/* STD Trend Chart */}
             <StdLineChart patients={patients} />
         </div>
     );

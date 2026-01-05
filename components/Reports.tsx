@@ -149,6 +149,11 @@ const GeneralTrendChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
 
     const { years, dataByYear } = useMemo(() => {
         const yrs = new Set<number>();
+        // Always include current year and next year (2569)
+        const currentY = new Date().getFullYear();
+        yrs.add(currentY);
+        yrs.add(currentY + 1); // 2026 / 2569
+
         const db: Record<number, Record<number, Record<string, number>>> = {};
         const add = (dateStr: string | undefined, category: string) => {
             if (!dateStr) return;
@@ -220,11 +225,12 @@ const GeneralTrendChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
                 <h3 className="text-lg font-bold text-gray-800">แนวโน้มรายเดือน (Monthly Trends)</h3>
                 {years.length > 0 && (
-                    <div className="relative mt-2 sm:mt-0">
+                    <div className="relative mt-2 sm:mt-0 flex items-center gap-2">
+                        <span className="text-sm font-medium text-gray-500">ปี พ.ศ.</span>
                          <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))} className="appearance-none bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-full p-2.5 pr-8">
-                            {years.map(y => <option key={y} value={y}>{y}</option>)}
+                            {years.map(y => <option key={y} value={y}>{y + 543}</option>)}
                         </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700"><ChevronDownIcon /></div>
+                        <div className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 flex items-center px-2 text-gray-700 mt-3.5 sm:mt-0"><ChevronDownIcon /></div>
                     </div>
                 )}
             </div>
@@ -242,7 +248,7 @@ const GeneralTrendChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
             <div className="relative w-full overflow-hidden">
                 {hoveredMonth !== null && (
                     <div className="absolute z-10 bg-white border border-gray-200 shadow-lg rounded-lg p-3 text-xs min-w-[120px] pointer-events-none" style={{ left: `${(hoveredMonth / 11) * 80}%`, top: '10%', transform: hoveredMonth > 8 ? 'translateX(-100%)' : 'translateX(0)' }}>
-                        <p className="font-bold text-gray-800 mb-2 border-b pb-1">{THAI_MONTHS[hoveredMonth]} {selectedYear}</p>
+                        <p className="font-bold text-gray-800 mb-2 border-b pb-1">{THAI_MONTHS[hoveredMonth]} {selectedYear + 543}</p>
                         <ul className="space-y-1">
                             {GENERAL_LABELS.filter(c => visibleCategories.has(c)).map(cat => (
                                 <li key={cat} className="flex justify-between items-center"><div className="flex items-center"><span className="w-2 h-2 rounded-full mr-1.5" style={{ backgroundColor: GENERAL_COLORS[cat as keyof typeof GENERAL_COLORS] }}></span><span className="text-gray-600">{cat}</span></div><span className="font-bold text-gray-900 ml-2">{monthlyData[hoveredMonth].counts[cat] || 0}</span></li>
@@ -276,6 +282,10 @@ const StdLineChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
 
     const { years, dataByYear } = useMemo(() => {
         const yrs = new Set<number>();
+        const currentY = new Date().getFullYear();
+        yrs.add(currentY);
+        yrs.add(currentY + 1); // 2026 / 2569
+
         const db: Record<number, Record<number, Record<string, number>>> = {};
 
         patients.forEach(p => {
@@ -351,11 +361,12 @@ const StdLineChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
                 <h3 className="text-lg font-bold text-gray-800">แนวโน้มโรคติดต่อทางเพศสัมพันธ์ (STD Trend)</h3>
                 {years.length > 0 && (
-                    <div className="relative mt-2 sm:mt-0">
+                    <div className="relative mt-2 sm:mt-0 flex items-center gap-2">
+                        <span className="text-sm font-medium text-gray-500">ปี พ.ศ.</span>
                          <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))} className="appearance-none bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-full p-2.5 pr-8">
-                            {years.map(y => <option key={y} value={y}>{y}</option>)}
+                            {years.map(y => <option key={y} value={y}>{y + 543}</option>)}
                         </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700"><ChevronDownIcon /></div>
+                        <div className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 flex items-center px-2 text-gray-700 mt-3.5 sm:mt-0"><ChevronDownIcon /></div>
                     </div>
                 )}
             </div>
@@ -383,7 +394,7 @@ const StdLineChart: React.FC<{ patients: Patient[] }> = ({ patients }) => {
                 <div className="relative overflow-hidden">
                     {hoveredMonth !== null && (
                          <div className="absolute z-10 bg-white border border-gray-200 shadow-lg rounded-lg p-3 text-xs min-w-[120px] pointer-events-none" style={{ left: `${(hoveredMonth / 11) * 80}%`, top: '10%', transform: hoveredMonth > 8 ? 'translateX(-100%)' : 'translateX(0)' }}>
-                             <p className="font-bold text-gray-800 mb-2 border-b pb-1">{THAI_MONTHS[hoveredMonth]} {selectedYear}</p>
+                             <p className="font-bold text-gray-800 mb-2 border-b pb-1">{THAI_MONTHS[hoveredMonth]} {selectedYear + 543}</p>
                              <ul className="space-y-1">
                                  {activeDiseases.filter(d => visibleDiseases.has(d)).map((d, idx) => (
                                      <li key={d} className="flex justify-between items-center">

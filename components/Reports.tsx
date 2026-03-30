@@ -768,9 +768,8 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
                 </div>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 <Card title="ผู้ป่วย HIV ใหม่" value={stats.totalHiv} onClick={() => handleCardClick('HIV_NEW', 'รายชื่อผู้ป่วย HIV ใหม่', stats.lists.hivNew)} className="bg-blue-50 border-blue-100 text-blue-900" />
-                <Card title="เริ่มรักษาที่อื่น" value={stats.referredElsewhere.length} onClick={() => handleCardClick('REFERRED_ELSEWHERE', 'รายชื่อผู้ป่วยที่เริ่มรักษาที่อื่น', stats.referredElsewhere)} className="bg-slate-100 border-slate-200 text-slate-900" />
                 <Card title="ตรวจพบ HBV" value={stats.hbv.positive} onClick={() => handleCardClick('HBV', 'รายชื่อผู้ป่วยตรวจพบ HBV', stats.lists.hbv)} className="bg-emerald-50 border-emerald-100 text-emerald-900" />
                 <Card title="ได้รับ TPT" value={stats.tpt} onClick={() => handleCardClick('TPT', 'รายชื่อผู้ป่วยได้รับ TPT', stats.lists.tpt)} className="bg-orange-50 border-orange-100 text-orange-900" />
                 <Card title="เริ่ม PrEP" value={stats.prep} onClick={() => handleCardClick('PREP', 'รายชื่อผู้ป่วยเริ่ม PrEP', stats.lists.prep)} className="bg-indigo-50 border-indigo-100 text-indigo-900" />
@@ -784,7 +783,7 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
                     <h2 className="text-xl font-bold text-gray-800 tracking-tight">การเริ่มยาต้านไวรัส (Early ART Analysis)</h2>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                     <div className="bg-slate-800 text-white p-6 rounded-2xl shadow-sm flex flex-col justify-center items-center text-center">
                         <p className="text-xs uppercase tracking-widest opacity-60">เฉลี่ยรวมทั้งหมด</p>
                         <p className="text-5xl font-bold mt-2">{avg.total}</p>
@@ -804,6 +803,11 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
                         <p className="text-xs font-bold text-red-600 uppercase tracking-widest">เฉลี่ยกลุ่ม Late จริง</p>
                         <p className="text-4xl font-bold text-gray-800 mt-2">{avg.lateTrue}</p>
                         <p className="text-sm text-gray-400 mt-1">วัน (ไม่มี OIs)</p>
+                    </div>
+                    <div onClick={() => handleSliceClick('elsewhere')} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-center items-center text-center cursor-pointer hover:bg-slate-50 transition-colors">
+                        <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">เริ่มรักษาที่อื่น</p>
+                        <p className="text-4xl font-bold text-gray-800 mt-2">{stats.referredElsewhere.length}</p>
+                        <p className="text-sm text-gray-400 mt-1">ราย (Elsewhere)</p>
                     </div>
                 </div>
 

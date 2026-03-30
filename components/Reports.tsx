@@ -578,14 +578,16 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
                 groups: {
                     early: [] as any[],
                     lateWithOi: [] as any[],
-                    lateTrue: [] as any[] // Late without OIs
+                    lateTrue: [] as any[], // Late without OIs
+                    elsewhere: [] as any[]
                 },
                 sums: {
                     earlyDays: 0,
                     lateWithOiDays: 0,
                     lateTrueDays: 0
                 }
-            }
+            },
+            referredElsewhere: [] as any[]
         };
 
         const isInRange = (dateStr?: string) => {
@@ -605,20 +607,38 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
                 s.totalHiv++;
                 const pData = { hn: p.hn, name: `${p.firstName} ${p.lastName}`, diagDate: hivDiagEvent.date, startDate: firstArtEvent?.date || '', diffDays: '-', hasOi: hasOiHistory };
                 
-                if (firstArtEvent) {
-                    const diagDate = new Date(hivDiagEvent.date), startDateObj = new Date(firstArtEvent.date);
-                    const diffTime = startDateObj.getTime() - diagDate.getTime();
-                    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-                    pData.diffDays = diffDays.toString();
+                // Check if treatment started elsewhere
+                if (p.hivTreatmentStartLocation === 'ที่อื่น') {
+                    s.earlyArt.groups.elsewhere.push(pData);
+                    s.referredElsewhere.push(pData);
+                } else {
+                    // Treatment at Mahasarakham (or not specified yet, default to Mahasarakham)
+                    const isMhs = p.hivTreatmentStartLocation === 'โรงพยาบาลมหาสารคาม' || !p.hivTreatmentStartLocation;
 
-                    if (diffDays >= 0) {
-                        s.earlyArt.totalDays += diffDays;
-                        s.earlyArt.validCount++;
-                        if (diffDays <= 7) {
-                            s.earlyArt.groups.early.push(pData);
-                            s.earlyArt.sums.earlyDays += diffDays;
-                        } else {
-                            if (hasOiHistory) {
+                    if (isMhs && firstArtEvent) {
+                        const diagDate = new Date(hivDiagEvent.date), startDateObj = new Date(firstArtEvent.date);
+                        const diffTime = startDateObj.getTime() - diagDate.getTime();
+                        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                        pData.diffDays = diffDays.toString();
+
+                        if (diffDays >= 0) {
+                            s.earlyArt.totalDays += diffDays;
+                            s.earlyArt.validCount++;
+
+                            // Calculate category automatically
+                            // 1. Early (MHS): <= 7 days
+                            // 2. Late (OIs) (MHS): > 7 days AND had OI before or on ART start date
+                            // 3. Late (No OIs) (MHS): > 7 days AND no OI before or on ART start date
+                            
+                            const hasOiAtInitiation = p.medicalHistory.some(e => 
+                                e.type === MedicalEventType.OPPORTUNISTIC_INFECTION && 
+                                new Date(e.date).getTime() <= startDateObj.getTime()
+                            );
+
+                            if (diffDays <= 7) {
+                                s.earlyArt.groups.early.push(pData);
+                                s.earlyArt.sums.earlyDays += diffDays;
+                            } else if (hasOiAtInitiation) {
                                 s.earlyArt.groups.lateWithOi.push(pData);
                                 s.earlyArt.sums.lateWithOiDays += diffDays;
                             } else {
@@ -710,17 +730,19 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
     const achievementRate = adjustedDenominator > 0 ? ((stats.earlyArt.groups.early.length / adjustedDenominator) * 100).toFixed(0) : 0;
 
     const earlyArtChartData = [
-        { label: 'ภายใน 7 วัน (Early)', count: stats.earlyArt.groups.early.length, color: '#10b981', id: 'early' },
-        { label: 'เกิน 7 วัน (มี OIs)', count: stats.earlyArt.groups.lateWithOi.length, color: '#f97316', id: 'lateWithOi' },
-        { label: 'เกิน 7 วัน (Late จริง/ไม่มี OIs)', count: stats.earlyArt.groups.lateTrue.length, color: '#ef4444', id: 'lateTrue' },
+        { label: 'ภายใน 7 วัน (Early) - MHS', count: stats.earlyArt.groups.early.length, color: '#10b981', id: 'early' },
+        { label: 'เกิน 7 วัน (มี OIs) - MHS', count: stats.earlyArt.groups.lateWithOi.length, color: '#f97316', id: 'lateWithOi' },
+        { label: 'เกิน 7 วัน (Late จริง) - MHS', count: stats.earlyArt.groups.lateTrue.length, color: '#ef4444', id: 'lateTrue' },
+        { label: 'เริ่มรักษาที่อื่น (Elsewhere)', count: stats.earlyArt.groups.elsewhere.length, color: '#94a3b8', id: 'elsewhere' },
     ];
 
     const handleSliceClick = (id: string) => {
         let groupTitle = "";
         let patientsList = [];
-        if (id === 'early') { groupTitle = "กลุ่มเริ่มยา ART ภายใน 7 วัน (Early)"; patientsList = stats.earlyArt.groups.early; }
-        else if (id === 'lateWithOi') { groupTitle = "กลุ่มเริ่มยา ART เกิน 7 วัน (เนื่องจากพบ OIs)"; patientsList = stats.earlyArt.groups.lateWithOi; }
-        else if (id === 'lateTrue') { groupTitle = "กลุ่มเริ่มยา ART เกิน 7 วัน (Late จริง/ไม่มี OIs)"; patientsList = stats.earlyArt.groups.lateTrue; }
+        if (id === 'early') { groupTitle = "กลุ่มเริ่มยา ART ภายใน 7 วัน (Early) - รพ.มหาสารคาม"; patientsList = stats.earlyArt.groups.early; }
+        else if (id === 'lateWithOi') { groupTitle = "กลุ่มเริ่มยา ART เกิน 7 วัน (เนื่องจากพบ OIs) - รพ.มหาสารคาม"; patientsList = stats.earlyArt.groups.lateWithOi; }
+        else if (id === 'lateTrue') { groupTitle = "กลุ่มเริ่มยา ART เกิน 7 วัน (Late จริง/ไม่มี OIs) - รพ.มหาสารคาม"; patientsList = stats.earlyArt.groups.lateTrue; }
+        else if (id === 'elsewhere') { groupTitle = "กลุ่มที่เริ่มการรักษาที่อื่น"; patientsList = stats.earlyArt.groups.elsewhere; }
         setActiveGroup({ title: groupTitle, patients: patientsList });
     };
 
@@ -746,8 +768,9 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
                 </div>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4">
                 <Card title="ผู้ป่วย HIV ใหม่" value={stats.totalHiv} onClick={() => handleCardClick('HIV_NEW', 'รายชื่อผู้ป่วย HIV ใหม่', stats.lists.hivNew)} className="bg-blue-50 border-blue-100 text-blue-900" />
+                <Card title="เริ่มรักษาที่อื่น" value={stats.referredElsewhere.length} onClick={() => handleCardClick('REFERRED_ELSEWHERE', 'รายชื่อผู้ป่วยที่เริ่มรักษาที่อื่น', stats.referredElsewhere)} className="bg-slate-100 border-slate-200 text-slate-900" />
                 <Card title="ตรวจพบ HBV" value={stats.hbv.positive} onClick={() => handleCardClick('HBV', 'รายชื่อผู้ป่วยตรวจพบ HBV', stats.lists.hbv)} className="bg-emerald-50 border-emerald-100 text-emerald-900" />
                 <Card title="ได้รับ TPT" value={stats.tpt} onClick={() => handleCardClick('TPT', 'รายชื่อผู้ป่วยได้รับ TPT', stats.lists.tpt)} className="bg-orange-50 border-orange-100 text-orange-900" />
                 <Card title="เริ่ม PrEP" value={stats.prep} onClick={() => handleCardClick('PREP', 'รายชื่อผู้ป่วยเริ่ม PrEP', stats.lists.prep)} className="bg-indigo-50 border-indigo-100 text-indigo-900" />

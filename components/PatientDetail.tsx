@@ -32,6 +32,8 @@ export const PatientDetail: React.FC<PatientDetailProps> = ({ patient, onBack, o
 
   const handleSaveEvent = (eventData: Omit<MedicalEvent, 'id'> | MedicalEvent) => {
     let newHistory: MedicalEvent[];
+    let updatedPatient = { ...patient };
+
     if ('id' in eventData) {
       // It's an update
       newHistory = patient.medicalHistory.map(e => e.id === eventData.id ? eventData : e);
@@ -43,7 +45,13 @@ export const PatientDetail: React.FC<PatientDetailProps> = ({ patient, onBack, o
       };
       newHistory = [newEvent, ...patient.medicalHistory];
     }
-    handleUpdatePatient({ ...patient, medicalHistory: newHistory });
+
+    // Sync HIV treatment start info if it's a DIAGNOSIS event
+    if (eventData.type === 'DIAGNOSIS' && eventData.details) {
+      updatedPatient.hivTreatmentStartLocation = eventData.details.hivTreatmentStartLocation;
+    }
+
+    handleUpdatePatient({ ...updatedPatient, medicalHistory: newHistory });
   };
   
   const handleDeleteEvent = (eventId: string) => {

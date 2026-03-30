@@ -214,10 +214,39 @@ const renderEventDetailForm = (type: MedicalEventType, details: Record<string, a
     switch (type) {
         case MedicalEventType.DIAGNOSIS:
             return (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div><label htmlFor="initialCd4" className={labelClass}>Initial CD4 count</label><input type="number" name="Initial CD4 count" id="initialCd4" value={details['Initial CD4 count'] || ''} onChange={handleDetailChange} className={inputClass} /></div>
-                    <div><label htmlFor="initialCd4Percent" className={labelClass}>Initial CD4 %</label><input type="number" name="Initial CD4 %" id="initialCd4Percent" value={details['Initial CD4 %'] || ''} step="0.1" onChange={handleDetailChange} className={inputClass} /></div>
-                    <div><label htmlFor="reason" className={labelClass}>สาเหตุที่ตรวจพบ</label><input type="text" name="สาเหตุที่ตรวจพบ" id="reason" value={details['สาเหตุที่ตรวจพบ'] || ''} onChange={handleDetailChange} className={inputClass} /></div>
+                <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div><label htmlFor="initialCd4" className={labelClass}>Initial CD4 count</label><input type="number" name="Initial CD4 count" id="initialCd4" value={details['Initial CD4 count'] || ''} onChange={handleDetailChange} className={inputClass} /></div>
+                        <div><label htmlFor="initialCd4Percent" className={labelClass}>Initial CD4 %</label><input type="number" name="Initial CD4 %" id="initialCd4Percent" value={details['Initial CD4 %'] || ''} step="0.1" onChange={handleDetailChange} className={inputClass} /></div>
+                        <div><label htmlFor="reason" className={labelClass}>สาเหตุที่ตรวจพบ</label><input type="text" name="สาเหตุที่ตรวจพบ" id="reason" value={details['สาเหตุที่ตรวจพบ'] || ''} onChange={handleDetailChange} className={inputClass} /></div>
+                    </div>
+                    <div className="border-t pt-4">
+                        <label className={labelClass}>เริ่มรักษาที่</label>
+                        <div className="flex gap-4 mt-2">
+                            <label className="flex items-center">
+                                <input 
+                                    type="radio" 
+                                    name="hivTreatmentStartLocation" 
+                                    value="โรงพยาบาลมหาสารคาม" 
+                                    checked={details.hivTreatmentStartLocation === 'โรงพยาบาลมหาสารคาม'} 
+                                    onChange={handleDetailChange} 
+                                    className="mr-2"
+                                />
+                                โรงพยาบาลมหาสารคาม
+                            </label>
+                            <label className="flex items-center">
+                                <input 
+                                    type="radio" 
+                                    name="hivTreatmentStartLocation" 
+                                    value="ที่อื่น" 
+                                    checked={details.hivTreatmentStartLocation === 'ที่อื่น'} 
+                                    onChange={handleDetailChange} 
+                                    className="mr-2"
+                                />
+                                ที่อื่น
+                            </label>
+                        </div>
+                    </div>
                 </div>
             );
         case MedicalEventType.ART_START:

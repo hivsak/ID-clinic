@@ -39,6 +39,7 @@ const mapRowToPatient = (row: any): Patient => ({
     referralType: row.referral_type as any,
     referredFrom: row.referred_from || '',
     referralDate: row.referral_date ? toLocalISOString(row.referral_date) : undefined,
+    hivTreatmentStartLocation: row.hiv_treatment_start_location as any,
     referOutDate: row.refer_out_date ? toLocalISOString(row.refer_out_date) : undefined,
     referOutLocation: row.refer_out_location || '',
     deathDate: row.death_date ? toLocalISOString(row.death_date) : undefined,
@@ -283,13 +284,13 @@ export const createPatient = async (data: any): Promise<number> => {
                 status, registration_date, next_appointment_date, occupation, partner_status, partner_hiv_status,
                 address, district, subdistrict, province, phone, healthcare_scheme,
                 referral_type, referred_from, referral_date, refer_out_date, refer_out_location, death_date, cause_of_death,
-                underlying_diseases, cid
+                underlying_diseases, cid, hiv_treatment_start_location
             ) VALUES (
                 $1, $2, $3, $4, $5, $6, $7, $8,
                 $9, $10, $11, $12, $13, $14,
                 $15, $16, $17, $18, $19, $20,
                 $21, $22, $23, $24, $25, $26, $27,
-                $28, $29
+                $28, $29, $30
             ) RETURNING id
         `, [
             data.hn, data.napId, data.title, data.firstName, data.lastName, dateOrNull(data.dob), data.sex, data.riskBehavior,
@@ -297,7 +298,8 @@ export const createPatient = async (data: any): Promise<number> => {
             data.address, data.district, data.subdistrict, data.province, data.phone, data.healthcareScheme,
             data.referralType, data.referredFrom, dateOrNull(data.referralDate),
             dateOrNull(data.referOutDate), data.referOutLocation, dateOrNull(data.deathDate), data.causeOfDeath,
-            JSON.stringify(data.underlyingDiseases || []), data.cid || null
+            JSON.stringify(data.underlyingDiseases || []), data.cid || null,
+            data.hivTreatmentStartLocation
         ]);
         return res.rows[0].id;
     } catch (error: any) {
@@ -331,8 +333,9 @@ export const updatePatient = async (patient: Patient): Promise<void> => {
                 hbv_manual_summary=$23, hcv_vl_not_tested=$24,
                 refer_out_date=$25, refer_out_location=$26, death_date=$27, cause_of_death=$28,
                 underlying_diseases=$29, cid=$30,
+                hiv_treatment_start_location=$31,
                 updated_at=CURRENT_TIMESTAMP
-            WHERE id=$31
+            WHERE id=$32
         `, [
             patient.hn, patient.napId, patient.title, patient.firstName, patient.lastName, dateOrNull(patient.dob), patient.sex, patient.riskBehavior,
             patient.status, dateOrNull(patient.nextAppointmentDate), patient.occupation, patient.partnerStatus, patient.partnerHivStatus,
@@ -341,6 +344,7 @@ export const updatePatient = async (patient: Patient): Promise<void> => {
             patient.hbvInfo?.manualSummary, patient.hcvInfo?.hcvVlNotTested || false,
             dateOrNull(patient.referOutDate), patient.referOutLocation, dateOrNull(patient.deathDate), patient.causeOfDeath,
             JSON.stringify(patient.underlyingDiseases || []), patient.cid || null,
+            patient.hivTreatmentStartLocation,
             patient.id
         ]);
 

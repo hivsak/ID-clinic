@@ -730,18 +730,18 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
     const achievementRate = adjustedDenominator > 0 ? ((stats.earlyArt.groups.early.length / adjustedDenominator) * 100).toFixed(0) : 0;
 
     const earlyArtChartData = [
-        { label: 'ภายใน 7 วัน (Early) - MHS', count: stats.earlyArt.groups.early.length, color: '#10b981', id: 'early' },
-        { label: 'เกิน 7 วัน (มี OIs) - MHS', count: stats.earlyArt.groups.lateWithOi.length, color: '#f97316', id: 'lateWithOi' },
-        { label: 'เกิน 7 วัน (Late จริง) - MHS', count: stats.earlyArt.groups.lateTrue.length, color: '#ef4444', id: 'lateTrue' },
+        { label: 'ภายใน 7 วัน (Early)', count: stats.earlyArt.groups.early.length, color: '#10b981', id: 'early' },
+        { label: 'เกิน 7 วัน (มี OIs)', count: stats.earlyArt.groups.lateWithOi.length, color: '#f97316', id: 'lateWithOi' },
+        { label: 'เกิน 7 วัน (Late จริง)', count: stats.earlyArt.groups.lateTrue.length, color: '#ef4444', id: 'lateTrue' },
         { label: 'เริ่มรักษาที่อื่น (Elsewhere)', count: stats.earlyArt.groups.elsewhere.length, color: '#94a3b8', id: 'elsewhere' },
     ];
 
     const handleSliceClick = (id: string) => {
         let groupTitle = "";
         let patientsList = [];
-        if (id === 'early') { groupTitle = "กลุ่มเริ่มยา ART ภายใน 7 วัน (Early) - รพ.มหาสารคาม"; patientsList = stats.earlyArt.groups.early; }
-        else if (id === 'lateWithOi') { groupTitle = "กลุ่มเริ่มยา ART เกิน 7 วัน (เนื่องจากพบ OIs) - รพ.มหาสารคาม"; patientsList = stats.earlyArt.groups.lateWithOi; }
-        else if (id === 'lateTrue') { groupTitle = "กลุ่มเริ่มยา ART เกิน 7 วัน (Late จริง/ไม่มี OIs) - รพ.มหาสารคาม"; patientsList = stats.earlyArt.groups.lateTrue; }
+        if (id === 'early') { groupTitle = "กลุ่มเริ่มยา ART ภายใน 7 วัน (Early)"; patientsList = stats.earlyArt.groups.early; }
+        else if (id === 'lateWithOi') { groupTitle = "กลุ่มเริ่มยา ART เกิน 7 วัน (เนื่องจากพบ OIs)"; patientsList = stats.earlyArt.groups.lateWithOi; }
+        else if (id === 'lateTrue') { groupTitle = "กลุ่มเริ่มยา ART เกิน 7 วัน (Late จริง/ไม่มี OIs)"; patientsList = stats.earlyArt.groups.lateTrue; }
         else if (id === 'elsewhere') { groupTitle = "กลุ่มที่เริ่มการรักษาที่อื่น"; patientsList = stats.earlyArt.groups.elsewhere; }
         setActiveGroup({ title: groupTitle, patients: patientsList });
     };

@@ -221,14 +221,14 @@ const renderEventDetailForm = (type: MedicalEventType, details: Record<string, a
                         <div><label htmlFor="reason" className={labelClass}>สาเหตุที่ตรวจพบ</label><input type="text" name="สาเหตุที่ตรวจพบ" id="reason" value={details['สาเหตุที่ตรวจพบ'] || ''} onChange={handleDetailChange} className={inputClass} /></div>
                     </div>
                     <div className="border-t pt-4">
-                        <label className={labelClass}>เริ่มรักษาที่</label>
+                        <label className={labelClass}>สถานที่เริ่มการรักษาครั้งแรก</label>
                         <div className="flex gap-4 mt-2">
                             <label className="flex items-center">
                                 <input 
                                     type="radio" 
-                                    name="hivTreatmentStartLocation" 
+                                    name="สถานที่เริ่มการรักษาครั้งแรก" 
                                     value="โรงพยาบาลมหาสารคาม" 
-                                    checked={details.hivTreatmentStartLocation === 'โรงพยาบาลมหาสารคาม'} 
+                                    checked={details['สถานที่เริ่มการรักษาครั้งแรก'] === 'โรงพยาบาลมหาสารคาม'} 
                                     onChange={handleDetailChange} 
                                     className="mr-2"
                                 />
@@ -237,9 +237,9 @@ const renderEventDetailForm = (type: MedicalEventType, details: Record<string, a
                             <label className="flex items-center">
                                 <input 
                                     type="radio" 
-                                    name="hivTreatmentStartLocation" 
+                                    name="สถานที่เริ่มการรักษาครั้งแรก" 
                                     value="ที่อื่น" 
-                                    checked={details.hivTreatmentStartLocation === 'ที่อื่น'} 
+                                    checked={details['สถานที่เริ่มการรักษาครั้งแรก'] === 'ที่อื่น'} 
                                     onChange={handleDetailChange} 
                                     className="mr-2"
                                 />
@@ -860,7 +860,7 @@ export const HivTreatmentTab: React.FC<HivTreatmentTabProps> = ({ patient, onSav
 
                 {/* Right Column: Timeline */}
                 <div className="bg-white p-6 rounded-lg shadow-sm border">
-                     <h3 className="text-xl font-semibold text-gray-800 mb-6">ประวัติการรักษา (เรียงจากล่าสุด)</h3>
+                     <h3 className="text-xl font-semibold text-gray-800 mb-6">Timeline การรักษา</h3>
 
                     {sortedHistory.length > 0 ? (
                         <div className="relative pl-5 max-h-[800px] overflow-y-auto pr-2">

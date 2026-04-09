@@ -561,7 +561,11 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
                 tpt: [] as any[],
                 prep: [] as any[],
                 pep: [] as any[],
-                std: [] as any[]
+                std: [] as any[],
+                hcv: {} as Record<string, any[]>,
+                syphilis: {} as Record<string, any[]>,
+                oi: {} as Record<string, any[]>,
+                tb: {} as Record<string, any[]>
             },
             totalHiv: 0,
             hbv: { positive: 0 },
@@ -608,12 +612,12 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
                 const pData = { hn: p.hn, name: `${p.firstName} ${p.lastName}`, diagDate: hivDiagEvent.date, startDate: firstArtEvent?.date || '', diffDays: '-', hasOi: hasOiHistory };
                 
                 // Check if treatment started elsewhere
-                if (p.hivTreatmentStartLocation === 'ที่อื่น') {
+                if (p.สถานที่เริ่มการรักษาครั้งแรก === 'ที่อื่น') {
                     s.earlyArt.groups.elsewhere.push(pData);
                     s.referredElsewhere.push(pData);
                 } else {
                     // Treatment at Mahasarakham (or not specified yet, default to Mahasarakham)
-                    const isMhs = p.hivTreatmentStartLocation === 'โรงพยาบาลมหาสารคาม' || !p.hivTreatmentStartLocation;
+                    const isMhs = p.สถานที่เริ่มการรักษาครั้งแรก === 'โรงพยาบาลมหาสารคาม' || !p.สถานที่เริ่มการรักษาครั้งแรก;
 
                     if (isMhs && firstArtEvent) {
                         const diagDate = new Date(hivDiagEvent.date), startDateObj = new Date(firstArtEvent.date);
@@ -666,12 +670,16 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
             }
             if (countThisHcv && hcvStatus.text !== 'ไม่มีข้อมูล' && hcvStatus.text !== 'ไม่เป็น HCV') {
                 s.hcv.totalPositiveDiagnostic++;
-                if (hcvStatus.text === 'รอการตรวจเพิ่มเติม') s.hcv.waitForTest++;
-                else if (hcvStatus.text === 'เคยเป็น HCV หายเอง') s.hcv.clearedSpontaneously++;
-                else if (hcvStatus.text === 'กำลังรักษา HCV') s.hcv.treating++;
-                else if (hcvStatus.text === 'เป็น HCV รักษาแล้วไม่หาย') s.hcv.treatmentFailed++;
-                else if (hcvStatus.text === 'เคยเป็น HCV รักษาหายแล้ว') s.hcv.cured++;
-                else if (hcvStatus.text === 'เป็น HCV') s.hcv.activeHcv++;
+                const pData = { hn: p.hn, name: `${p.firstName} ${p.lastName}`, date: '-', result: hcvStatus.text };
+                const latestTest = [...(p.hcvInfo?.hcvTests || [])].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+                if (latestTest) pData.date = latestTest.date;
+
+                if (hcvStatus.text === 'รอการตรวจเพิ่มเติม') { s.hcv.waitForTest++; (s.lists.hcv['รอการตรวจเพิ่มเติม'] = s.lists.hcv['รอการตรวจเพิ่มเติม'] || []).push(pData); }
+                else if (hcvStatus.text === 'เคยเป็น HCV หายเอง') { s.hcv.clearedSpontaneously++; (s.lists.hcv['เคยเป็น HCV หายเอง'] = s.lists.hcv['เคยเป็น HCV หายเอง'] || []).push(pData); }
+                else if (hcvStatus.text === 'กำลังรักษา HCV') { s.hcv.treating++; (s.lists.hcv['กำลังรักษา HCV'] = s.lists.hcv['กำลังรักษา HCV'] || []).push(pData); }
+                else if (hcvStatus.text === 'เป็น HCV รักษาแล้วไม่หาย') { s.hcv.treatmentFailed++; (s.lists.hcv['เป็น HCV รักษาแล้วไม่หาย'] = s.lists.hcv['เป็น HCV รักษาแล้วไม่หาย'] || []).push(pData); }
+                else if (hcvStatus.text === 'เคยเป็น HCV รักษาหายแล้ว') { s.hcv.cured++; (s.lists.hcv['เคยเป็น HCV รักษาหายแล้ว'] = s.lists.hcv['เคยเป็น HCV รักษาหายแล้ว'] || []).push(pData); }
+                else if (hcvStatus.text === 'เป็น HCV') { s.hcv.activeHcv++; (s.lists.hcv['เป็น HCV'] = s.lists.hcv['เป็น HCV'] || []).push(pData); }
             }
 
             const tptEventsInRange = p.medicalHistory.filter(e => e.type === MedicalEventType.PROPHYLAXIS && e.details.TPT && isInRange(e.date));
@@ -685,10 +693,19 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
             p.medicalHistory.filter(e => e.type === MedicalEventType.OPPORTUNISTIC_INFECTION && isInRange(e.date)).forEach(e => {
                 const infections = e.details.infections || []; if (e.details.โรค) infections.push(e.details.โรค);
                 const uniqueInfs = new Set(infections);
+                const pData = { hn: p.hn, name: `${p.firstName} ${p.lastName}`, date: e.date, diseases: infections };
                 uniqueInfs.forEach((inf: any) => {
-                    if (TB_SUBTYPES.includes(inf)) s.tbBreakdown[inf] = (s.tbBreakdown[inf] || 0) + 1;
-                    if (TB_SUBTYPES.includes(inf) || inf === 'Tuberculosis') s.oiBreakdown['Tuberculosis'] = (s.oiBreakdown['Tuberculosis'] || 0) + 1;
-                    else s.oiBreakdown[inf] = (s.oiBreakdown[inf] || 0) + 1;
+                    if (TB_SUBTYPES.includes(inf)) {
+                        s.tbBreakdown[inf] = (s.tbBreakdown[inf] || 0) + 1;
+                        (s.lists.tb[inf] = s.lists.tb[inf] || []).push(pData);
+                    }
+                    if (TB_SUBTYPES.includes(inf) || inf === 'Tuberculosis') {
+                        s.oiBreakdown['Tuberculosis'] = (s.oiBreakdown['Tuberculosis'] || 0) + 1;
+                        (s.lists.oi['Tuberculosis'] = s.lists.oi['Tuberculosis'] || []).push(pData);
+                    } else {
+                        s.oiBreakdown[inf] = (s.oiBreakdown[inf] || 0) + 1;
+                        (s.lists.oi[inf] = s.lists.oi[inf] || []).push(pData);
+                    }
                 });
             });
 
@@ -696,8 +713,14 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
             if (stdRecordsInRange.length > 0) {
                 stdRecordsInRange.forEach(rec => {
                     s.std.totalDiagnoses += rec.diseases.length;
-                    rec.diseases.forEach(d => { if (SYPHILIS_SUBTYPES.includes(d)) s.std.syphilisBreakdown[d] = (s.std.syphilisBreakdown[d] || 0) + 1; });
-                    s.lists.std.push({ hn: p.hn, name: `${p.firstName} ${p.lastName}`, date: rec.date, diseases: rec.diseases });
+                    const pData = { hn: p.hn, name: `${p.firstName} ${p.lastName}`, date: rec.date, diseases: rec.diseases };
+                    rec.diseases.forEach(d => { 
+                        if (SYPHILIS_SUBTYPES.includes(d)) {
+                            s.std.syphilisBreakdown[d] = (s.std.syphilisBreakdown[d] || 0) + 1; 
+                            (s.lists.syphilis[d] = s.lists.syphilis[d] || []).push(pData);
+                        }
+                    });
+                    s.lists.std.push(pData);
                 });
             }
 
@@ -739,11 +762,38 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
     const handleSliceClick = (id: string) => {
         let groupTitle = "";
         let patientsList = [];
+        let type = "";
+
         if (id === 'early') { groupTitle = "กลุ่มเริ่มยา ART ภายใน 7 วัน (Early)"; patientsList = stats.earlyArt.groups.early; }
         else if (id === 'lateWithOi') { groupTitle = "กลุ่มเริ่มยา ART เกิน 7 วัน (เนื่องจากพบ OIs)"; patientsList = stats.earlyArt.groups.lateWithOi; }
         else if (id === 'lateTrue') { groupTitle = "กลุ่มเริ่มยา ART เกิน 7 วัน (Late จริง/ไม่มี OIs)"; patientsList = stats.earlyArt.groups.lateTrue; }
         else if (id === 'elsewhere') { groupTitle = "กลุ่มที่เริ่มการรักษาที่อื่น"; patientsList = stats.earlyArt.groups.elsewhere; }
-        setActiveGroup({ title: groupTitle, patients: patientsList });
+        else if (id.startsWith('hcv_')) {
+            const label = id.replace('hcv_', '');
+            groupTitle = `สรุปสถานการณ์ HCV: ${label}`;
+            patientsList = stats.lists.hcv[label] || [];
+            type = 'HBV'; // Reuse HBV table style for HCV (date/result)
+        }
+        else if (id.startsWith('syphilis_')) {
+            const label = id.replace('syphilis_', '');
+            groupTitle = `สรุปสถานการณ์ Syphilis: ${label}`;
+            patientsList = stats.lists.syphilis[label] || [];
+            type = 'STD';
+        }
+        else if (id.startsWith('oi_')) {
+            const label = id.replace('oi_', '');
+            groupTitle = `สรุปการติดเชื้อฉวยโอกาส (OI): ${label}`;
+            patientsList = stats.lists.oi[label] || [];
+            type = 'STD';
+        }
+        else if (id.startsWith('tb_')) {
+            const label = id.replace('tb_', '');
+            groupTitle = `รายละเอียดประเภทวัณโรค (TB): ${label}`;
+            patientsList = stats.lists.tb[label] || [];
+            type = 'STD';
+        }
+
+        setActiveGroup({ title: groupTitle, patients: patientsList, type });
     };
 
     const handleCardClick = (type: string, title: string, list: any[]) => {
@@ -839,10 +889,68 @@ export const Reports: React.FC<ReportsProps> = ({ patients }) => {
             <GeneralTrendChart patients={patients} />
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100"><h3 className="text-lg font-bold text-gray-800 mb-6 pb-2 border-b"><span>สรุปสถานการณ์ HCV</span></h3><DonutChart data={[{ label: 'รอตรวจเพิ่ม', count: stats.hcv.waitForTest, color: '#fbbf24' }, { label: 'หายเอง', count: stats.hcv.clearedSpontaneously, color: '#34d399' }, { label: 'กำลังรักษา', count: stats.hcv.treating, color: '#3b82f6' }, { label: 'รักษาไม่หาย', count: stats.hcv.treatmentFailed, color: '#ef4444' }, { label: 'หายแล้ว', count: stats.hcv.cured, color: '#059669' }, { label: 'Active (ไม่รักษา)', count: stats.hcv.activeHcv, color: '#f87171' }].filter(d => d.count > 0)} /></div>
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100"><h3 className="text-lg font-bold text-gray-800 mb-6 pb-2 border-b"><span>สรุปสถานการณ์ Syphilis</span></h3><DonutChart data={Object.entries(stats.std.syphilisBreakdown).map(([label, count], index) => ({ label, count: count as number, color: STD_COLORS[index % STD_COLORS.length] })).filter(d => d.count > 0)} /></div>
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100"><h3 className="text-lg font-bold text-gray-800 mb-6 pb-2 border-b"><span>สรุปการติดเชื้อฉวยโอกาส (OI)</span></h3><DonutChart data={Object.entries(stats.oiBreakdown).map(([label, count], index) => ({ label, count: count as number, color: STD_COLORS[(index + 5) % STD_COLORS.length] })).filter(d => d.count > 0)} /></div>
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100"><h3 className="text-lg font-bold text-gray-800 mb-6 pb-2 border-b"><span>รายละเอียดประเภทวัณโรค (TB)</span></h3><DonutChart data={Object.entries(stats.tbBreakdown).map(([label, count], index) => ({ label, count: count as number, color: STD_COLORS[(index + 3) % STD_COLORS.length] })).filter(d => d.count > 0)} /></div>
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h3 className="text-lg font-bold text-gray-800 mb-6 pb-2 border-b flex items-center justify-between">
+                        <span>สรุปสถานการณ์ HCV</span>
+                        <span className="text-[10px] font-normal text-gray-400 italic">คลิกที่กราฟเพื่อดูรายชื่อ</span>
+                    </h3>
+                    <DonutChart 
+                        data={[
+                            { label: 'รอตรวจเพิ่ม', count: stats.hcv.waitForTest, color: '#fbbf24', id: 'hcv_รอการตรวจเพิ่มเติม' }, 
+                            { label: 'หายเอง', count: stats.hcv.clearedSpontaneously, color: '#34d399', id: 'hcv_เคยเป็น HCV หายเอง' }, 
+                            { label: 'กำลังรักษา', count: stats.hcv.treating, color: '#3b82f6', id: 'hcv_กำลังรักษา HCV' }, 
+                            { label: 'รักษาไม่หาย', count: stats.hcv.treatmentFailed, color: '#ef4444', id: 'hcv_เป็น HCV รักษาแล้วไม่หาย' }, 
+                            { label: 'หายแล้ว', count: stats.hcv.cured, color: '#059669', id: 'hcv_เคยเป็น HCV รักษาหายแล้ว' }, 
+                            { label: 'Active (ไม่รักษา)', count: stats.hcv.activeHcv, color: '#f87171', id: 'hcv_เป็น HCV' }
+                        ].filter(d => d.count > 0)} 
+                        onSliceClick={handleSliceClick}
+                    />
+                </div>
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h3 className="text-lg font-bold text-gray-800 mb-6 pb-2 border-b flex items-center justify-between">
+                        <span>สรุปสถานการณ์ Syphilis</span>
+                        <span className="text-[10px] font-normal text-gray-400 italic">คลิกที่กราฟเพื่อดูรายชื่อ</span>
+                    </h3>
+                    <DonutChart 
+                        data={Object.entries(stats.std.syphilisBreakdown).map(([label, count], index) => ({ 
+                            label, 
+                            count: count as number, 
+                            color: STD_COLORS[index % STD_COLORS.length],
+                            id: `syphilis_${label}`
+                        })).filter(d => d.count > 0)} 
+                        onSliceClick={handleSliceClick}
+                    />
+                </div>
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h3 className="text-lg font-bold text-gray-800 mb-6 pb-2 border-b flex items-center justify-between">
+                        <span>สรุปการติดเชื้อฉวยโอกาส (OI)</span>
+                        <span className="text-[10px] font-normal text-gray-400 italic">คลิกที่กราฟเพื่อดูรายชื่อ</span>
+                    </h3>
+                    <DonutChart 
+                        data={Object.entries(stats.oiBreakdown).map(([label, count], index) => ({ 
+                            label, 
+                            count: count as number, 
+                            color: STD_COLORS[(index + 5) % STD_COLORS.length],
+                            id: `oi_${label}`
+                        })).filter(d => d.count > 0)} 
+                        onSliceClick={handleSliceClick}
+                    />
+                </div>
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h3 className="text-lg font-bold text-gray-800 mb-6 pb-2 border-b flex items-center justify-between">
+                        <span>รายละเอียดประเภทวัณโรค (TB)</span>
+                        <span className="text-[10px] font-normal text-gray-400 italic">คลิกที่กราฟเพื่อดูรายชื่อ</span>
+                    </h3>
+                    <DonutChart 
+                        data={Object.entries(stats.tbBreakdown).map(([label, count], index) => ({ 
+                            label, 
+                            count: count as number, 
+                            color: STD_COLORS[(index + 3) % STD_COLORS.length],
+                            id: `tb_${label}`
+                        })).filter(d => d.count > 0)} 
+                        onSliceClick={handleSliceClick}
+                    />
+                </div>
             </div>
 
             <StdLineChart patients={patients} />

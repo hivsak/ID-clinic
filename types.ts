@@ -166,7 +166,7 @@ export interface Patient {
   referralType?: 'มหาสารคาม' | 'ที่อื่น';
   referredFrom?: string;
   referralDate?: string; // ISO date string
-  hivTreatmentStartLocation?: 'โรงพยาบาลมหาสารคาม' | 'ที่อื่น';
+  สถานที่เริ่มการรักษาครั้งแรก?: 'โรงพยาบาลมหาสารคาม' | 'ที่อื่น';
   // Discharge / Refer Out
   referOutDate?: string; // ISO date string
   referOutLocation?: string;

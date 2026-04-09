@@ -39,7 +39,7 @@ const mapRowToPatient = (row: any): Patient => ({
     referralType: row.referral_type as any,
     referredFrom: row.referred_from || '',
     referralDate: row.referral_date ? toLocalISOString(row.referral_date) : undefined,
-    hivTreatmentStartLocation: row.hiv_treatment_start_location as any,
+    สถานที่เริ่มการรักษาครั้งแรก: row.hiv_treatment_start_location as any,
     referOutDate: row.refer_out_date ? toLocalISOString(row.refer_out_date) : undefined,
     referOutLocation: row.refer_out_location || '',
     deathDate: row.death_date ? toLocalISOString(row.death_date) : undefined,
@@ -299,7 +299,7 @@ export const createPatient = async (data: any): Promise<number> => {
             data.referralType, data.referredFrom, dateOrNull(data.referralDate),
             dateOrNull(data.referOutDate), data.referOutLocation, dateOrNull(data.deathDate), data.causeOfDeath,
             JSON.stringify(data.underlyingDiseases || []), data.cid || null,
-            data.hivTreatmentStartLocation
+            data.สถานที่เริ่มการรักษาครั้งแรก
         ]);
         return res.rows[0].id;
     } catch (error: any) {
@@ -344,7 +344,7 @@ export const updatePatient = async (patient: Patient): Promise<void> => {
             patient.hbvInfo?.manualSummary, patient.hcvInfo?.hcvVlNotTested || false,
             dateOrNull(patient.referOutDate), patient.referOutLocation, dateOrNull(patient.deathDate), patient.causeOfDeath,
             JSON.stringify(patient.underlyingDiseases || []), patient.cid || null,
-            patient.hivTreatmentStartLocation,
+            patient.สถานที่เริ่มการรักษาครั้งแรก,
             patient.id
         ]);
 

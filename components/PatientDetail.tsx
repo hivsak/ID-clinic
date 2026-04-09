@@ -48,7 +48,7 @@ export const PatientDetail: React.FC<PatientDetailProps> = ({ patient, onBack, o
 
     // Sync HIV treatment start info if it's a DIAGNOSIS event
     if (eventData.type === 'DIAGNOSIS' && eventData.details) {
-      updatedPatient.hivTreatmentStartLocation = eventData.details.hivTreatmentStartLocation;
+      updatedPatient.สถานที่เริ่มการรักษาครั้งแรก = eventData.details['สถานที่เริ่มการรักษาครั้งแรก'];
     }
 
     handleUpdatePatient({ ...updatedPatient, medicalHistory: newHistory });

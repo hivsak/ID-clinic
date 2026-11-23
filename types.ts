@@ -130,6 +130,29 @@ export interface PepInfo {
   records: PepRecord[];
 }
 
+export interface LabRecord {
+  id: string;
+  date: string; // ISO date string
+  cd4?: string;
+  cd4Percent?: string;
+  hivVl?: string;
+  drResistance?: string;
+  cbc?: string;
+  fbs?: string;
+  cr?: string;
+  alt?: string;
+  chol?: string;
+  tg?: string;
+  hdl?: string;
+  ldl?: string;
+  hbsag?: string;
+  antiHbs?: string;
+  antiHcv?: string;
+  cxr?: string;
+  vdrl?: string;
+  tpha?: string;
+  tst?: string;
+}
 
 export interface Patient {
   id: number;
@@ -152,6 +175,7 @@ export interface Patient {
   stdInfo?: StdInfo;
   prepInfo?: PrepInfo;
   pepInfo?: PepInfo;
+  labInfo?: { records: LabRecord[] };
   underlyingDiseases?: string[]; // New field for comorbidities
   // Detailed General Information
   occupation?: string;

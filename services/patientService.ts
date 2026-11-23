@@ -56,7 +56,8 @@ const mapRowToPatient = (row: any): Patient => ({
     hcvInfo: { hcvTests: [], hcvVlNotTested: row.hcv_vl_not_tested, preTreatmentVls: [], treatments: [], postTreatmentVls: [] },
     stdInfo: { records: [] },
     prepInfo: { records: [] },
-    pepInfo: { records: [] }
+    pepInfo: { records: [] },
+    labInfo: { records: [] }
 });
 
 const mapMedicalEvent = (row: any): MedicalEvent => ({
@@ -80,7 +81,7 @@ export const getPatients = async (): Promise<Patient[]> => {
             eventsRes, pregRes, 
             hbsRes, hbvVlRes, hbvUsRes, hbvCtRes,
             hcvTestRes, hcvPreRes, hcvTreatRes, hcvPostRes,
-            stdRes, prepRes, pepRes
+            stdRes, prepRes, pepRes, labRes
         ] = await Promise.all([
             client.query('SELECT * FROM public.medical_events ORDER BY date DESC'),
             client.query('SELECT * FROM public.pregnancy_records ORDER BY ga_date DESC'),
@@ -95,6 +96,7 @@ export const getPatients = async (): Promise<Patient[]> => {
             client.query('SELECT * FROM public.std_records ORDER BY date DESC'),
             client.query('SELECT * FROM public.prep_records ORDER BY date_start DESC'),
             client.query('SELECT * FROM public.pep_records ORDER BY date DESC'),
+            client.query('SELECT * FROM public.lab_records ORDER BY date DESC'),
         ]);
 
         // 3. Group by Patient ID
@@ -111,6 +113,7 @@ export const getPatients = async (): Promise<Patient[]> => {
         const stdByPid = groupBy(stdRes.rows, 'patient_id');
         const prepByPid = groupBy(prepRes.rows, 'patient_id');
         const pepByPid = groupBy(pepRes.rows, 'patient_id');
+        const labByPid = groupBy(labRes.rows, 'patient_id');
 
         // 4. Assemble Patients
         return patientRows.map(row => {
@@ -167,6 +170,32 @@ export const getPatients = async (): Promise<Patient[]> => {
                  }))
             };
 
+            p.labInfo = {
+                records: (labByPid[p.id] || []).map(r => ({
+                    id: r.id,
+                    date: toLocalISOString(r.date),
+                    cd4: r.cd4,
+                    cd4Percent: r.cd4_percent,
+                    hivVl: r.viral_load,
+                    drResistance: r.dr_resistance_profile,
+                    cbc: r.cbc,
+                    fbs: r.fbs,
+                    cr: r.cr,
+                    alt: r.alt,
+                    chol: r.chol,
+                    tg: r.tg,
+                    hdl: r.hdl,
+                    ldl: r.ldl,
+                    hbsag: r.hbsag,
+                    antiHbs: r.anti_hbs,
+                    antiHcv: r.anti_hcv,
+                    cxr: r.cxr,
+                    vdrl: r.vdrl,
+                    tpha: r.tpha,
+                    tst: r.tst
+                }))
+            };
+
             return p;
         });
 
@@ -193,7 +222,7 @@ export const getPatientById = async (id: number): Promise<Patient | null> => {
             eventsRes, pregRes, 
             hbsRes, hbvVlRes, hbvUsRes, hbvCtRes,
             hcvTestRes, hcvPreRes, hcvTreatRes, hcvPostRes,
-            stdRes, prepRes, pepRes
+            stdRes, prepRes, pepRes, labRes
         ] = await Promise.all([
             pool.query('SELECT * FROM public.medical_events WHERE patient_id = $1 ORDER BY date DESC', [id]),
             pool.query('SELECT * FROM public.pregnancy_records WHERE patient_id = $1 ORDER BY ga_date DESC', [id]),
@@ -207,10 +236,11 @@ export const getPatientById = async (id: number): Promise<Patient | null> => {
             pool.query('SELECT * FROM public.hcv_pre_treatment_vls WHERE patient_id = $1 ORDER BY date DESC', [id]),
             pool.query('SELECT * FROM public.hcv_treatments WHERE patient_id = $1 ORDER BY date DESC', [id]),
             pool.query('SELECT * FROM public.hcv_post_treatment_vls WHERE patient_id = $1 ORDER BY date DESC', [id]),
-            // STD, PrEP, PEP
+            // STD, PrEP, PEP, Labs
             pool.query('SELECT * FROM public.std_records WHERE patient_id = $1 ORDER BY date DESC', [id]),
             pool.query('SELECT * FROM public.prep_records WHERE patient_id = $1 ORDER BY date_start DESC', [id]),
             pool.query('SELECT * FROM public.pep_records WHERE patient_id = $1 ORDER BY date DESC', [id]),
+            pool.query('SELECT * FROM public.lab_records WHERE patient_id = $1 ORDER BY date DESC', [id]),
         ]);
 
         // 3. Map to Object
@@ -262,6 +292,32 @@ export const getPatientById = async (id: number): Promise<Patient | null> => {
                  date: toLocalISOString(r.date),
                  type: r.type
              }))
+        };
+
+        patient.labInfo = {
+            records: labRes.rows.map(r => ({
+                id: r.id,
+                date: toLocalISOString(r.date),
+                cd4: r.cd4,
+                cd4Percent: r.cd4_percent,
+                hivVl: r.viral_load,
+                drResistance: r.dr_resistance_profile,
+                cbc: r.cbc,
+                fbs: r.fbs,
+                cr: r.cr,
+                alt: r.alt,
+                chol: r.chol,
+                tg: r.tg,
+                hdl: r.hdl,
+                ldl: r.ldl,
+                hbsag: r.hbsag,
+                antiHbs: r.anti_hbs,
+                antiHcv: r.anti_hcv,
+                cxr: r.cxr,
+                vdrl: r.vdrl,
+                tpha: r.tpha,
+                tst: r.tst
+            }))
         };
 
         return patient;
@@ -421,6 +477,23 @@ export const updatePatient = async (patient: Patient): Promise<void> => {
              await client.query('INSERT INTO public.pep_records (patient_id, date, type) VALUES ($1, $2, $3)', [patient.id, item.date, item.type]);
         }
 
+        // 9. Sync Labs
+        await client.query('DELETE FROM public.lab_records WHERE patient_id = $1', [patient.id]);
+        for (const item of (patient.labInfo?.records || [])) {
+            const recordId = item.id || `lab-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+            await client.query(
+                `INSERT INTO public.lab_records (
+                    id, patient_id, date, cd4, cd4_percent, viral_load, dr_resistance_profile, cbc, fbs, cr, alt, chol, tg, hdl, ldl, hbsag, anti_hbs, anti_hcv, cxr, vdrl, tpha, tst
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)`,
+                [
+                    recordId, patient.id, item.date, item.cd4 || null, item.cd4Percent || null, item.hivVl || null, item.drResistance || null,
+                    item.cbc || null, item.fbs || null, item.cr || null, item.alt || null, item.chol || null, item.tg || null,
+                    item.hdl || null, item.ldl || null, item.hbsag || null, item.antiHbs || null, item.antiHcv || null,
+                    item.cxr || null, item.vdrl || null, item.tpha || null, item.tst || null
+                ]
+            );
+        }
+
         await client.query('COMMIT');
     } catch (error: any) {
         await client.query('ROLLBACK');
@@ -449,7 +522,7 @@ export const deletePatient = async (id: number): Promise<void> => {
             'medical_events', 'pregnancy_records',
             'hbv_hbsag_tests', 'hbv_viral_loads', 'hbv_ultrasounds', 'hbv_ct_scans',
             'hcv_tests', 'hcv_pre_treatment_vls', 'hcv_treatments', 'hcv_post_treatment_vls',
-            'std_records', 'prep_records', 'pep_records'
+            'std_records', 'prep_records', 'pep_records', 'lab_records'
         ];
         
         for (const table of tables) {

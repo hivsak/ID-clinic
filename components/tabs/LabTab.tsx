@@ -728,14 +728,14 @@ export const LabTab: React.FC<LabTabProps> = ({ patient, onUpdatePatient }) => {
     if (row.inputType === 'checkbox') {
       const checked = Boolean(val);
       return (
-        <label className="flex items-center justify-center gap-2 cursor-pointer py-1 select-none">
+        <label className="flex items-center justify-center gap-1.5 cursor-pointer py-0.5 select-none">
           <input
             type="checkbox"
             checked={checked}
             onChange={e => handleDraftFieldChange(row.key, e.target.checked)}
-            className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer accent-emerald-600"
+            className="h-3.5 w-3.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer accent-emerald-600"
           />
-          <span className={`text-xs font-medium ${checked ? 'text-emerald-700' : 'text-slate-400'}`}>
+          <span className={`text-[11px] font-medium ${checked ? 'text-emerald-700' : 'text-slate-400'}`}>
             {checked ? 'มารับ' : '-'}
           </span>
         </label>
@@ -750,7 +750,7 @@ export const LabTab: React.FC<LabTabProps> = ({ patient, onUpdatePatient }) => {
         <select
           value={strVal}
           onChange={e => handleDraftFieldChange(row.key, e.target.value)}
-          className="w-full px-2 py-1.5 text-sm bg-white border border-emerald-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"
+          className="w-full px-1.5 py-1 text-xs bg-white border border-emerald-300 rounded focus:outline-none focus:ring-1 focus:ring-emerald-500/40 focus:border-emerald-500"
         >
           <option value="">-</option>
           {hasCustom && <option value={strVal}>{strVal}</option>}
@@ -773,7 +773,7 @@ export const LabTab: React.FC<LabTabProps> = ({ patient, onUpdatePatient }) => {
             value={String(val || '')}
             onChange={e => handleDraftFieldChange(row.key, e.target.value)}
             placeholder={row.placeholder || '-'}
-            className="w-full px-2 py-1.5 text-sm bg-white border border-emerald-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"
+            className="w-full px-1.5 py-1 text-xs bg-white border border-emerald-300 rounded focus:outline-none focus:ring-1 focus:ring-emerald-500/40 focus:border-emerald-500"
           />
           <datalist id={listId}>
             {(row.options || []).map(opt => (
@@ -791,19 +791,19 @@ export const LabTab: React.FC<LabTabProps> = ({ patient, onUpdatePatient }) => {
           value={String(val || '')}
           onChange={e => handleDraftFieldChange(row.key, e.target.value)}
           placeholder={row.placeholder || '-'}
-          className="w-full px-2 py-1 text-sm bg-white border border-emerald-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 min-w-[160px]"
+          className="w-full px-1.5 py-1 text-xs bg-white border border-emerald-300 rounded focus:outline-none focus:ring-1 focus:ring-emerald-500/40 focus:border-emerald-500 min-w-[130px]"
         />
       );
     }
 
     return (
       <input
-        type={row.inputType === 'number' ? 'text' : 'text'}
+        type="text"
         inputMode={row.inputType === 'number' ? 'decimal' : undefined}
         value={String(val || '')}
         onChange={e => handleDraftFieldChange(row.key, e.target.value)}
         placeholder={row.placeholder || '-'}
-        className="w-full px-2 py-1.5 text-sm bg-white border border-emerald-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"
+        className="w-full px-1.5 py-1 text-xs bg-white border border-emerald-300 rounded focus:outline-none focus:ring-1 focus:ring-emerald-500/40 focus:border-emerald-500"
       />
     );
   };
@@ -819,7 +819,7 @@ export const LabTab: React.FC<LabTabProps> = ({ patient, onUpdatePatient }) => {
               checked
               onChange={() => handleQuickToggleCheckbox(col, row.key as 'prep' | 'npep')}
               title="มารับบริการในวันนี้ (คลิกเพื่อเปลี่ยนสถานะ)"
-              className="h-4 w-4 rounded border-emerald-500 text-emerald-600 focus:ring-emerald-500 cursor-pointer accent-emerald-600"
+              className="h-3.5 w-3.5 rounded border-emerald-500 text-emerald-600 focus:ring-emerald-500 cursor-pointer accent-emerald-600"
             />
           </div>
         );
@@ -856,27 +856,27 @@ export const LabTab: React.FC<LabTabProps> = ({ patient, onUpdatePatient }) => {
     );
   };
 
-  // Fill empty spreadsheet columns so the grid stays visually balanced like the reference
+  // Only show a single empty placeholder column when there are no dates yet
   const totalRenderedCols = columns.length + (isAddingNew ? 1 : 0);
-  const emptyFillerCount = Math.max(0, 5 - totalRenderedCols);
+  const emptyFillerCount = totalRenderedCols === 0 ? 1 : 0;
 
   const isEditingAny = isAddingNew || editingOriginalDate !== null;
 
   return (
-    <div className="space-y-4">
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+    <div className="space-y-3">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 w-full">
         {/* Top Toolbar */}
-        <div className="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-50/60 rounded-t-2xl">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-emerald-100 text-emerald-600 rounded-lg">
-              <BeakerIcon className="w-5 h-5" />
+        <div className="px-4 py-3 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/60 rounded-t-2xl">
+          <div className="flex items-center gap-2.5">
+            <div className="p-1.5 bg-emerald-100 text-emerald-600 rounded-lg">
+              <BeakerIcon className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-slate-800">
+              <h2 className="text-base font-bold text-slate-800">
                 ตารางบันทึกผล Lab และบริการ (Lab Flowsheet)
               </h2>
-              <p className="text-xs text-slate-500">
-                ข้อมูล CD4, CD4 %, HIV VL, HBsAg, Anti-HCV/HCV-Ab, HCV VL, PrEP, NPEP และ TPT เชื่อมต่อกับหน้าอื่นๆ อัตโนมัติ (คลิกที่ช่องข้อมูลเพื่อแก้ไขได้ทันที)
+              <p className="text-[11px] text-slate-500">
+                เชื่อมโยงข้อมูลกับหน้า HIV, HBV/HCV, PrEP, PEP และ TPT อัตโนมัติ (คลิกที่ช่องเพื่อแก้ไข)
               </p>
             </div>
           </div>
@@ -886,18 +886,18 @@ export const LabTab: React.FC<LabTabProps> = ({ patient, onUpdatePatient }) => {
               <button
                 type="button"
                 onClick={() => setShowExtraLabs(prev => !prev)}
-                className="px-3 py-2 text-xs font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+                className="px-2.5 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
               >
-                {showExtraLabs ? 'ซ่อน Lab เพิ่มเติม' : 'แสดง Lab เพิ่มเติม (CBC, Lipid, LFT, CXR)'}
+                {showExtraLabs ? 'ซ่อน Lab เพิ่มเติม' : 'แสดง Lab เพิ่มเติม'}
               </button>
             )}
             {!isEditingAny && (
               <button
                 type="button"
                 onClick={handleStartAdd}
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium shadow-sm"
+                className="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-xs font-medium shadow-sm"
               >
-                <PlusIcon className="w-4 h-4" />
+                <PlusIcon className="w-3.5 h-3.5" />
                 เพิ่มวันที่ตรวจ
               </button>
             )}
@@ -909,16 +909,16 @@ export const LabTab: React.FC<LabTabProps> = ({ patient, onUpdatePatient }) => {
           ref={tableScrollRef}
           className={`overflow-x-auto ${isEditingAny ? 'pb-52' : ''}`}
         >
-          <table className="w-full border-collapse text-sm">
+          <table className="w-auto border-collapse text-xs">
             <thead>
               <tr className="bg-slate-200/90 text-slate-900">
-                <th className="sticky left-0 z-20 bg-slate-200 border border-slate-300 px-3 py-2.5 text-left font-bold min-w-[230px] w-[230px]">
+                <th className="sticky left-0 z-20 bg-slate-200 border border-slate-300 px-2 py-1.5 text-left font-bold min-w-[128px] w-[140px] max-w-[148px]">
                   วันที่
                 </th>
 
                 {isAddingNew && draft && (
-                  <th className="border border-slate-300 px-3 py-2 bg-emerald-100/90 min-w-[180px] align-top">
-                    <div className="space-y-2">
+                  <th className="border border-slate-300 px-1.5 py-1.5 bg-emerald-100/90 min-w-[156px] w-[158px] align-top">
+                    <div className="space-y-1.5">
                       <DateInput
                         value={draft.date}
                         onChange={e => {
@@ -933,18 +933,18 @@ export const LabTab: React.FC<LabTabProps> = ({ patient, onUpdatePatient }) => {
                           }
                         }}
                       />
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1">
                         <button
                           type="button"
                           onClick={handleSaveColumn}
-                          className="flex-1 px-2.5 py-1 bg-emerald-600 text-white text-xs font-semibold rounded hover:bg-emerald-700 transition-colors"
+                          className="flex-1 px-2 py-1 bg-emerald-600 text-white text-[11px] font-semibold rounded hover:bg-emerald-700 transition-colors"
                         >
                           บันทึก
                         </button>
                         <button
                           type="button"
                           onClick={handleCancelEdit}
-                          className="px-2.5 py-1 bg-white text-slate-700 border border-slate-300 text-xs font-medium rounded hover:bg-slate-50 transition-colors"
+                          className="px-2 py-1 bg-white text-slate-700 border border-slate-300 text-[11px] font-medium rounded hover:bg-slate-50 transition-colors"
                         >
                           ยกเลิก
                         </button>
@@ -958,56 +958,56 @@ export const LabTab: React.FC<LabTabProps> = ({ patient, onUpdatePatient }) => {
                   return (
                     <th
                       key={col.date}
-                      className={`border border-slate-300 px-3 py-2 font-bold min-w-[165px] align-top ${
-                        isEditingThis ? 'bg-emerald-100/90' : 'bg-slate-200/90'
+                      className={`border border-slate-300 px-1 py-1.5 font-bold align-top ${
+                        isEditingThis ? 'bg-emerald-100/90 min-w-[156px] w-[158px]' : 'bg-slate-200/90 min-w-[84px] w-[90px]'
                       }`}
                     >
                       {isEditingThis && draft ? (
-                        <div className="space-y-2 min-w-[160px]">
+                        <div className="space-y-1.5">
                           <DateInput
                             value={draft.date}
                             onChange={e =>
                               setDraft(prev => (prev ? { ...prev, date: e.target.value } : null))
                             }
                           />
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1">
                             <button
                               type="button"
                               onClick={handleSaveColumn}
-                              className="flex-1 px-2.5 py-1 bg-emerald-600 text-white text-xs font-semibold rounded hover:bg-emerald-700 transition-colors"
+                              className="flex-1 px-2 py-1 bg-emerald-600 text-white text-[11px] font-semibold rounded hover:bg-emerald-700 transition-colors"
                             >
                               บันทึก
                             </button>
                             <button
                               type="button"
                               onClick={handleCancelEdit}
-                              className="px-2.5 py-1 bg-white text-slate-700 border border-slate-300 text-xs font-medium rounded hover:bg-slate-50 transition-colors"
+                              className="px-2 py-1 bg-white text-slate-700 border border-slate-300 text-[11px] font-medium rounded hover:bg-slate-50 transition-colors"
                             >
                               ยกเลิก
                             </button>
                           </div>
                         </div>
                       ) : (
-                        <div className="flex items-center justify-between gap-2 group">
-                          <span className="flex-1 text-right font-bold text-slate-900 tabular-nums">
+                        <div className="flex items-center justify-between gap-0.5 group">
+                          <span className="text-[11px] font-bold text-slate-900 tabular-nums whitespace-nowrap">
                             {formatThaiDateBE(col.date)}
                           </span>
-                          <div className="flex items-center gap-0.5 opacity-60 group-hover:opacity-100 transition-opacity">
+                          <div className="flex items-center opacity-50 group-hover:opacity-100 transition-opacity shrink-0">
                             <button
                               type="button"
                               onClick={() => handleStartEdit(col)}
-                              className="p-1 text-slate-600 hover:text-emerald-700 hover:bg-white/70 rounded"
+                              className="p-0.5 text-slate-600 hover:text-emerald-700 hover:bg-white/70 rounded"
                               title="แก้ไขข้อมูลวันที่นี้"
                             >
-                              <EditIcon className="w-3.5 h-3.5" />
+                              <EditIcon className="w-2.5 h-2.5" />
                             </button>
                             <button
                               type="button"
                               onClick={() => handleDeleteColumn(col.date)}
-                              className="p-1 text-slate-600 hover:text-rose-600 hover:bg-white/70 rounded"
+                              className="p-0.5 text-slate-600 hover:text-rose-600 hover:bg-white/70 rounded"
                               title="ลบข้อมูลวันที่นี้"
                             >
-                              <TrashIcon className="w-3.5 h-3.5" />
+                              <TrashIcon className="w-2.5 h-2.5" />
                             </button>
                           </div>
                         </div>
@@ -1019,7 +1019,7 @@ export const LabTab: React.FC<LabTabProps> = ({ patient, onUpdatePatient }) => {
                 {Array.from({ length: emptyFillerCount }).map((_, idx) => (
                   <th
                     key={`empty-th-${idx}`}
-                    className="border border-slate-300 px-3 py-2.5 bg-slate-200/70 min-w-[130px] text-center"
+                    className="border border-slate-300 px-2 py-1.5 bg-slate-200/70 min-w-[100px] text-center"
                   >
                     {idx === 0 && !isEditingAny && (
                       <button
@@ -1046,26 +1046,19 @@ export const LabTab: React.FC<LabTabProps> = ({ patient, onUpdatePatient }) => {
                       <tr className="bg-slate-100/80">
                         <td
                           colSpan={1 + totalRenderedCols + emptyFillerCount}
-                          className="border border-slate-300 px-3 py-1.5 text-xs font-bold text-slate-600 uppercase tracking-wide"
+                          className="border border-slate-300 px-2 py-1 text-[11px] font-bold text-slate-600 uppercase tracking-wide"
                         >
-                          ผลตรวจทางห้องปฏิบัติการเพิ่มเติม (Additional Labs)
+                          ผลตรวจทางห้องปฏิบัติการเพิ่มเติม
                         </td>
                       </tr>
                     )}
                     <tr className="hover:bg-slate-50/70 transition-colors">
-                      <td className="sticky left-0 z-10 bg-slate-100 border border-slate-300 px-3 py-2 font-bold text-slate-900 align-middle">
-                        <div className="flex items-center justify-between gap-2">
-                          <span>{row.label}</span>
-                          {row.linkedLabel && (
-                            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-slate-200/80 text-slate-600">
-                              {row.linkedLabel}
-                            </span>
-                          )}
-                        </div>
+                      <td className="sticky left-0 z-10 bg-slate-100 border border-slate-300 px-2 py-1 font-bold text-slate-900 align-middle leading-tight">
+                        <span>{row.label}</span>
                       </td>
 
                       {isAddingNew && draft && (
-                        <td className="border border-slate-300 px-3 py-2 bg-emerald-50/50 align-middle">
+                        <td className="border border-slate-300 px-1.5 py-1 bg-emerald-50/50 align-middle">
                           {renderEditCell(row)}
                         </td>
                       )}
@@ -1080,7 +1073,7 @@ export const LabTab: React.FC<LabTabProps> = ({ patient, onUpdatePatient }) => {
                                 handleStartEdit(col);
                               }
                             }}
-                            className={`border border-slate-300 px-3 py-2 align-middle ${
+                            className={`border border-slate-300 px-1.5 py-1 align-middle ${
                               isEditingThis
                                 ? 'bg-emerald-50/50'
                                 : !isEditingAny && row.inputType !== 'checkbox'
@@ -1096,7 +1089,7 @@ export const LabTab: React.FC<LabTabProps> = ({ patient, onUpdatePatient }) => {
                       {Array.from({ length: emptyFillerCount }).map((_, idx) => (
                         <td
                           key={`empty-td-${row.key}-${idx}`}
-                          className="border border-slate-300 px-3 py-2 bg-white"
+                          className="border border-slate-300 px-1.5 py-1 bg-white"
                         />
                       ))}
                     </tr>
@@ -1107,23 +1100,23 @@ export const LabTab: React.FC<LabTabProps> = ({ patient, onUpdatePatient }) => {
               {/* Bottom quick-save row when editing or adding a column */}
               {isEditingAny && (
                 <tr className="bg-slate-50">
-                  <td className="sticky left-0 z-10 bg-slate-100 border border-slate-300 px-3 py-2 font-semibold text-slate-600">
+                  <td className="sticky left-0 z-10 bg-slate-100 border border-slate-300 px-2 py-1.5 font-semibold text-slate-600">
                     จัดการคอลัมน์
                   </td>
                   {isAddingNew && (
-                    <td className="border border-slate-300 px-3 py-2">
-                      <div className="flex items-center gap-1.5">
+                    <td className="border border-slate-300 px-1.5 py-1.5">
+                      <div className="flex items-center gap-1">
                         <button
                           type="button"
                           onClick={handleSaveColumn}
-                          className="flex-1 px-2.5 py-1.5 bg-emerald-600 text-white text-xs font-semibold rounded hover:bg-emerald-700 transition-colors"
+                          className="flex-1 px-2 py-1 bg-emerald-600 text-white text-[11px] font-semibold rounded hover:bg-emerald-700 transition-colors"
                         >
                           บันทึก
                         </button>
                         <button
                           type="button"
                           onClick={handleCancelEdit}
-                          className="px-2.5 py-1.5 bg-white text-slate-700 border border-slate-300 text-xs font-medium rounded hover:bg-slate-50 transition-colors"
+                          className="px-2 py-1 bg-white text-slate-700 border border-slate-300 text-[11px] font-medium rounded hover:bg-slate-50 transition-colors"
                         >
                           ยกเลิก
                         </button>
@@ -1133,20 +1126,20 @@ export const LabTab: React.FC<LabTabProps> = ({ patient, onUpdatePatient }) => {
                   {columns.map(col => {
                     const isEditingThis = editingOriginalDate === col.date;
                     return (
-                      <td key={`action-${col.date}`} className="border border-slate-300 px-3 py-2">
+                      <td key={`action-${col.date}`} className="border border-slate-300 px-1.5 py-1.5">
                         {isEditingThis && (
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1">
                             <button
                               type="button"
                               onClick={handleSaveColumn}
-                              className="flex-1 px-2.5 py-1.5 bg-emerald-600 text-white text-xs font-semibold rounded hover:bg-emerald-700 transition-colors"
+                              className="flex-1 px-2 py-1 bg-emerald-600 text-white text-[11px] font-semibold rounded hover:bg-emerald-700 transition-colors"
                             >
                               บันทึก
                             </button>
                             <button
                               type="button"
                               onClick={handleCancelEdit}
-                              className="px-2.5 py-1.5 bg-white text-slate-700 border border-slate-300 text-xs font-medium rounded hover:bg-slate-50 transition-colors"
+                              className="px-2 py-1 bg-white text-slate-700 border border-slate-300 text-[11px] font-medium rounded hover:bg-slate-50 transition-colors"
                             >
                               ยกเลิก
                             </button>
@@ -1156,7 +1149,7 @@ export const LabTab: React.FC<LabTabProps> = ({ patient, onUpdatePatient }) => {
                     );
                   })}
                   {Array.from({ length: emptyFillerCount }).map((_, idx) => (
-                    <td key={`empty-action-${idx}`} className="border border-slate-300 px-3 py-2" />
+                    <td key={`empty-action-${idx}`} className="border border-slate-300 px-1.5 py-1.5" />
                   ))}
                 </tr>
               )}

@@ -192,6 +192,7 @@ export const getPatients = async (): Promise<Patient[]> => {
                     cxr: r.cxr,
                     vdrl: r.vdrl,
                     tpha: r.tpha,
+                    cryptoAg: r.crypto_ag,
                     tst: r.tst
                 }))
             };
@@ -316,6 +317,7 @@ export const getPatientById = async (id: number): Promise<Patient | null> => {
                 cxr: r.cxr,
                 vdrl: r.vdrl,
                 tpha: r.tpha,
+                cryptoAg: r.crypto_ag,
                 tst: r.tst
             }))
         };
@@ -483,13 +485,13 @@ export const updatePatient = async (patient: Patient): Promise<void> => {
             const recordId = item.id || `lab-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
             await client.query(
                 `INSERT INTO public.lab_records (
-                    id, patient_id, date, cd4, cd4_percent, viral_load, dr_resistance_profile, cbc, fbs, cr, alt, chol, tg, hdl, ldl, hbsag, anti_hbs, anti_hcv, cxr, vdrl, tpha, tst
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)`,
+                    id, patient_id, date, cd4, cd4_percent, viral_load, dr_resistance_profile, cbc, fbs, cr, alt, chol, tg, hdl, ldl, hbsag, anti_hbs, anti_hcv, cxr, vdrl, tpha, crypto_ag, tst
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)`,
                 [
                     recordId, patient.id, item.date, item.cd4 || null, item.cd4Percent || null, item.hivVl || null, item.drResistance || null,
                     item.cbc || null, item.fbs || null, item.cr || null, item.alt || null, item.chol || null, item.tg || null,
                     item.hdl || null, item.ldl || null, item.hbsag || null, item.antiHbs || null, item.antiHcv || null,
-                    item.cxr || null, item.vdrl || null, item.tpha || null, item.tst || null
+                    item.cxr || null, item.vdrl || null, item.tpha || null, item.cryptoAg || null, item.tst || null
                 ]
             );
         }

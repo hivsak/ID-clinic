@@ -26,6 +26,7 @@ async function setup() {
         cxr TEXT,
         vdrl VARCHAR(255),
         tpha VARCHAR(255),
+        crypto_ag TEXT,
         tst VARCHAR(255),
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );

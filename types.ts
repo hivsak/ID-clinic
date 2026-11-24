@@ -151,6 +151,7 @@ export interface LabRecord {
   cxr?: string;
   vdrl?: string;
   tpha?: string;
+  cryptoAg?: string;
   tst?: string;
 }
 

@@ -32,6 +32,7 @@ interface ColumnData {
   // Lab records (labInfo.records)
   vdrl: string;
   tpha: string;
+  cryptoAg: string;
   tst: string;
   cr: string;
   // Linked to PrEP / PEP / TPT
@@ -78,6 +79,7 @@ const ROWS: RowDef[] = [
   { key: 'hcvPostVl', label: 'HCV viral load หลังการรักษา', inputType: 'text', placeholder: 'e.g. 0, Not Detected', linkedLabel: 'HCV' },
   { key: 'vdrl', label: 'VDRL', inputType: 'text', placeholder: 'e.g. 1:08, Non-reactive' },
   { key: 'tpha', label: 'TPHA', inputType: 'datalist', options: SEROLOGY_OPTIONS, placeholder: 'Positive / Negative' },
+  { key: 'cryptoAg', label: 'CryptoAg', inputType: 'datalist', options: SEROLOGY_OPTIONS, placeholder: 'Positive / Negative' },
   { key: 'tst', label: 'TST', inputType: 'datalist', options: ['Negative', 'Positive'], placeholder: 'Positive / Negative' },
   { key: 'cr', label: 'Cr', inputType: 'text', placeholder: 'e.g. 0.8' },
   { key: 'prep', label: 'PrEP', inputType: 'checkbox', linkedLabel: 'PrEP' },
@@ -118,6 +120,7 @@ const createEmptyColumn = (date: string): ColumnData => ({
   hbvVl: '',
   vdrl: '',
   tpha: '',
+  cryptoAg: '',
   tst: '',
   cr: '',
   prep: false,
@@ -252,6 +255,7 @@ export const LabTab: React.FC<LabTabProps> = ({ patient, onUpdatePatient }) => {
         hbvVl: toDisplayStr(hbvVlTest?.result),
         vdrl: toDisplayStr(labRec?.vdrl),
         tpha: toDisplayStr(labRec?.tpha),
+        cryptoAg: toDisplayStr(labRec?.cryptoAg),
         tst: toDisplayStr(labRec?.tst),
         cr: toDisplayStr(labRec?.cr),
         prep: hasPrep,
@@ -625,6 +629,7 @@ export const LabTab: React.FC<LabTabProps> = ({ patient, onUpdatePatient }) => {
     const hasLabTableFields =
       hasValue(data.vdrl) ||
       hasValue(data.tpha) ||
+      hasValue(data.cryptoAg) ||
       hasValue(data.tst) ||
       hasValue(data.cr) ||
       hasValue(data.antiHbs) ||
@@ -649,6 +654,7 @@ export const LabTab: React.FC<LabTabProps> = ({ patient, onUpdatePatient }) => {
         antiHcv: hasValue(data.antiHcv) ? data.antiHcv.trim() : undefined,
         vdrl: hasValue(data.vdrl) ? data.vdrl.trim() : undefined,
         tpha: hasValue(data.tpha) ? data.tpha.trim() : undefined,
+        cryptoAg: hasValue(data.cryptoAg) ? data.cryptoAg.trim() : undefined,
         tst: hasValue(data.tst) ? data.tst.trim() : undefined,
         cr: hasValue(data.cr) ? data.cr.trim() : undefined,
         antiHbs: hasValue(data.antiHbs) ? data.antiHbs.trim() : undefined,

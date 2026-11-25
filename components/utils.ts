@@ -142,6 +142,29 @@ export const formatThaiDateShort = (isoDate: string) => {
     return formatThaiDateBE(isoDate);
 };
 
+export const formatThaiCitizenId = (cid?: string | null): string => {
+    if (!cid) return '';
+    const digits = cid.replace(/\D/g, '').slice(0, 13);
+    if (!digits) return '';
+    const parts: string[] = [digits.slice(0, 1)];
+    if (digits.length > 1) parts.push(digits.slice(1, 5));
+    if (digits.length > 5) parts.push(digits.slice(5, 10));
+    if (digits.length > 10) parts.push(digits.slice(10, 12));
+    if (digits.length > 12) parts.push(digits.slice(12, 13));
+    return parts.join('-');
+};
+
+export const formatThaiPhoneNumber = (phone?: string | null): string => {
+    if (!phone) return '';
+    if (/[a-zA-Zก-ฮ]/.test(phone)) return phone;
+    const digits = phone.replace(/\D/g, '').slice(0, 10);
+    if (!digits) return '';
+    const parts: string[] = [digits.slice(0, 3)];
+    if (digits.length > 3) parts.push(digits.slice(3, 6));
+    if (digits.length > 6) parts.push(digits.slice(6, 10));
+    return parts.join('-');
+};
+
 // Modern UI Classes
 export const inputClass = "mt-1 block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all sm:text-sm";
 export const labelClass = "block text-sm font-semibold text-slate-700 mb-1";

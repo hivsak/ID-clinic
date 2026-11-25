@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Patient, PatientStatus, MedicalEventType } from '../types';
 import { PlusIcon, SearchIcon, ChevronLeftIcon, ChevronRightIcon, TrashIcon } from './icons';
-import { calculateAge, calculatePatientStatus, determineHbvStatus, determineHcvStatus, formatThaiDateShort } from './utils';
+import { calculateAge, calculatePatientStatus, determineHbvStatus, determineHcvStatus, formatThaiDateShort, formatThaiPhoneNumber } from './utils';
 import { DateInput } from './DateInput';
 
 interface PatientListProps {
@@ -82,12 +82,13 @@ export const PatientList: React.FC<PatientListProps> = ({ patients, onSelectPati
         // 1. Text Search (HN, Name, Phone, CID)
         if (searchText) {
             const searchLower = searchText.toLowerCase();
+            const searchDigits = searchText.replace(/\D/g, '');
             const fullName = `${p.firstName} ${p.lastName}`.toLowerCase();
             const matches = 
                 p.hn.toLowerCase().includes(searchLower) ||
-                (p.cid && p.cid.includes(searchLower)) ||
+                (p.cid && (p.cid.includes(searchLower) || (searchDigits.length >= 3 && p.cid.includes(searchDigits)))) ||
                 fullName.includes(searchLower) ||
-                (p.phone && p.phone.includes(searchLower));
+                (p.phone && (p.phone.includes(searchLower) || (searchDigits.length >= 3 && p.phone.replace(/\D/g, '').includes(searchDigits))));
             if (!matches) return false;
         }
 
@@ -330,7 +331,7 @@ export const PatientList: React.FC<PatientListProps> = ({ patients, onSelectPati
                         <td className="px-6 py-4 font-semibold text-emerald-700">{patient.hn}</td>
                         <td className="px-6 py-4 font-medium text-slate-900">{`${patient.firstName || '-'} ${patient.lastName || ''}`}</td>
                         <td className="px-6 py-4">{calculateAge(patient.dob)}</td>
-                        <td className="px-6 py-4 font-mono text-slate-500">{patient.phone || '-'}</td>
+                        <td className="px-6 py-4 font-mono text-slate-500">{formatThaiPhoneNumber(patient.phone) || '-'}</td>
                         <td className="px-6 py-4 truncate max-w-[150px]" title={patient.healthcareScheme}>{patient.healthcareScheme || '-'}</td>
                         <td className="px-6 py-4">
                             {patient.nextAppointmentDate ? (

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Patient, PatientStatus } from '../../types';
-import { DisplayField, calculateAgeBreakdown, calculateDobFromAge, calculatePatientStatus, formatThaiDateBE, inputClass, labelClass } from '../utils';
+import { DisplayField, calculateAgeBreakdown, calculateDobFromAge, calculatePatientStatus, formatThaiCitizenId, formatThaiDateBE, formatThaiPhoneNumber, inputClass, labelClass } from '../utils';
 import { EditIcon } from '../icons';
 import { ThaiAddressSelector } from '../ThaiAddressSelector';
 import { DateInput } from '../DateInput';
@@ -52,6 +52,9 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, onUpdat
         if (name === 'cid') {
             const numericValue = value.replace(/\D/g, '').slice(0, 13);
             updates.cid = numericValue;
+        } else if (name === 'phone') {
+            const numericValue = value.replace(/\D/g, '').slice(0, 10);
+            updates.phone = numericValue;
         }
 
         if (name === 'title') {
@@ -111,11 +114,13 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, onUpdat
 
     const handleSave = (e: React.FormEvent) => {
         e.preventDefault();
-        if (formData.cid && formData.cid.length !== 13) {
+        const cleanCid = (formData.cid || '').replace(/\D/g, '').slice(0, 13);
+        if (cleanCid && cleanCid.length !== 13) {
             alert("เลขบัตรประชาชนต้องมี 13 หลัก");
             return;
         }
-        onUpdate(formData);
+        const cleanPhone = (formData.phone || '').replace(/\D/g, '').slice(0, 10);
+        onUpdate({ ...formData, cid: cleanCid, phone: cleanPhone });
         setEditSection(null);
     };
     
@@ -169,13 +174,14 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, onUpdat
                                 <label htmlFor="cid" className={labelClass}>เลขบัตรประชาชน</label>
                                 <input 
                                     type="text" 
+                                    inputMode="numeric"
                                     name="cid" 
                                     id="cid" 
-                                    value={formData.cid || ''} 
+                                    value={formatThaiCitizenId(formData.cid)} 
                                     onChange={handleChange} 
                                     className={inputClass} 
-                                    placeholder="13 หลัก"
-                                    maxLength={13}
+                                    placeholder="x-xxxx-xxxxx-xx-x"
+                                    maxLength={17}
                                 />
                             </div>
                             <div>
@@ -197,7 +203,7 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, onUpdat
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                         <DisplayField label="HN (Hospital Number)" value={patient.hn} />
-                        <DisplayField label="เลขบัตรประชาชน" value={patient.cid} />
+                        <DisplayField label="เลขบัตรประชาชน" value={formatThaiCitizenId(patient.cid)} />
                         <DisplayField label="NAP ID" value={patient.napId} />
                         <DisplayField label="สถานะ (ปัจจุบัน)" value={displayStatus} />
                     </div>
@@ -370,7 +376,17 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, onUpdat
                                 </div>
                                 <div>
                                     <label htmlFor="phone" className={labelClass}>เบอร์โทรศัพท์</label>
-                                    <input type="tel" name="phone" id="phone" value={formData.phone} onChange={handleChange} className={inputClass} />
+                                    <input
+                                        type="tel"
+                                        inputMode="numeric"
+                                        name="phone"
+                                        id="phone"
+                                        value={formatThaiPhoneNumber(formData.phone)}
+                                        onChange={handleChange}
+                                        className={inputClass}
+                                        placeholder="xxx-xxx-xxxx"
+                                        maxLength={12}
+                                    />
                                 </div>
                                 <div>
                                     <HealthcareSchemeSearchableSelect 
@@ -395,7 +411,7 @@ export const GeneralInfoTab: React.FC<GeneralInfoTabProps> = ({ patient, onUpdat
                          <div className="md:col-span-3">
                             <DisplayField label="ที่อยู่ (รายละเอียด)" value={patient.address} />
                         </div>
-                        <DisplayField label="เบอร์โทรศัพท์" value={patient.phone} />
+                        <DisplayField label="เบอร์โทรศัพท์" value={formatThaiPhoneNumber(patient.phone)} />
                         <DisplayField label="สิทธิการรักษา" value={patient.healthcareScheme} />
                         <DisplayField label="วันนัดหมายครั้งถัดไป" value={formatThaiDateBE(patient.nextAppointmentDate || '')} />
                     </div>

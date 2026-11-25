@@ -835,7 +835,7 @@ export const LabTab: React.FC<LabTabProps> = ({ patient, onUpdatePatient }) => {
           type="button"
           onClick={() => handleQuickToggleCheckbox(col, row.key as 'prep' | 'npep')}
           title="ไม่ได้มารับ (คลิกเพื่อติ๊กเลือกมารับ)"
-          className="w-full text-left text-slate-400 hover:text-emerald-600 transition-colors cursor-pointer"
+          className="w-full text-center text-slate-400 hover:text-emerald-600 transition-colors cursor-pointer"
         >
           -
         </button>
@@ -844,7 +844,7 @@ export const LabTab: React.FC<LabTabProps> = ({ patient, onUpdatePatient }) => {
 
     const rawVal = col[row.key];
     if (!hasValue(rawVal)) {
-      return <span className="text-slate-400">-</span>;
+      return <div className="w-full text-center text-slate-400">-</div>;
     }
 
     const strVal = String(rawVal);
@@ -853,8 +853,8 @@ export const LabTab: React.FC<LabTabProps> = ({ patient, onUpdatePatient }) => {
 
     return (
       <div
-        className={`whitespace-pre-wrap break-words ${
-          isNumeric ? 'text-right font-medium text-slate-800 tabular-nums' : 'text-left'
+        className={`w-full text-right whitespace-pre-wrap break-words ${
+          isNumeric ? 'font-medium tabular-nums' : ''
         } ${isPositive ? 'text-rose-700 font-semibold' : 'text-slate-800'}`}
       >
         {strVal}

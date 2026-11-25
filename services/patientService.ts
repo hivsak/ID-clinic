@@ -34,7 +34,7 @@ const mapRowToPatient = (row: any): Patient => ({
     district: row.district || '',
     subdistrict: row.subdistrict || '',
     province: row.province || '',
-    phone: row.phone || '',
+    phone: (row.phone || '').replace(/-/g, ''),
     healthcareScheme: row.healthcare_scheme || '',
     referralType: row.referral_type as any,
     referredFrom: row.referred_from || '',
@@ -353,7 +353,7 @@ export const createPatient = async (data: any): Promise<number> => {
         `, [
             data.hn, data.napId, data.title, data.firstName, data.lastName, dateOrNull(data.dob), data.sex, data.riskBehavior,
             data.status || 'Active', toLocalISOString(new Date()), dateOrNull(data.nextAppointmentDate), data.occupation, data.partnerStatus, data.partnerHivStatus,
-            data.address, data.district, data.subdistrict, data.province, data.phone, data.healthcareScheme,
+            data.address, data.district, data.subdistrict, data.province, (data.phone || '').replace(/\D/g, '').slice(0, 10), data.healthcareScheme,
             data.referralType, data.referredFrom, dateOrNull(data.referralDate),
             dateOrNull(data.referOutDate), data.referOutLocation, dateOrNull(data.deathDate), data.causeOfDeath,
             JSON.stringify(data.underlyingDiseases || []), data.cid || null,
@@ -397,7 +397,7 @@ export const updatePatient = async (patient: Patient): Promise<void> => {
         `, [
             patient.hn, patient.napId, patient.title, patient.firstName, patient.lastName, dateOrNull(patient.dob), patient.sex, patient.riskBehavior,
             patient.status, dateOrNull(patient.nextAppointmentDate), patient.occupation, patient.partnerStatus, patient.partnerHivStatus,
-            patient.address, patient.district, patient.subdistrict, patient.province, patient.phone, patient.healthcareScheme,
+            patient.address, patient.district, patient.subdistrict, patient.province, (patient.phone || '').replace(/\D/g, '').slice(0, 10), patient.healthcareScheme,
             patient.referralType, patient.referredFrom, dateOrNull(patient.referralDate),
             patient.hbvInfo?.manualSummary, patient.hcvInfo?.hcvVlNotTested || false,
             dateOrNull(patient.referOutDate), patient.referOutLocation, dateOrNull(patient.deathDate), patient.causeOfDeath,

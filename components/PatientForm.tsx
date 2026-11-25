@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Patient, PatientStatus } from '../types';
-import { calculateAgeBreakdown, calculateDobFromAge, calculatePatientStatus, inputClass, labelClass } from './utils';
+import { calculateAgeBreakdown, calculateDobFromAge, calculatePatientStatus, formatThaiCitizenId, formatThaiPhoneNumber, inputClass, labelClass } from './utils';
 import { ThaiAddressSelector } from './ThaiAddressSelector';
 import { DateInput } from './DateInput';
 import { HospitalSearchableSelect } from './HospitalSearchableSelect';
@@ -66,6 +66,9 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
         if (name === 'cid') {
             const numericValue = value.replace(/\D/g, '').slice(0, 13);
             updates.cid = numericValue;
+        } else if (name === 'phone') {
+            const numericValue = value.replace(/\D/g, '').slice(0, 10);
+            updates.phone = numericValue;
         }
 
         if (name === 'title') {
@@ -126,11 +129,13 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (formData.cid && formData.cid.length !== 13) {
+        const cleanCid = (formData.cid || '').replace(/\D/g, '').slice(0, 13);
+        if (cleanCid && cleanCid.length !== 13) {
             alert("เลขบัตรประชาชนต้องมี 13 หลัก");
             return;
         }
-        onSave(formData);
+        const cleanPhone = (formData.phone || '').replace(/\D/g, '').slice(0, 10);
+        onSave({ ...formData, cid: cleanCid, phone: cleanPhone });
     };
 
     return (
@@ -155,13 +160,14 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
                              <label htmlFor="cid" className={labelClass}>เลขบัตรประชาชน (National ID)</label>
                              <input 
                                 type="text" 
+                                inputMode="numeric"
                                 name="cid" 
                                 id="cid" 
-                                value={formData.cid} 
+                                value={formatThaiCitizenId(formData.cid)} 
                                 onChange={handleChange} 
                                 className={inputClass} 
-                                placeholder="13 หลัก"
-                                maxLength={13}
+                                placeholder="x-xxxx-xxxxx-xx-x"
+                                maxLength={17}
                             />
                         </div>
                         <div>
@@ -315,7 +321,17 @@ export const PatientForm: React.FC<PatientFormProps> = ({ onSave, onCancel }) =>
                             </div>
                             <div>
                                 <label htmlFor="phone" className={labelClass}>เบอร์โทรศัพท์</label>
-                                <input type="tel" name="phone" id="phone" value={formData.phone} onChange={handleChange} className={inputClass} />
+                                <input
+                                    type="tel"
+                                    inputMode="numeric"
+                                    name="phone"
+                                    id="phone"
+                                    value={formatThaiPhoneNumber(formData.phone)}
+                                    onChange={handleChange}
+                                    className={inputClass}
+                                    placeholder="xxx-xxx-xxxx"
+                                    maxLength={12}
+                                />
                             </div>
                             <div>
                                 <HealthcareSchemeSearchableSelect 

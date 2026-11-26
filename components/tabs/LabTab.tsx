@@ -7,7 +7,7 @@ import {
   HbsAgTest,
   HcvTest,
 } from '../../types';
-import { BeakerIcon, EditIcon, PlusIcon, TrashIcon } from '../icons';
+import { BeakerIcon, EditIcon, TrashIcon } from '../icons';
 import { formatThaiDateBE, toLocalISOString } from '../utils';
 import { DateInput } from '../DateInput';
 
@@ -66,6 +66,7 @@ interface RowDef {
 
 const TPT_OPTIONS = ['3HP', '1HP', '3HR', '6INH', '9INH', '4R'];
 const SEROLOGY_OPTIONS = ['Positive', 'Negative', 'Inconclusive'];
+const VDRL_OPTIONS = ['NR', '1:2', '1:4', '1:8', '1:16', '1:32'];
 
 const ROWS: RowDef[] = [
   // Exact 15 rows matching reference table order
@@ -77,7 +78,7 @@ const ROWS: RowDef[] = [
   { key: 'hcvAb', label: 'HCV-Ab', inputType: 'select', options: SEROLOGY_OPTIONS, linkedLabel: 'HCV' },
   { key: 'hcvPreVl', label: 'HCV viral load ก่อนการรักษา', inputType: 'text', placeholder: 'e.g. 100000', linkedLabel: 'HCV' },
   { key: 'hcvPostVl', label: 'HCV viral load หลังการรักษา', inputType: 'text', placeholder: 'e.g. 0, Not Detected', linkedLabel: 'HCV' },
-  { key: 'vdrl', label: 'VDRL', inputType: 'text', placeholder: 'e.g. 1:08, Non-reactive' },
+  { key: 'vdrl', label: 'VDRL', inputType: 'datalist', options: VDRL_OPTIONS, placeholder: 'NR / 1:2 - 1:32' },
   { key: 'tpha', label: 'TPHA', inputType: 'datalist', options: SEROLOGY_OPTIONS, placeholder: 'Positive / Negative' },
   { key: 'cryptoAg', label: 'CryptoAg', inputType: 'datalist', options: SEROLOGY_OPTIONS, placeholder: 'Positive / Negative' },
   { key: 'tst', label: 'TST', inputType: 'datalist', options: ['Negative', 'Positive'], placeholder: 'Positive / Negative' },
@@ -87,7 +88,7 @@ const ROWS: RowDef[] = [
   { key: 'tpt', label: 'TPT', inputType: 'datalist', options: TPT_OPTIONS, placeholder: 'เช่น 3HP, 1HP', linkedLabel: 'TPT' },
   // Additional lab fields from lab_records & HBV
   { key: 'hbvVl', label: 'HBV Viral Load', inputType: 'text', placeholder: 'e.g. 1,500 IU/mL', linkedLabel: 'HBV', isExtra: true },
-  { key: 'antiHbs', label: 'Anti-HBs', inputType: 'text', placeholder: 'Positive / Negative / ค่าตัวเลข', isExtra: true },
+  { key: 'antiHbs', label: 'Anti-HBs', inputType: 'select', options: ['Positive', 'Negative'], isExtra: true },
   { key: 'fbs', label: 'FBS (mg/dL)', inputType: 'text', placeholder: 'e.g. 95', isExtra: true },
   { key: 'alt', label: 'ALT (U/L)', inputType: 'text', placeholder: 'e.g. 25', isExtra: true },
   { key: 'chol', label: 'Cholesterol (mg/dL)', inputType: 'text', placeholder: 'e.g. 180', isExtra: true },
@@ -106,6 +107,126 @@ const hasValue = (val: unknown): boolean => {
 const toDisplayStr = (val: unknown): string => {
   return hasValue(val) ? String(val) : '';
 };
+
+const valuesMatch = (a: string, b: string, inputType: RowDef['inputType']): boolean => {
+  const sa = a.trim();
+  const sb = b.trim();
+  if (sa === sb || sa.toLowerCase() === sb.toLowerCase()) return true;
+  if (inputType === 'number') {
+    const na = Number(sa);
+    const nb = Number(sb);
+    if (!Number.isNaN(na) && !Number.isNaN(nb)) {
+      return na === nb;
+    }
+  }
+  return false;
+};
+
+const parseNumericValue = (raw: string): { num: number; comparator?: '<' | '>' } | null => {
+  const cleaned = raw.trim().replace(/,/g, '');
+  if (!cleaned) return null;
+  if (/^(not\s*detected|undetected|nd|negative|nr)$/i.test(cleaned)) {
+    return { num: 0 };
+  }
+  const compMatch = cleaned.match(
+    /^([<>])\s*=?\s*(-?\d+(?:\.\d+)?)(?:\s*(?:copies\/ml|iu\/ml|mg\/dl|u\/l|cells\/mm3))?$/i
+  );
+  if (compMatch) {
+    const num = parseFloat(compMatch[2]);
+    if (!Number.isNaN(num)) {
+      return { num, comparator: compMatch[1] as '<' | '>' };
+    }
+  }
+  const exactMatch = cleaned.match(
+    /^(-?\d+(?:\.\d+)?)(?:\s*(?:copies\/ml|iu\/ml|mg\/dl|u\/l|cells\/mm3))?$/i
+  );
+  if (exactMatch) {
+    const num = parseFloat(exactMatch[1]);
+    if (!Number.isNaN(num)) {
+      return { num };
+    }
+  }
+  return null;
+};
+
+const isAbnormalLabResult = (key: FieldKey, rawVal: string): boolean => {
+  const trimmed = rawVal.trim();
+  if (!trimmed) return false;
+  const lower = trimmed.toLowerCase();
+
+  switch (key) {
+    case 'cd4': {
+      const parsed = parseNumericValue(trimmed);
+      if (!parsed) return false;
+      if (parsed.comparator === '<') return parsed.num <= 200;
+      if (parsed.comparator === '>') return false;
+      return parsed.num < 200;
+    }
+    case 'hivVl': {
+      const parsed = parseNumericValue(trimmed);
+      if (!parsed) return false;
+      if (parsed.comparator === '<') return false;
+      if (parsed.comparator === '>') return parsed.num >= 50;
+      return parsed.num > 50;
+    }
+    case 'hbsag':
+    case 'antiHcv':
+    case 'hcvAb':
+    case 'tpha':
+    case 'cryptoAg':
+    case 'tst':
+      return lower === 'positive';
+    case 'vdrl':
+      return !['nr', 'non-reactive', 'non reactive', '-'].includes(lower);
+    case 'cr': {
+      const parsed = parseNumericValue(trimmed);
+      if (!parsed) return false;
+      if (parsed.comparator === '<') return false;
+      if (parsed.comparator === '>') return parsed.num >= 1.5;
+      return parsed.num > 1.5;
+    }
+    case 'fbs': {
+      const parsed = parseNumericValue(trimmed);
+      if (!parsed) return false;
+      if (parsed.comparator === '<') return false;
+      if (parsed.comparator === '>') return parsed.num >= 126;
+      return parsed.num > 126;
+    }
+    case 'tg': {
+      const parsed = parseNumericValue(trimmed);
+      if (!parsed) return false;
+      if (parsed.comparator === '<') return false;
+      if (parsed.comparator === '>') return parsed.num >= 200;
+      return parsed.num > 200;
+    }
+    case 'ldl': {
+      const parsed = parseNumericValue(trimmed);
+      if (!parsed) return false;
+      if (parsed.comparator === '<') return false;
+      if (parsed.comparator === '>') return parsed.num >= 130;
+      return parsed.num > 130;
+    }
+    default:
+      return false;
+  }
+};
+
+interface ConflictItem {
+  key: FieldKey;
+  label: string;
+  existingVal: string;
+  incomingVal: string;
+}
+
+interface ConflictAlert {
+  date: string;
+  items: ConflictItem[];
+}
+
+interface FeedbackBanner {
+  type: 'success' | 'info' | 'warning' | 'error';
+  message: string;
+}
 
 const createEmptyColumn = (date: string): ColumnData => ({
   date,
@@ -139,11 +260,19 @@ const createEmptyColumn = (date: string): ColumnData => ({
 });
 
 export const LabTab: React.FC<LabTabProps> = ({ patient, onUpdatePatient }) => {
+  const [newDraft, setNewDraft] = useState<ColumnData>(() =>
+    createEmptyColumn(toLocalISOString(new Date()))
+  );
   const [editingOriginalDate, setEditingOriginalDate] = useState<string | null>(null);
-  const [isAddingNew, setIsAddingNew] = useState<boolean>(false);
-  const [draft, setDraft] = useState<ColumnData | null>(null);
+  const [editDraft, setEditDraft] = useState<ColumnData | null>(null);
   const [showExtraLabs, setShowExtraLabs] = useState<boolean>(false);
+  const [conflictAlert, setConflictAlert] = useState<ConflictAlert | null>(null);
+  const [feedbackBanner, setFeedbackBanner] = useState<FeedbackBanner | null>(null);
+  const [pendingDeleteDate, setPendingDeleteDate] = useState<string | null>(null);
+
   const tableScrollRef = useRef<HTMLDivElement>(null);
+  const colHeaderRefs = useRef<Record<string, HTMLTableCellElement | null>>({});
+  const editCellRefs = useRef<Partial<Record<FieldKey, HTMLElement | null>>>({});
 
   // Build unified columns from all linked data sources
   const columns = useMemo<ColumnData[]>(() => {
@@ -286,42 +415,67 @@ export const LabTab: React.FC<LabTabProps> = ({ patient, onUpdatePatient }) => {
     return ROWS.filter(r => !r.isExtra);
   }, [showExtraLabs, hasAnyExtraData]);
 
-  // Scroll horizontally to the left so the latest date column is immediately visible
+  // Reset form states and scroll left when switching patient
   useEffect(() => {
-    const el = tableScrollRef.current;
-    if (el) {
-      el.scrollLeft = 0;
-    }
-  }, [patient.id, isAddingNew]);
-
-  const handleStartAdd = () => {
-    const today = toLocalISOString(new Date());
-    const existingCol = columns.find(c => c.date === today);
-    if (existingCol) {
-      setIsAddingNew(false);
-      setEditingOriginalDate(today);
-      setDraft({ ...existingCol });
-      return;
-    }
+    setNewDraft(createEmptyColumn(toLocalISOString(new Date())));
     setEditingOriginalDate(null);
-    setIsAddingNew(true);
-    setDraft(createEmptyColumn(today));
+    setEditDraft(null);
+    setConflictAlert(null);
+    setFeedbackBanner(null);
+    setPendingDeleteDate(null);
+    if (tableScrollRef.current) {
+      tableScrollRef.current.scrollLeft = 0;
+    }
+  }, [patient.id]);
+
+  // Auto-scroll and focus on the conflicting existing lab cell when duplicate conflict occurs
+  useEffect(() => {
+    if (!conflictAlert || editingOriginalDate !== conflictAlert.date) return;
+    const targetDate = conflictAlert.date;
+    const firstConflictKey = conflictAlert.items[0]?.key;
+
+    const rafId = requestAnimationFrame(() => {
+      const headerEl = colHeaderRefs.current[targetDate];
+      if (headerEl) {
+        headerEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      }
+      if (firstConflictKey) {
+        const inputEl = editCellRefs.current[firstConflictKey];
+        if (inputEl) {
+          inputEl.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+          if (typeof (inputEl as HTMLInputElement).focus === 'function') {
+            (inputEl as HTMLInputElement).focus();
+          }
+        }
+      }
+    });
+
+    return () => cancelAnimationFrame(rafId);
+  }, [conflictAlert, editingOriginalDate]);
+
+  const handleResetNewDraft = () => {
+    setNewDraft(createEmptyColumn(toLocalISOString(new Date())));
+  };
+
+  const handleNewFieldChange = (key: FieldKey, value: string | boolean) => {
+    setNewDraft(prev => ({ ...prev, [key]: value }));
   };
 
   const handleStartEdit = (col: ColumnData) => {
-    setIsAddingNew(false);
     setEditingOriginalDate(col.date);
-    setDraft({ ...col });
+    setEditDraft({ ...col });
+    setConflictAlert(null);
+    setPendingDeleteDate(null);
   };
 
   const handleCancelEdit = () => {
-    setIsAddingNew(false);
     setEditingOriginalDate(null);
-    setDraft(null);
+    setEditDraft(null);
+    setConflictAlert(null);
   };
 
-  const handleDraftFieldChange = (key: FieldKey, value: string | boolean) => {
-    setDraft(prev => (prev ? { ...prev, [key]: value } : null));
+  const handleEditFieldChange = (key: FieldKey, value: string | boolean) => {
+    setEditDraft(prev => (prev ? { ...prev, [key]: value } : null));
   };
 
   const buildUpdatedPatient = (
@@ -682,63 +836,210 @@ export const LabTab: React.FC<LabTabProps> = ({ patient, onUpdatePatient }) => {
     };
   };
 
-  const handleSaveColumn = () => {
-    if (!draft) return;
-    if (!draft.date || !/^\d{4}-\d{2}-\d{2}$/.test(draft.date)) {
-      alert('กรุณาระบุวันที่ให้ถูกต้อง (dd/mm/yyyy พ.ศ.)');
+  const handleSaveNewColumn = () => {
+    setFeedbackBanner(null);
+    setConflictAlert(null);
+
+    if (!newDraft.date || !/^\d{4}-\d{2}-\d{2}$/.test(newDraft.date)) {
+      setFeedbackBanner({
+        type: 'error',
+        message: 'กรุณาระบุวันที่ให้ถูกต้อง (dd/mm/yyyy พ.ศ.)',
+      });
+      return;
+    }
+
+    const hasAnyInput = ROWS.some(row =>
+      row.inputType === 'checkbox' ? Boolean(newDraft[row.key]) : hasValue(newDraft[row.key])
+    );
+
+    if (!hasAnyInput) {
+      setFeedbackBanner({
+        type: 'warning',
+        message: 'กรุณากรอกผล Lab อย่างน้อย 1 รายการก่อนบันทึก',
+      });
+      return;
+    }
+
+    const existingCol = columns.find(c => c.date === newDraft.date);
+
+    // Date has no existing records yet -> create new column directly
+    if (!existingCol) {
+      const updated = buildUpdatedPatient(newDraft.date, null, newDraft);
+      onUpdatePatient(updated);
+      setNewDraft(createEmptyColumn(toLocalISOString(new Date())));
+      setFeedbackBanner({
+        type: 'success',
+        message: `บันทึกผล Lab วันที่ ${formatThaiDateBE(newDraft.date)} เรียบร้อยแล้ว`,
+      });
+      return;
+    }
+
+    // Date already exists -> compare field by field
+    const fieldsToAdd: { key: FieldKey; label: string; value: string | boolean }[] = [];
+    const identicalLabels: string[] = [];
+    const conflicts: ConflictItem[] = [];
+
+    for (const row of ROWS) {
+      if (row.inputType === 'checkbox') {
+        const incomingChecked = Boolean(newDraft[row.key]);
+        if (!incomingChecked) continue;
+        const existingChecked = Boolean(existingCol[row.key]);
+        if (!existingChecked) {
+          fieldsToAdd.push({ key: row.key, label: row.label, value: true });
+        } else {
+          identicalLabels.push(row.label);
+        }
+      } else {
+        const rawIncoming = newDraft[row.key];
+        if (!hasValue(rawIncoming)) continue;
+        const incomingTrimmed = String(rawIncoming).trim();
+        const rawExisting = existingCol[row.key];
+
+        if (!hasValue(rawExisting)) {
+          fieldsToAdd.push({ key: row.key, label: row.label, value: incomingTrimmed });
+        } else {
+          const existingTrimmed = String(rawExisting).trim();
+          if (valuesMatch(incomingTrimmed, existingTrimmed, row.inputType)) {
+            identicalLabels.push(row.label);
+          } else {
+            conflicts.push({
+              key: row.key,
+              label: row.label,
+              existingVal: existingTrimmed,
+              incomingVal: incomingTrimmed,
+            });
+          }
+        }
+      }
+    }
+
+    // If any existing field has a mismatching value -> jump to existing column & warn
+    if (conflicts.length > 0) {
+      const prefilledEdit: ColumnData = { ...existingCol };
+      for (const item of fieldsToAdd) {
+        (prefilledEdit as any)[item.key] = item.value;
+      }
+      setEditingOriginalDate(existingCol.date);
+      setEditDraft(prefilledEdit);
+      setConflictAlert({ date: existingCol.date, items: conflicts });
+      return;
+    }
+
+    // No conflicts: save only fields that did not previously exist (skip identical fields)
+    if (fieldsToAdd.length > 0) {
+      const merged: ColumnData = { ...existingCol };
+      for (const item of fieldsToAdd) {
+        (merged as any)[item.key] = item.value;
+      }
+      const updated = buildUpdatedPatient(existingCol.date, existingCol.date, merged);
+      onUpdatePatient(updated);
+      setNewDraft(createEmptyColumn(toLocalISOString(new Date())));
+
+      const addedNames = fieldsToAdd.map(f => f.label).join(', ');
+      const skippedNote =
+        identicalLabels.length > 0
+          ? ` (ข้ามข้อมูลเดิมที่ตรงกัน: ${identicalLabels.join(', ')})`
+          : '';
+      setFeedbackBanner({
+        type: 'success',
+        message: `เพิ่มผล Lab วันที่ ${formatThaiDateBE(existingCol.date)} เรียบร้อย: ${addedNames}${skippedNote}`,
+      });
+      return;
+    }
+
+    // All entered fields were identical to existing values -> skip write
+    setNewDraft(createEmptyColumn(toLocalISOString(new Date())));
+    setFeedbackBanner({
+      type: 'info',
+      message: `ผล Lab วันที่ ${formatThaiDateBE(existingCol.date)} มีข้อมูลเดิมอยู่แล้วและค่าตรงกันทั้งหมด (${identicalLabels.join(', ')}) จึงข้ามการบันทึกซ้ำ`,
+    });
+  };
+
+  const handleSaveEditedColumn = () => {
+    if (!editDraft || !editingOriginalDate) return;
+    if (!editDraft.date || !/^\d{4}-\d{2}-\d{2}$/.test(editDraft.date)) {
+      setFeedbackBanner({
+        type: 'error',
+        message: 'กรุณาระบุวันที่ให้ถูกต้อง (dd/mm/yyyy พ.ศ.)',
+      });
       return;
     }
 
     if (
-      editingOriginalDate &&
-      draft.date !== editingOriginalDate &&
-      columns.some(c => c.date === draft.date)
+      editDraft.date !== editingOriginalDate &&
+      columns.some(c => c.date === editDraft.date)
     ) {
-      alert(`วันที่ ${formatThaiDateBE(draft.date)} มีข้อมูลอยู่ในตารางแล้ว กรุณาแก้ไขในคอลัมน์ของวันที่นั้นโดยตรง`);
+      setFeedbackBanner({
+        type: 'error',
+        message: `วันที่ ${formatThaiDateBE(editDraft.date)} มีข้อมูลอยู่ในตารางแล้ว กรุณาแก้ไขในคอลัมน์ของวันที่นั้นโดยตรง`,
+      });
       return;
     }
 
-    const updated = buildUpdatedPatient(draft.date, editingOriginalDate, draft);
+    const updated = buildUpdatedPatient(editDraft.date, editingOriginalDate, editDraft);
     onUpdatePatient(updated);
+
+    const savedDate = editDraft.date;
+    const hadConflictForThisDate = conflictAlert?.date === editingOriginalDate;
     handleCancelEdit();
+    if (hadConflictForThisDate && newDraft.date === savedDate) {
+      setNewDraft(createEmptyColumn(toLocalISOString(new Date())));
+    }
+    setFeedbackBanner({
+      type: 'success',
+      message: `บันทึกการแก้ไขผล Lab วันที่ ${formatThaiDateBE(savedDate)} เรียบร้อยแล้ว`,
+    });
   };
 
   const handleDeleteColumn = (date: string) => {
-    if (
-      !window.confirm(
-        `คุณต้องการลบข้อมูล Lab และประวัติการตรวจของวันที่ ${formatThaiDateBE(date)} ทั้งหมดใช่หรือไม่?`
-      )
-    ) {
-      return;
-    }
-
     const empty = createEmptyColumn(date);
     const updated = buildUpdatedPatient(date, date, empty);
     onUpdatePatient(updated);
+    setPendingDeleteDate(null);
     if (editingOriginalDate === date) {
       handleCancelEdit();
     }
+    setFeedbackBanner({
+      type: 'info',
+      message: `ลบข้อมูล Lab วันที่ ${formatThaiDateBE(date)} แล้ว`,
+    });
   };
 
   const handleQuickToggleCheckbox = (col: ColumnData, field: 'prep' | 'npep') => {
-    if (isEditingAny) return;
+    if (editingOriginalDate !== null) return;
     const nextCol: ColumnData = { ...col, [field]: !col[field] };
     const updated = buildUpdatedPatient(col.date, col.date, nextCol);
     onUpdatePatient(updated);
   };
 
-  const renderEditCell = (row: RowDef) => {
-    if (!draft) return null;
-    const val = draft[row.key];
+  const renderEditCell = (
+    row: RowDef,
+    sourceDraft: ColumnData,
+    onFieldChange: (key: FieldKey, value: string | boolean) => void,
+    mode: 'new' | 'edit',
+    conflictItem?: ConflictItem
+  ) => {
+    const val = sourceDraft[row.key];
+    const isConflicting = Boolean(conflictItem);
+    const borderRingClass = isConflicting
+      ? 'border-rose-500 ring-2 ring-rose-400/50 bg-rose-50/70'
+      : 'border-emerald-300 focus:ring-1 focus:ring-emerald-500/40 focus:border-emerald-500 bg-white';
+
+    const attachEditRef = (el: HTMLElement | null) => {
+      if (mode === 'edit') {
+        editCellRefs.current[row.key] = el;
+      }
+    };
 
     if (row.inputType === 'checkbox') {
       const checked = Boolean(val);
       return (
         <label className="flex items-center justify-center gap-1.5 cursor-pointer py-0.5 select-none">
           <input
+            ref={attachEditRef}
             type="checkbox"
             checked={checked}
-            onChange={e => handleDraftFieldChange(row.key, e.target.checked)}
+            onChange={e => onFieldChange(row.key, e.target.checked)}
             className="h-3.5 w-3.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer accent-emerald-600"
           />
           <span className={`text-[11px] font-medium ${checked ? 'text-emerald-700' : 'text-slate-400'}`}>
@@ -748,15 +1049,18 @@ export const LabTab: React.FC<LabTabProps> = ({ patient, onUpdatePatient }) => {
       );
     }
 
+    let control: React.ReactNode;
+
     if (row.inputType === 'select') {
       const strVal = String(val || '');
       const options = row.options || [];
       const hasCustom = strVal && !options.includes(strVal);
-      return (
+      control = (
         <select
+          ref={attachEditRef}
           value={strVal}
-          onChange={e => handleDraftFieldChange(row.key, e.target.value)}
-          className="w-full px-1.5 py-1 text-xs bg-white border border-emerald-300 rounded focus:outline-none focus:ring-1 focus:ring-emerald-500/40 focus:border-emerald-500"
+          onChange={e => onFieldChange(row.key, e.target.value)}
+          className={`w-full px-1.5 py-1 text-xs border rounded focus:outline-none ${borderRingClass}`}
         >
           <option value="">-</option>
           {hasCustom && <option value={strVal}>{strVal}</option>}
@@ -767,19 +1071,18 @@ export const LabTab: React.FC<LabTabProps> = ({ patient, onUpdatePatient }) => {
           ))}
         </select>
       );
-    }
-
-    if (row.inputType === 'datalist') {
-      const listId = `lab-datalist-${row.key}`;
-      return (
+    } else if (row.inputType === 'datalist') {
+      const listId = `lab-datalist-${mode}-${row.key}`;
+      control = (
         <>
           <input
+            ref={attachEditRef}
             type="text"
             list={listId}
             value={String(val || '')}
-            onChange={e => handleDraftFieldChange(row.key, e.target.value)}
+            onChange={e => onFieldChange(row.key, e.target.value)}
             placeholder={row.placeholder || '-'}
-            className="w-full px-1.5 py-1 text-xs bg-white border border-emerald-300 rounded focus:outline-none focus:ring-1 focus:ring-emerald-500/40 focus:border-emerald-500"
+            className={`w-full px-1.5 py-1 text-xs border rounded focus:outline-none ${borderRingClass}`}
           />
           <datalist id={listId}>
             {(row.options || []).map(opt => (
@@ -788,29 +1091,51 @@ export const LabTab: React.FC<LabTabProps> = ({ patient, onUpdatePatient }) => {
           </datalist>
         </>
       );
-    }
-
-    if (row.inputType === 'textarea') {
-      return (
+    } else if (row.inputType === 'textarea') {
+      control = (
         <textarea
+          ref={attachEditRef}
           rows={2}
           value={String(val || '')}
-          onChange={e => handleDraftFieldChange(row.key, e.target.value)}
+          onChange={e => onFieldChange(row.key, e.target.value)}
           placeholder={row.placeholder || '-'}
-          className="w-full px-1.5 py-1 text-xs bg-white border border-emerald-300 rounded focus:outline-none focus:ring-1 focus:ring-emerald-500/40 focus:border-emerald-500 min-w-[130px]"
+          className={`w-full px-1.5 py-1 text-xs border rounded focus:outline-none min-w-[130px] ${borderRingClass}`}
+        />
+      );
+    } else {
+      control = (
+        <input
+          ref={attachEditRef}
+          type="text"
+          inputMode={row.inputType === 'number' ? 'decimal' : undefined}
+          value={String(val || '')}
+          onChange={e => onFieldChange(row.key, e.target.value)}
+          placeholder={row.placeholder || '-'}
+          className={`w-full px-1.5 py-1 text-xs border rounded focus:outline-none ${borderRingClass}`}
         />
       );
     }
 
+    if (!conflictItem) {
+      return control;
+    }
+
     return (
-      <input
-        type="text"
-        inputMode={row.inputType === 'number' ? 'decimal' : undefined}
-        value={String(val || '')}
-        onChange={e => handleDraftFieldChange(row.key, e.target.value)}
-        placeholder={row.placeholder || '-'}
-        className="w-full px-1.5 py-1 text-xs bg-white border border-emerald-300 rounded focus:outline-none focus:ring-1 focus:ring-emerald-500/40 focus:border-emerald-500"
-      />
+      <div className="space-y-1">
+        {control}
+        <div className="flex items-center justify-between gap-1 text-[10px] leading-tight text-rose-700 bg-rose-50 border border-rose-200 rounded px-1 py-0.5">
+          <span className="truncate" title={`ค่าใหม่ที่กรอก: ${conflictItem.incomingVal}`}>
+            ใหม่: <b>{conflictItem.incomingVal}</b>
+          </span>
+          <button
+            type="button"
+            onClick={() => onFieldChange(row.key, conflictItem.incomingVal)}
+            className="shrink-0 font-semibold text-rose-700 hover:text-rose-900 underline"
+          >
+            ใช้ค่านี้
+          </button>
+        </div>
+      </div>
     );
   };
 
@@ -848,25 +1173,22 @@ export const LabTab: React.FC<LabTabProps> = ({ patient, onUpdatePatient }) => {
     }
 
     const strVal = String(rawVal);
-    const isPositive = strVal.toLowerCase() === 'positive';
+    const isAbnormal = isAbnormalLabResult(row.key, strVal);
     const isNumeric = /^-?\d+(\.\d+)?$/.test(strVal.trim());
 
     return (
       <div
         className={`w-full text-right whitespace-pre-wrap break-words ${
           isNumeric ? 'font-medium tabular-nums' : ''
-        } ${isPositive ? 'text-rose-700 font-semibold' : 'text-slate-800'}`}
+        } ${isAbnormal ? 'text-rose-700 font-semibold' : 'text-slate-800'}`}
       >
         {strVal}
       </div>
     );
   };
 
-  // Only show a single empty placeholder column when there are no dates yet
-  const totalRenderedCols = columns.length + (isAddingNew ? 1 : 0);
-  const emptyFillerCount = totalRenderedCols === 0 ? 1 : 0;
-
-  const isEditingAny = isAddingNew || editingOriginalDate !== null;
+  const totalRenderedCols = columns.length + 1; // Always includes pinned add-new column
+  const isEditingExisting = editingOriginalDate !== null;
 
   return (
     <div className="space-y-3">
@@ -882,7 +1204,7 @@ export const LabTab: React.FC<LabTabProps> = ({ patient, onUpdatePatient }) => {
                 ตารางบันทึกผล Lab และบริการ (Lab Flowsheet)
               </h2>
               <p className="text-[11px] text-slate-500">
-                เชื่อมโยงข้อมูลกับหน้า HIV, HBV/HCV, PrEP, PEP และ TPT อัตโนมัติ (คลิกที่ช่องเพื่อแก้ไข)
+                เชื่อมโยงข้อมูลกับหน้า HIV, HBV/HCV, PrEP, PEP และ TPT อัตโนมัติ (เพิ่มผล Lab ใหม่ได้ที่คอลัมน์ซ้ายสุด หรือคลิกช่องเดิมเพื่อแก้ไข)
               </p>
             </div>
           </div>
@@ -897,24 +1219,71 @@ export const LabTab: React.FC<LabTabProps> = ({ patient, onUpdatePatient }) => {
                 {showExtraLabs ? 'ซ่อน Lab เพิ่มเติม' : 'แสดง Lab เพิ่มเติม'}
               </button>
             )}
-            {!isEditingAny && (
-              <button
-                type="button"
-                onClick={handleStartAdd}
-                className="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-xs font-medium shadow-sm"
-              >
-                <PlusIcon className="w-3.5 h-3.5" />
-                เพิ่มวันที่ตรวจ
-              </button>
-            )}
           </div>
         </div>
 
+        {/* Conflict Warning Banner (Duplicate Date with Mismatching Values) */}
+        {conflictAlert && (
+          <div className="mx-4 mt-3 p-3 rounded-xl border border-rose-300 bg-rose-50 text-rose-900 flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+            <div className="space-y-1 text-xs">
+              <div className="font-bold text-rose-800 flex items-center gap-1.5">
+                <span className="inline-block w-2 h-2 rounded-full bg-rose-600" />
+                เตือน: Lab ซ้ำ แต่ค่าไม่ตรงกัน (วันที่ {formatThaiDateBE(conflictAlert.date)})
+              </div>
+              <p className="text-rose-700">
+                ระบบได้เลื่อนไปที่ผล Lab ของวันที่ดังกล่าวแล้ว กรุณาตรวจสอบและเลือก/แก้ไขค่าที่ถูกต้องก่อนกดบันทึก:
+              </p>
+              <ul className="list-disc list-inside space-y-0.5 text-rose-800">
+                {conflictAlert.items.map(item => (
+                  <li key={item.key}>
+                    <span className="font-semibold">{item.label}</span>: ค่าเดิม{' '}
+                    <span className="font-mono font-semibold bg-white px-1 rounded border border-rose-200">
+                      {item.existingVal}
+                    </span>{' '}
+                    ≠ ค่าที่กรอกใหม่{' '}
+                    <span className="font-mono font-semibold bg-amber-50 px-1 rounded border border-amber-300">
+                      {item.incomingVal}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <button
+              type="button"
+              onClick={() => setConflictAlert(null)}
+              className="self-start px-2.5 py-1 text-[11px] font-medium text-rose-700 bg-white border border-rose-300 rounded-lg hover:bg-rose-100 transition-colors shrink-0"
+            >
+              ปิดแจ้งเตือน
+            </button>
+          </div>
+        )}
+
+        {/* General Feedback Banner */}
+        {feedbackBanner && (
+          <div
+            className={`mx-4 mt-3 px-3 py-2 rounded-xl border text-xs flex items-center justify-between gap-3 ${
+              feedbackBanner.type === 'success'
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                : feedbackBanner.type === 'info'
+                ? 'bg-sky-50 border-sky-200 text-sky-800'
+                : feedbackBanner.type === 'warning'
+                ? 'bg-amber-50 border-amber-200 text-amber-800'
+                : 'bg-rose-50 border-rose-200 text-rose-800'
+            }`}
+          >
+            <span>{feedbackBanner.message}</span>
+            <button
+              type="button"
+              onClick={() => setFeedbackBanner(null)}
+              className="text-[11px] font-semibold opacity-70 hover:opacity-100 shrink-0"
+            >
+              ปิด
+            </button>
+          </div>
+        )}
+
         {/* Matrix Spreadsheet Table */}
-        <div
-          ref={tableScrollRef}
-          className={`overflow-x-auto ${isEditingAny ? 'pb-52' : ''}`}
-        >
+        <div ref={tableScrollRef} className="overflow-x-auto pb-3 mt-2">
           <table className="w-auto border-collapse text-xs">
             <thead>
               <tr className="bg-slate-200/90 text-slate-900">
@@ -922,64 +1291,70 @@ export const LabTab: React.FC<LabTabProps> = ({ patient, onUpdatePatient }) => {
                   วันที่
                 </th>
 
-                {isAddingNew && draft && (
-                  <th className="border border-slate-300 px-1.5 py-1.5 bg-emerald-100/90 min-w-[156px] w-[158px] align-top">
-                    <div className="space-y-1.5">
-                      <DateInput
-                        value={draft.date}
-                        onChange={e => {
-                          const pickedDate = e.target.value;
-                          const existingCol = columns.find(c => c.date === pickedDate);
-                          if (existingCol) {
-                            setIsAddingNew(false);
-                            setEditingOriginalDate(pickedDate);
-                            setDraft({ ...existingCol });
-                          } else {
-                            setDraft(prev => (prev ? { ...prev, date: pickedDate } : null));
-                          }
-                        }}
-                      />
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={handleSaveColumn}
-                          className="flex-1 px-2 py-1 bg-emerald-600 text-white text-[11px] font-semibold rounded hover:bg-emerald-700 transition-colors"
-                        >
-                          บันทึก
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleCancelEdit}
-                          className="px-2 py-1 bg-white text-slate-700 border border-slate-300 text-[11px] font-medium rounded hover:bg-slate-50 transition-colors"
-                        >
-                          ยกเลิก
-                        </button>
-                      </div>
+                {/* Always-visible Leftmost Add New Lab Column */}
+                <th className="border border-slate-300 px-1.5 py-1.5 bg-emerald-100/90 min-w-[156px] w-[158px] align-top">
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold text-emerald-800 tracking-wide">
+                        + เพิ่ม Lab ใหม่
+                      </span>
                     </div>
-                  </th>
-                )}
+                    <DateInput
+                      value={newDraft.date}
+                      onChange={e =>
+                        setNewDraft(prev => ({ ...prev, date: e.target.value }))
+                      }
+                    />
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={handleSaveNewColumn}
+                        className="flex-1 px-2 py-1 bg-emerald-600 text-white text-[11px] font-semibold rounded hover:bg-emerald-700 transition-colors"
+                      >
+                        บันทึก
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleResetNewDraft}
+                        className="px-2 py-1 bg-white text-slate-700 border border-slate-300 text-[11px] font-medium rounded hover:bg-slate-50 transition-colors"
+                        title="ล้างข้อมูลที่กรอกค้างไว้"
+                      >
+                        ล้างค่า
+                      </button>
+                    </div>
+                  </div>
+                </th>
 
                 {columns.map(col => {
                   const isEditingThis = editingOriginalDate === col.date;
+                  const isConflictCol = conflictAlert?.date === col.date;
+                  const isConfirmingDelete = pendingDeleteDate === col.date;
                   return (
                     <th
                       key={col.date}
+                      ref={el => {
+                        colHeaderRefs.current[col.date] = el;
+                      }}
                       className={`border border-slate-300 px-1 py-1.5 font-bold align-top ${
-                        isEditingThis ? 'bg-emerald-100/90 min-w-[156px] w-[158px]' : 'bg-slate-200/90 min-w-[84px] w-[90px]'
+                        isConflictCol
+                          ? 'bg-rose-100/90 min-w-[162px] w-[166px]'
+                          : isEditingThis
+                          ? 'bg-amber-50 min-w-[156px] w-[158px]'
+                          : 'bg-slate-200/90 min-w-[84px] w-[90px]'
                       }`}
                     >
-                      {isEditingThis && draft ? (
+                      {isEditingThis && editDraft ? (
                         <div className="space-y-1.5">
                           <DateInput
-                            value={draft.date}
+                            value={editDraft.date}
                             onChange={e =>
-                              setDraft(prev => (prev ? { ...prev, date: e.target.value } : null))
+                              setEditDraft(prev => (prev ? { ...prev, date: e.target.value } : null))
                             }
                           />
                           <div className="flex items-center gap-1">
                             <button
                               type="button"
-                              onClick={handleSaveColumn}
+                              onClick={handleSaveEditedColumn}
                               className="flex-1 px-2 py-1 bg-emerald-600 text-white text-[11px] font-semibold rounded hover:bg-emerald-700 transition-colors"
                             >
                               บันทึก
@@ -988,6 +1363,28 @@ export const LabTab: React.FC<LabTabProps> = ({ patient, onUpdatePatient }) => {
                               type="button"
                               onClick={handleCancelEdit}
                               className="px-2 py-1 bg-white text-slate-700 border border-slate-300 text-[11px] font-medium rounded hover:bg-slate-50 transition-colors"
+                            >
+                              ยกเลิก
+                            </button>
+                          </div>
+                        </div>
+                      ) : isConfirmingDelete ? (
+                        <div className="space-y-1">
+                          <div className="text-[10px] font-semibold text-rose-700 whitespace-nowrap">
+                            ลบ {formatThaiDateBE(col.date)}?
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteColumn(col.date)}
+                              className="flex-1 px-1.5 py-0.5 bg-rose-600 text-white text-[10px] font-semibold rounded hover:bg-rose-700"
+                            >
+                              ยืนยัน
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setPendingDeleteDate(null)}
+                              className="px-1.5 py-0.5 bg-white text-slate-600 border border-slate-300 text-[10px] rounded hover:bg-slate-50"
                             >
                               ยกเลิก
                             </button>
@@ -1009,7 +1406,7 @@ export const LabTab: React.FC<LabTabProps> = ({ patient, onUpdatePatient }) => {
                             </button>
                             <button
                               type="button"
-                              onClick={() => handleDeleteColumn(col.date)}
+                              onClick={() => setPendingDeleteDate(col.date)}
                               className="p-0.5 text-slate-600 hover:text-rose-600 hover:bg-white/70 rounded"
                               title="ลบข้อมูลวันที่นี้"
                             >
@@ -1021,23 +1418,6 @@ export const LabTab: React.FC<LabTabProps> = ({ patient, onUpdatePatient }) => {
                     </th>
                   );
                 })}
-
-                {Array.from({ length: emptyFillerCount }).map((_, idx) => (
-                  <th
-                    key={`empty-th-${idx}`}
-                    className="border border-slate-300 px-2 py-1.5 bg-slate-200/70 min-w-[100px] text-center"
-                  >
-                    {idx === 0 && !isEditingAny && (
-                      <button
-                        type="button"
-                        onClick={handleStartAdd}
-                        className="text-xs font-medium text-slate-500 hover:text-emerald-700 transition-colors"
-                      >
-                        + เพิ่มวันที่
-                      </button>
-                    )}
-                  </th>
-                ))}
               </tr>
             </thead>
 
@@ -1045,120 +1425,139 @@ export const LabTab: React.FC<LabTabProps> = ({ patient, onUpdatePatient }) => {
               {visibleRows.map((row, rowIdx) => {
                 const prevRow = rowIdx > 0 ? visibleRows[rowIdx - 1] : null;
                 const showExtraDivider = row.isExtra && (!prevRow || !prevRow.isExtra);
+                const isStriped = rowIdx % 2 === 1;
+                const rowConflict =
+                  conflictAlert && editingOriginalDate === conflictAlert.date
+                    ? conflictAlert.items.find(item => item.key === row.key)
+                    : undefined;
 
                 return (
                   <React.Fragment key={row.key}>
                     {showExtraDivider && (
                       <tr className="bg-slate-100/80">
                         <td
-                          colSpan={1 + totalRenderedCols + emptyFillerCount}
+                          colSpan={1 + totalRenderedCols}
                           className="border border-slate-300 px-2 py-1 text-[11px] font-bold text-slate-600 uppercase tracking-wide"
                         >
                           ผลตรวจทางห้องปฏิบัติการเพิ่มเติม
                         </td>
                       </tr>
                     )}
-                    <tr className="hover:bg-slate-50/70 transition-colors">
-                      <td className="sticky left-0 z-10 bg-slate-100 border border-slate-300 px-2 py-1 font-bold text-slate-900 align-middle leading-tight">
+                    <tr className="transition-colors">
+                      <td
+                        className={`sticky left-0 z-10 border border-slate-300 px-2 py-1 font-bold align-middle leading-tight ${
+                          rowConflict
+                            ? 'bg-rose-100 text-rose-900'
+                            : isStriped
+                            ? 'bg-[#e7ecf2] text-slate-900'
+                            : 'bg-slate-100 text-slate-900'
+                        }`}
+                      >
                         <span>{row.label}</span>
                       </td>
 
-                      {isAddingNew && draft && (
-                        <td className="border border-slate-300 px-1.5 py-1 bg-emerald-50/50 align-middle">
-                          {renderEditCell(row)}
-                        </td>
-                      )}
+                      {/* Always-visible Leftmost New Entry Cell */}
+                      <td
+                        className={`border border-slate-300 px-1.5 py-1 align-middle ${
+                          isStriped ? 'bg-emerald-50/75' : 'bg-emerald-50/30'
+                        }`}
+                      >
+                        {renderEditCell(row, newDraft, handleNewFieldChange, 'new')}
+                      </td>
 
                       {columns.map(col => {
                         const isEditingThis = editingOriginalDate === col.date;
+                        const cellConflict =
+                          isEditingThis && conflictAlert?.date === col.date
+                            ? conflictAlert.items.find(item => item.key === row.key)
+                            : undefined;
+
+                        const baseBg = isStriped ? 'bg-slate-50/90' : 'bg-white';
+
                         return (
                           <td
                             key={`${row.key}-${col.date}`}
                             onClick={() => {
-                              if (!isEditingThis && !isEditingAny && row.inputType !== 'checkbox') {
+                              if (!isEditingThis && !isEditingExisting && row.inputType !== 'checkbox') {
                                 handleStartEdit(col);
                               }
                             }}
                             className={`border border-slate-300 px-1.5 py-1 align-middle ${
-                              isEditingThis
-                                ? 'bg-emerald-50/50'
-                                : !isEditingAny && row.inputType !== 'checkbox'
-                                ? 'bg-white hover:bg-emerald-50/40 cursor-pointer'
-                                : 'bg-white'
+                              cellConflict
+                                ? 'bg-rose-50/80'
+                                : isEditingThis
+                                ? 'bg-amber-50/50'
+                                : !isEditingExisting && row.inputType !== 'checkbox'
+                                ? `${baseBg} hover:bg-emerald-50/50 cursor-pointer`
+                                : baseBg
                             }`}
                           >
-                            {isEditingThis ? renderEditCell(row) : renderDisplayCell(row, col)}
+                            {isEditingThis && editDraft
+                              ? renderEditCell(
+                                  row,
+                                  editDraft,
+                                  handleEditFieldChange,
+                                  'edit',
+                                  cellConflict
+                                )
+                              : renderDisplayCell(row, col)}
                           </td>
                         );
                       })}
-
-                      {Array.from({ length: emptyFillerCount }).map((_, idx) => (
-                        <td
-                          key={`empty-td-${row.key}-${idx}`}
-                          className="border border-slate-300 px-1.5 py-1 bg-white"
-                        />
-                      ))}
                     </tr>
                   </React.Fragment>
                 );
               })}
 
-              {/* Bottom quick-save row when editing or adding a column */}
-              {isEditingAny && (
-                <tr className="bg-slate-50">
-                  <td className="sticky left-0 z-10 bg-slate-100 border border-slate-300 px-2 py-1.5 font-semibold text-slate-600">
-                    จัดการคอลัมน์
-                  </td>
-                  {isAddingNew && (
-                    <td className="border border-slate-300 px-1.5 py-1.5">
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={handleSaveColumn}
-                          className="flex-1 px-2 py-1 bg-emerald-600 text-white text-[11px] font-semibold rounded hover:bg-emerald-700 transition-colors"
-                        >
-                          บันทึก
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleCancelEdit}
-                          className="px-2 py-1 bg-white text-slate-700 border border-slate-300 text-[11px] font-medium rounded hover:bg-slate-50 transition-colors"
-                        >
-                          ยกเลิก
-                        </button>
-                      </div>
+              {/* Bottom quick-save row */}
+              <tr className="bg-slate-50">
+                <td className="sticky left-0 z-10 bg-slate-100 border border-slate-300 px-2 py-1.5 font-semibold text-slate-600">
+                  จัดการคอลัมน์
+                </td>
+                <td className="border border-slate-300 px-1.5 py-1.5 bg-emerald-50/40">
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={handleSaveNewColumn}
+                      className="flex-1 px-2 py-1 bg-emerald-600 text-white text-[11px] font-semibold rounded hover:bg-emerald-700 transition-colors"
+                    >
+                      บันทึก
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleResetNewDraft}
+                      className="px-2 py-1 bg-white text-slate-700 border border-slate-300 text-[11px] font-medium rounded hover:bg-slate-50 transition-colors"
+                    >
+                      ล้างค่า
+                    </button>
+                  </div>
+                </td>
+                {columns.map(col => {
+                  const isEditingThis = editingOriginalDate === col.date;
+                  return (
+                    <td key={`action-${col.date}`} className="border border-slate-300 px-1.5 py-1.5">
+                      {isEditingThis && (
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={handleSaveEditedColumn}
+                            className="flex-1 px-2 py-1 bg-emerald-600 text-white text-[11px] font-semibold rounded hover:bg-emerald-700 transition-colors"
+                          >
+                            บันทึก
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleCancelEdit}
+                            className="px-2 py-1 bg-white text-slate-700 border border-slate-300 text-[11px] font-medium rounded hover:bg-slate-50 transition-colors"
+                          >
+                            ยกเลิก
+                          </button>
+                        </div>
+                      )}
                     </td>
-                  )}
-                  {columns.map(col => {
-                    const isEditingThis = editingOriginalDate === col.date;
-                    return (
-                      <td key={`action-${col.date}`} className="border border-slate-300 px-1.5 py-1.5">
-                        {isEditingThis && (
-                          <div className="flex items-center gap-1">
-                            <button
-                              type="button"
-                              onClick={handleSaveColumn}
-                              className="flex-1 px-2 py-1 bg-emerald-600 text-white text-[11px] font-semibold rounded hover:bg-emerald-700 transition-colors"
-                            >
-                              บันทึก
-                            </button>
-                            <button
-                              type="button"
-                              onClick={handleCancelEdit}
-                              className="px-2 py-1 bg-white text-slate-700 border border-slate-300 text-[11px] font-medium rounded hover:bg-slate-50 transition-colors"
-                            >
-                              ยกเลิก
-                            </button>
-                          </div>
-                        )}
-                      </td>
-                    );
-                  })}
-                  {Array.from({ length: emptyFillerCount }).map((_, idx) => (
-                    <td key={`empty-action-${idx}`} className="border border-slate-300 px-1.5 py-1.5" />
-                  ))}
-                </tr>
-              )}
+                  );
+                })}
+              </tr>
             </tbody>
           </table>
         </div>

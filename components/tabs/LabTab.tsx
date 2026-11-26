@@ -81,7 +81,7 @@ const ROWS: RowDef[] = [
   { key: 'vdrl', label: 'VDRL', inputType: 'datalist', options: VDRL_OPTIONS, placeholder: 'NR / 1:2 - 1:32' },
   { key: 'tpha', label: 'TPHA', inputType: 'datalist', options: SEROLOGY_OPTIONS, placeholder: 'Positive / Negative' },
   { key: 'cryptoAg', label: 'CryptoAg', inputType: 'datalist', options: SEROLOGY_OPTIONS, placeholder: 'Positive / Negative' },
-  { key: 'tst', label: 'TST', inputType: 'datalist', options: ['Negative', 'Positive'], placeholder: 'Positive / Negative' },
+  { key: 'tst', label: 'TST', inputType: 'datalist', options: ['Positive', 'Negative'], placeholder: 'Positive / Negative' },
   { key: 'cr', label: 'Cr', inputType: 'text', placeholder: 'e.g. 0.8' },
   { key: 'prep', label: 'PrEP', inputType: 'checkbox', linkedLabel: 'PrEP' },
   { key: 'npep', label: 'NPEP', inputType: 'checkbox', linkedLabel: 'PEP' },
@@ -149,25 +149,31 @@ const parseNumericValue = (raw: string): { num: number; comparator?: '<' | '>' }
   return null;
 };
 
-const isAbnormalLabResult = (key: FieldKey, rawVal: string): boolean => {
+type LabTone = 'abnormal' | 'favorable' | 'neutral';
+
+const getLabResultTone = (key: FieldKey, rawVal: string): LabTone => {
   const trimmed = rawVal.trim();
-  if (!trimmed) return false;
+  if (!trimmed) return 'neutral';
   const lower = trimmed.toLowerCase();
 
   switch (key) {
     case 'cd4': {
       const parsed = parseNumericValue(trimmed);
-      if (!parsed) return false;
-      if (parsed.comparator === '<') return parsed.num <= 200;
-      if (parsed.comparator === '>') return false;
-      return parsed.num < 200;
+      if (!parsed) return 'neutral';
+      if (parsed.comparator === '<') return parsed.num <= 200 ? 'abnormal' : 'neutral';
+      if (parsed.comparator === '>') return parsed.num >= 200 ? 'favorable' : 'neutral';
+      if (parsed.num < 200) return 'abnormal';
+      if (parsed.num > 200) return 'favorable';
+      return 'neutral';
     }
     case 'hivVl': {
       const parsed = parseNumericValue(trimmed);
-      if (!parsed) return false;
-      if (parsed.comparator === '<') return false;
-      if (parsed.comparator === '>') return parsed.num >= 50;
-      return parsed.num > 50;
+      if (!parsed) return 'neutral';
+      if (parsed.comparator === '<') return parsed.num <= 50 ? 'favorable' : 'neutral';
+      if (parsed.comparator === '>') return parsed.num >= 50 ? 'abnormal' : 'neutral';
+      if (parsed.num > 50) return 'abnormal';
+      if (parsed.num < 50) return 'favorable';
+      return 'neutral';
     }
     case 'hbsag':
     case 'antiHcv':
@@ -175,39 +181,54 @@ const isAbnormalLabResult = (key: FieldKey, rawVal: string): boolean => {
     case 'tpha':
     case 'cryptoAg':
     case 'tst':
-      return lower === 'positive';
+      if (lower === 'positive') return 'abnormal';
+      if (lower === 'negative') return 'favorable';
+      return 'neutral';
+    case 'antiHbs':
+      if (lower === 'positive') return 'favorable';
+      return 'neutral';
     case 'vdrl':
-      return !['nr', 'non-reactive', 'non reactive', '-'].includes(lower);
+      if (['nr', 'non-reactive', 'non reactive'].includes(lower)) return 'favorable';
+      if (lower === '-') return 'neutral';
+      return 'abnormal';
     case 'cr': {
       const parsed = parseNumericValue(trimmed);
-      if (!parsed) return false;
-      if (parsed.comparator === '<') return false;
-      if (parsed.comparator === '>') return parsed.num >= 1.5;
-      return parsed.num > 1.5;
+      if (!parsed) return 'neutral';
+      if (parsed.comparator === '<') return parsed.num <= 1.2 ? 'favorable' : 'neutral';
+      if (parsed.comparator === '>') return parsed.num >= 1.5 ? 'abnormal' : 'neutral';
+      if (parsed.num > 1.5) return 'abnormal';
+      if (parsed.num < 1.2) return 'favorable';
+      return 'neutral';
     }
     case 'fbs': {
       const parsed = parseNumericValue(trimmed);
-      if (!parsed) return false;
-      if (parsed.comparator === '<') return false;
-      if (parsed.comparator === '>') return parsed.num >= 126;
-      return parsed.num > 126;
+      if (!parsed) return 'neutral';
+      if (parsed.comparator === '<') return parsed.num <= 110 ? 'favorable' : 'neutral';
+      if (parsed.comparator === '>') return parsed.num >= 126 ? 'abnormal' : 'neutral';
+      if (parsed.num > 126) return 'abnormal';
+      if (parsed.num < 110) return 'favorable';
+      return 'neutral';
     }
     case 'tg': {
       const parsed = parseNumericValue(trimmed);
-      if (!parsed) return false;
-      if (parsed.comparator === '<') return false;
-      if (parsed.comparator === '>') return parsed.num >= 200;
-      return parsed.num > 200;
+      if (!parsed) return 'neutral';
+      if (parsed.comparator === '<') return parsed.num <= 200 ? 'favorable' : 'neutral';
+      if (parsed.comparator === '>') return parsed.num >= 200 ? 'abnormal' : 'neutral';
+      if (parsed.num > 200) return 'abnormal';
+      if (parsed.num < 200) return 'favorable';
+      return 'neutral';
     }
     case 'ldl': {
       const parsed = parseNumericValue(trimmed);
-      if (!parsed) return false;
-      if (parsed.comparator === '<') return false;
-      if (parsed.comparator === '>') return parsed.num >= 130;
-      return parsed.num > 130;
+      if (!parsed) return 'neutral';
+      if (parsed.comparator === '<') return parsed.num <= 100 ? 'favorable' : 'neutral';
+      if (parsed.comparator === '>') return parsed.num >= 130 ? 'abnormal' : 'neutral';
+      if (parsed.num > 130) return 'abnormal';
+      if (parsed.num < 100) return 'favorable';
+      return 'neutral';
     }
     default:
-      return false;
+      return 'neutral';
   }
 };
 
@@ -1173,14 +1194,20 @@ export const LabTab: React.FC<LabTabProps> = ({ patient, onUpdatePatient }) => {
     }
 
     const strVal = String(rawVal);
-    const isAbnormal = isAbnormalLabResult(row.key, strVal);
+    const tone = getLabResultTone(row.key, strVal);
     const isNumeric = /^-?\d+(\.\d+)?$/.test(strVal.trim());
+    const toneClass =
+      tone === 'abnormal'
+        ? 'text-rose-700 font-semibold'
+        : tone === 'favorable'
+        ? 'text-emerald-700 font-semibold'
+        : 'text-slate-800';
 
     return (
       <div
         className={`w-full text-right whitespace-pre-wrap break-words ${
           isNumeric ? 'font-medium tabular-nums' : ''
-        } ${isAbnormal ? 'text-rose-700 font-semibold' : 'text-slate-800'}`}
+        } ${toneClass}`}
       >
         {strVal}
       </div>
